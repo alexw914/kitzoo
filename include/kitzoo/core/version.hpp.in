@@ -1,0 +1,41 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: include/kitzoo/core/version.hpp.in
+// Description: Declares generated version and build metadata constants; CMake
+//              configures this template during the build.
+// -----------------------------------------------------------------------------
+
+#pragma once
+
+#include <kitzoo/core/macro.hpp>
+
+#include <cstdint>
+#include <string_view>
+
+namespace kitzoo {
+
+struct version {
+    std::uint16_t major;
+    std::uint16_t minor;
+    std::uint16_t patch;
+
+    constexpr auto operator<=>(version const&) const = default;
+};
+
+inline constexpr version library_version {
+    @PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@,
+};
+
+inline constexpr std::string_view version_string = "@PROJECT_VERSION@";
+
+struct build_info {
+    version lib_version;
+    std::string_view version_str;
+    std::string_view compiler;
+    bool is_debug;
+    std::string_view sanitizers;
+};
+
+KZ_NODISCARD KZ_EXPORT build_info const& current_build_info() noexcept;
+
+}  // namespace kitzoo

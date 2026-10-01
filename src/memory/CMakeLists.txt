@@ -1,0 +1,5 @@
+if(KITZOO_WITH_MIMALLOC)
+    kitzoo_add_module(memory DEPENDS core)
+    target_compile_definitions(kitzoo_memory INTERFACE KZ_WITH_MIMALLOC=1)
+    target_link_libraries(kitzoo_memory INTERFACE mimalloc-static)
+endif()

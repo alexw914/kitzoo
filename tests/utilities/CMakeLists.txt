@@ -1,0 +1,5 @@
+kitzoo_add_unit_test(random SOURCES random_test.cpp DEPENDS utilities)
+kitzoo_add_unit_test(uuid SOURCES uuid_test.cpp DEPENDS utilities)
+kitzoo_add_unit_test(singleton SOURCES singleton_test.cpp DEPENDS utilities)
+kitzoo_add_unit_test(scope_guard SOURCES scope_guard_test.cpp DEPENDS utilities)
+kitzoo_add_unit_test(unique_function SOURCES unique_function_test.cpp DEPENDS utilities)

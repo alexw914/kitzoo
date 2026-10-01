@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+cmake-build-*/
+
+# IDE
+.vscode/
+.idea/
+*.xcodeproj
+*.xcworkspace
+AGENTS.md
+
+# Dependencies fetched by CMake
+_deps/
+
+# Install
+install/
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*.pyc
+compile_commands.json

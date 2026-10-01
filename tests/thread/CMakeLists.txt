@@ -1,0 +1,6 @@
+kitzoo_add_unit_test(thread_pool SOURCES thread_pool_test.cpp DEPENDS thread)
+kitzoo_add_unit_test(bs_thread_pool SOURCES bs_thread_pool_test.cpp DEPENDS thread_bs_pool)
+kitzoo_add_unit_test(object_pool SOURCES object_pool_test.cpp DEPENDS thread)
+kitzoo_add_unit_test(blocking_object_pool SOURCES blocking_object_pool_test.cpp DEPENDS thread)
+kitzoo_add_unit_test(concurrent_object_pool SOURCES concurrent_object_pool_test.cpp
+                     DEPENDS thread_concurrent_pool)

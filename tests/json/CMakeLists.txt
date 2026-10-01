@@ -1,0 +1,1 @@
+kitzoo_add_unit_test(json SOURCES json_test.cpp DEPENDS json)

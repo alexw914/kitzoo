@@ -1,0 +1,1 @@
+kitzoo_add_unit_test(aes SOURCES aes_test.cpp DEPENDS crypto string)

@@ -1,0 +1,18 @@
+add_subdirectory(core)
+add_subdirectory(utilities)
+add_subdirectory(lock)
+add_subdirectory(string)
+add_subdirectory(time)
+add_subdirectory(filesystem)
+add_subdirectory(queue)
+add_subdirectory(thread)
+add_subdirectory(cli)
+add_subdirectory(memory)
+add_subdirectory(log)
+add_subdirectory(system)
+
+if(KITZOO_WITH_OPENSSL)
+    add_subdirectory(crypto)
+endif()
+
+add_subdirectory(json)

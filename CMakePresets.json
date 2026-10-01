@@ -1,0 +1,169 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "KITZOO_WARNINGS_AS_ERRORS": "ON",
+                "KITZOO_BUILD_TESTS": "ON",
+                "KITZOO_BUILD_BENCHMARKS": "ON"
+            }
+        },
+        {
+            "name": "debug",
+            "inherits": "base",
+            "displayName": "Debug",
+            "description": "Debug build with all warnings",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "KITZOO_SANITIZERS": ""
+            }
+        },
+        {
+            "name": "release",
+            "inherits": "base",
+            "displayName": "Release",
+            "description": "Optimized release build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "KITZOO_SANITIZERS": "",
+                "KITZOO_ENABLE_IPO": "ON"
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "inherits": "base",
+            "displayName": "RelWithDebInfo",
+            "description": "Optimized build with debug info",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "KITZOO_SANITIZERS": ""
+            }
+        },
+        {
+            "name": "asan",
+            "inherits": "base",
+            "displayName": "Address Sanitizer",
+            "description": "Debug + AddressSanitizer",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "KITZOO_SANITIZERS": "address"
+            }
+        },
+        {
+            "name": "ubsan",
+            "inherits": "base",
+            "displayName": "Undefined Behavior Sanitizer",
+            "description": "Debug + UBSan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "KITZOO_SANITIZERS": "undefined"
+            }
+        },
+        {
+            "name": "tsan",
+            "inherits": "base",
+            "displayName": "Thread Sanitizer",
+            "description": "Debug + ThreadSanitizer",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "KITZOO_SANITIZERS": "thread"
+            }
+        },
+        {
+            "name": "asan-ubsan",
+            "inherits": "base",
+            "displayName": "ASan + UBSan",
+            "description": "Debug + AddressSanitizer + UBSan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "KITZOO_SANITIZERS": "address;undefined"
+            }
+        },
+        {
+            "name": "compare",
+            "inherits": "base",
+            "displayName": "Release + comparison benchmarks",
+            "description": "Release build with third-party comparison benchmarks",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "KITZOO_SANITIZERS": "",
+                "KITZOO_ENABLE_IPO": "ON",
+                "KITZOO_BUILD_COMPARE_BENCHMARKS": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "jobs": 0
+        },
+        {
+            "name": "release",
+            "configurePreset": "release",
+            "jobs": 0
+        },
+        {
+            "name": "asan",
+            "configurePreset": "asan",
+            "jobs": 0
+        },
+        {
+            "name": "ubsan",
+            "configurePreset": "ubsan",
+            "jobs": 0
+        },
+        {
+            "name": "tsan",
+            "configurePreset": "tsan",
+            "jobs": 0
+        },
+        {
+            "name": "asan-ubsan",
+            "configurePreset": "asan-ubsan",
+            "jobs": 0
+        },
+        {
+            "name": "compare",
+            "configurePreset": "compare",
+            "jobs": 0
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "asan",
+            "configurePreset": "asan",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "ubsan",
+            "configurePreset": "ubsan",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "tsan",
+            "configurePreset": "tsan",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "asan-ubsan",
+            "configurePreset": "asan-ubsan",
+            "output": {"outputOnFailure": true}
+        }
+    ]
+}

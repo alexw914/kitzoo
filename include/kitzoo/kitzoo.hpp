@@ -1,0 +1,20 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: include/kitzoo/kitzoo.hpp
+// Description: Aggregates the common kitzoo modules into a single convenience
+//              include.
+// -----------------------------------------------------------------------------
+
+#pragma once
+
+#include <kitzoo/core.hpp>
+#include <kitzoo/filesystem.hpp>
+#include <kitzoo/lock.hpp>
+#include <kitzoo/log.hpp>
+#include <kitzoo/queue/blocking_queue.hpp>
+#include <kitzoo/queue/spsc_queue.hpp>
+#include <kitzoo/string.hpp>
+#include <kitzoo/system.hpp>
+#include <kitzoo/thread.hpp>
+#include <kitzoo/time.hpp>
+#include <kitzoo/utilities.hpp>
