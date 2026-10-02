@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Build and test kitzoo on a Linux host.
+# Build and test all kitzoo targets on Linux.
 #
 # Usage:
 #   ./scripts/linux_build_test.sh [preset]     # default preset: debug
@@ -31,7 +31,7 @@ fi
 cmake -S "$ROOT" -B "$ROOT/build-linux/$PRESET" -G Ninja \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DKITZOO_SANITIZERS="$SANITIZERS" \
-    -DKITZOO_BUILD_TESTS=ON -DKITZOO_BUILD_BENCHMARKS=OFF -DKITZOO_BUILD_EXAMPLES=OFF \
-    -DKITZOO_WITH_OPENSSL=ON
+    -DKITZOO_BUILD_TESTS=ON -DKITZOO_BUILD_BENCHMARKS=ON -DKITZOO_BUILD_EXAMPLES=ON \
+    -DKITZOO_WITH_OPENSSL=ON -DKITZOO_WITH_MIMALLOC=ON
 cmake --build "$ROOT/build-linux/$PRESET"
 ctest --test-dir "$ROOT/build-linux/$PRESET" --output-on-failure --timeout 300

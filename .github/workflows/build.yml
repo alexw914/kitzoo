@@ -17,9 +17,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang ninja-build libssl-dev
-      - name: Configure all modules
-        run: cmake --preset debug -DKITZOO_WITH_OPENSSL=ON -DKITZOO_WITH_MIMALLOC=ON
-      - name: Build library, tests, benchmarks, and examples
-        run: cmake --build --preset debug
-      - name: Run tests and benchmark smoke tests
-        run: ctest --preset debug
+      - name: Build and test all targets
+        run: ./scripts/linux_build_test.sh debug
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: brew install ninja openssl@3
+      - name: Build and test all targets
+        run: ./scripts/macos_build_test.sh
