@@ -42,7 +42,7 @@ static void BM_ThreadPoolTinyTaskThroughput(benchmark::State& state) {
             f.get();
         benchmark::DoNotOptimize(counter.load());
     }
-    state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * kTasks);
+    state.SetItemsProcessed(state.iterations() * kTasks);
 }
 BENCHMARK(BM_ThreadPoolTinyTaskThroughput)->Arg(1)->Arg(2)->Arg(4)->Arg(8);
 

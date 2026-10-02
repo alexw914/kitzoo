@@ -55,7 +55,7 @@ static void tiny_task_throughput(benchmark::State& state, Submit&& submit) {
             f.get();
         benchmark::DoNotOptimize(counter.load());
     }
-    state.SetItemsProcessed(static_cast<std::int64_t>(state.iterations()) * kTasks);
+    state.SetItemsProcessed(state.iterations() * kTasks);
 }
 
 static void BM_TinyTasks_Kitzoo(benchmark::State& state) {
