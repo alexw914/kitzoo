@@ -104,9 +104,15 @@ TEST_F(FilesystemTest, AtomicWriteCreatesParents) {
 }
 
 TEST_F(FilesystemTest, AtomicWriteErrorCode) {
+    auto const parent = make_path("parent.txt");
+    write_text(parent, "existing file");
+    ASSERT_TRUE(std::filesystem::is_regular_file(parent));
+
     std::error_code ec;
-    atomic_write("/proc/$$$/impossible/path/file.txt", std::span<char const>{}, ec);
+    atomic_write(parent / "file.txt", std::span<char const>{}, ec);
     EXPECT_TRUE(ec);
+    EXPECT_EQ(read_text(parent), "existing file");
+    EXPECT_EQ(list_directory(tmp_).size(), 1u);
 }
 
 // -- temp_directory -----------------------------------------------------------
