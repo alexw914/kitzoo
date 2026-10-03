@@ -17,11 +17,22 @@ function(kitzoo_apply_warnings target)
     endif()
 
     if(MSVC)
-        target_compile_options(${target} ${_scope}
+        # UTF-8 literals must not depend on the machine's Windows code page.
+        # C4324 reports intentional cache-line padding in concurrent containers.
+        set(_flags
+            /utf-8 /wd4324
+            $<$<BOOL:${KITZOO_WARNINGS_AS_ERRORS}>:/WX>
             /W4 /w14242 /w14254 /w14263 /w14265 /w14287
             /w14296 /w14311 /w14545 /w14546 /w14547 /w14549
             /w14555 /w14619 /w14640 /w14826 /w14905 /w14906
             /w14928)
+        if(_type STREQUAL "INTERFACE_LIBRARY")
+            list(TRANSFORM _flags PREPEND "$<BUILD_INTERFACE:")
+            list(TRANSFORM _flags APPEND ">")
+        endif()
+        target_compile_options(${target} ${_scope} ${_flags})
+        target_compile_definitions(${target} ${_scope}
+            $<BUILD_INTERFACE:_CRT_SECURE_NO_WARNINGS>)
     else()
         set(_flags
             -Wall

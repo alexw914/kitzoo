@@ -8,6 +8,7 @@
 #include <kitzoo/system/system.hpp>
 
 #include <cstdlib>
+#include <sstream>
 #include <thread>
 
 #if defined(_WIN32)
@@ -106,9 +107,22 @@ auto home_dir() -> std::string {
 }
 
 auto stacktrace(int const max_frames) -> std::vector<std::string> {
+    if (max_frames <= 0)
+        return {};
 #if defined(_WIN32)
-    (void)max_frames;
-    return {};
+    // The capture API returns a USHORT frame count. Windows provides addresses;
+    // symbol resolution would additionally require DbgHelp and symbol files.
+    auto const capacity = static_cast<DWORD>(max_frames > 65535 ? 65535 : max_frames);
+    std::vector<void*> frames(capacity);
+    auto const count = ::CaptureStackBackTrace(0, capacity, frames.data(), nullptr);
+    std::vector<std::string> out;
+    out.reserve(count);
+    for (USHORT i = 0; i < count; ++i) {
+        std::ostringstream address;
+        address << frames[i];
+        out.push_back(address.str());
+    }
+    return out;
 #else
     std::vector<void*> frames(static_cast<std::size_t>(max_frames));
     int const n = ::backtrace(frames.data(), static_cast<int>(frames.size()));

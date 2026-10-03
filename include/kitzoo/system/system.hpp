@@ -33,6 +33,8 @@ KZ_NODISCARD auto username() -> std::string;
 
 KZ_NODISCARD auto home_dir() -> std::string;
 
+// Captures up to max_frames entries; non-positive limits return an empty trace.
+// Windows entries contain addresses, without symbol-name resolution.
 KZ_NODISCARD auto stacktrace(int max_frames = 64) -> std::vector<std::string>;
 
 }  // namespace kitzoo::sys

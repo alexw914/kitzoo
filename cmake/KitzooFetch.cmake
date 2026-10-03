@@ -96,6 +96,8 @@ function(kitzoo_fetch_dependency name)
             GIT_REPOSITORY "${KITZOO_DEP_${upper}_GIT_URL}"
             GIT_TAG "${KITZOO_DEP_${upper}_GIT_TAG}"
             GIT_SHALLOW TRUE
+            # Integrations use upstream sources only; no submodules are needed.
+            GIT_SUBMODULES ""
             GIT_PROGRESS TRUE
             ${populate_only_args}
             ${find_package_args})

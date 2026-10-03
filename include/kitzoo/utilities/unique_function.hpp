@@ -102,7 +102,7 @@ private:
                 return std::invoke(*static_cast<T*>(obj), std::forward<Args>(args)...);
             },
 
-            [](void* from, void* to) noexcept {
+            [](KZ_MAYBE_UNUSED void* from, KZ_MAYBE_UNUSED void* to) noexcept {
                 if constexpr (InSbo) {
                     new (to) T(std::move(*static_cast<T*>(from)));
                     static_cast<T*>(from)->~T();

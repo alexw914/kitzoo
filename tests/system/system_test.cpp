@@ -63,10 +63,19 @@ TEST(SystemTest, HomeDir) {
 
 TEST(SystemTest, StacktraceCapturesFrames) {
     auto const frames = stacktrace();
-#if !defined(_WIN32)
     // Symbol names are only resolvable when the binary exports them
     // (-rdynamic); without it we still get return addresses. Only assert
     // that frames were captured at all.
     EXPECT_GT(frames.size(), 1u);
-#endif
+    for (auto const& frame : frames)
+        EXPECT_FALSE(frame.empty());
+}
+
+TEST(SystemTest, StacktraceRespectsFrameLimit) {
+    EXPECT_EQ(stacktrace(1).size(), 1u);
+}
+
+TEST(SystemTest, StacktraceRejectsNonPositiveFrameLimit) {
+    EXPECT_TRUE(stacktrace(0).empty());
+    EXPECT_TRUE(stacktrace(-1).empty());
 }

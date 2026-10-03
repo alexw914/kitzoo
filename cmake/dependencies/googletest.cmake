@@ -15,7 +15,7 @@ kitzoo_fetch_dependency(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG v1.18.0
-    OPTIONS INSTALL_GTEST=OFF BUILD_GMOCK=ON
+    OPTIONS INSTALL_GTEST=OFF BUILD_GMOCK=ON gtest_force_shared_crt=ON
     FIND_PACKAGE NAMES GTest)
 
 message(STATUS "Using GoogleTest")

@@ -10,6 +10,7 @@
 #include <kitzoo/core/macro.hpp>
 
 #include <atomic>
+#include <memory>
 #include <cstddef>
 #include <new>
 #include <optional>
