@@ -39,9 +39,7 @@ string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(cxxopts CONFIG)")
 if(KITZOO_WITH_OPENSSL)
     string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(OpenSSL)")
 endif()
-if(KITZOO_WITH_MIMALLOC)
-    string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(mimalloc CONFIG)")
-endif()
+string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(mimalloc CONFIG)")
 
 configure_package_config_file(
     "${PROJECT_SOURCE_DIR}/cmake/kitzooConfig.cmake.in"

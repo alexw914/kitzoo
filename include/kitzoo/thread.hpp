@@ -8,7 +8,6 @@
 #ifndef KITZOO_THREAD_HPP
 #define KITZOO_THREAD_HPP
 
-#include <kitzoo/thread/blocking_object_pool.hpp>
 #include <kitzoo/thread/object_pool.hpp>
 #include <kitzoo/thread/thread_pool.hpp>
 

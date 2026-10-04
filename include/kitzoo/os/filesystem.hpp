@@ -9,6 +9,7 @@
 #define KITZOO_OS_FILESYSTEM_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/os/fsadaptor.hpp>
 
 #include <filesystem>
 #include <span>
@@ -18,6 +19,8 @@
 #include <vector>
 
 namespace kitzoo::os {
+
+// Compatibility entry points; new code may use FsAdaptor::instance() directly.
 
 KZ_NODISCARD auto read_file(std::filesystem::path const& path, std::error_code& ec) -> std::string;
 KZ_NODISCARD auto read_file(std::filesystem::path const& path) -> std::string;

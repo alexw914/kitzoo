@@ -37,9 +37,8 @@ set_property(CACHE KITZOO_SANITIZERS PROPERTY STRINGS "address" "undefined" "thr
 option(KITZOO_SANITIZE_RECOVER_ALL "Allow sanitizers to continue after first error" OFF)
 
 # -- Third-party integrations --------------------------------------------------
-# JSON/crypto are opt-in. ConcurrentQueue and BS::thread_pool are always fetched.
+# Crypto is opt-in. Other module dependencies are always fetched.
 option(KITZOO_WITH_OPENSSL "Enable crypto module (requires OpenSSL)" OFF)
-option(KITZOO_WITH_MIMALLOC "Enable the mimalloc allocator adapter" OFF)
 
 # -- Dependency provider options -----------------------------------------------
 option(KITZOO_USE_SYSTEM_GOOGLETEST "Use system-installed GoogleTest" OFF)

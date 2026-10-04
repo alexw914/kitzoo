@@ -28,15 +28,14 @@ kitzoo_add_example(strings SOURCES strings.cpp DEPENDS string)
 kitzoo_add_example(time SOURCES time.cpp DEPENDS time)
 kitzoo_add_example(json SOURCES json.cpp DEPENDS json)
 kitzoo_add_example(cli SOURCES cli.cpp DEPENDS cli)
-kitzoo_add_example(logging SOURCES logging.cpp DEPENDS log)
+kitzoo_add_example(logging SOURCES logging.cpp DEPENDS log os)
 kitzoo_add_example(queues SOURCES queues.cpp DEPENDS queue)
-kitzoo_add_example(memory SOURCES memory.cpp DEPENDS thread thread_concurrent_pool)
 kitzoo_add_example(os SOURCES os.cpp DEPENDS os)
 kitzoo_add_example(utilities SOURCES utilities.cpp DEPENDS utilities)
 
-kitzoo_add_example(thread SOURCES thread.cpp)
-target_link_libraries(kitzoo_example_thread
-                      PRIVATE kitzoo::queue_concurrentqueue kitzoo::thread_bs_pool)
+kitzoo_add_example(memory SOURCES memory.cpp DEPENDS memory)
+
+kitzoo_add_example(thread SOURCES thread.cpp DEPENDS thread)
 
 if(KITZOO_WITH_OPENSSL)
     kitzoo_add_example(crypto SOURCES crypto.cpp DEPENDS crypto)

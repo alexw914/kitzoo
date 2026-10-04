@@ -9,19 +9,33 @@
 #define KITZOO_LOG_LOGGER_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/memory/advanced_types.hpp>
 
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <iterator>
 #include <memory>
+#include <mutex>
 #include <source_location>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/callback_sink.h>
+#include <spdlog/sinks/daily_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace kitzoo::log {
+
+namespace detail {
+using Message = memory::String;
+}  // namespace detail
 
 enum class Level : int {
     Trace = 0,
@@ -30,6 +44,7 @@ enum class Level : int {
     Warn = 3,
     Error = 4,
     Fatal = 5,
+    Off = 6,
 };
 
 KZ_NODISCARD constexpr auto to_string(Level level) noexcept -> std::string_view {
@@ -46,6 +61,8 @@ KZ_NODISCARD constexpr auto to_string(Level level) noexcept -> std::string_view 
             return "ERROR";
         case Level::Fatal:
             return "FATAL";
+        case Level::Off:
+            return "OFF";
     }
     return "UNKNOWN";
 }
@@ -55,11 +72,27 @@ using SinkPtr = spdlog::sink_ptr;
 using ConsoleSink = spdlog::sinks::stdout_color_sink_mt;
 using FileSink = spdlog::sinks::basic_file_sink_mt;
 
+using StderrSink = spdlog::sinks::stderr_color_sink_mt;
+using RotatingFileSink = spdlog::sinks::rotating_file_sink_mt;
+using DailyFileSink = spdlog::sinks::daily_file_sink_mt;
+using CallbackSink = spdlog::sinks::callback_sink_mt;
+using ErrorHandler = std::function<void(std::string_view)>;
+
+struct LoggerOptions {
+    Level level{Level::Info};
+    std::string pattern;
+    std::vector<SinkPtr> sinks;
+    Level flush_level{Level::Off};
+    ErrorHandler error_handler;
+};
+
 struct LogRecord;
 
 class Logger {
 public:
     explicit Logger(std::string name, Level level = Level::Info);
+
+    Logger(std::string name, const LoggerOptions& options);
 
     Logger(Logger const&) = delete;
     auto operator=(Logger const&) -> Logger& = delete;
@@ -79,21 +112,40 @@ public:
     template <typename... Args>
     auto logf(Level level, std::source_location const& loc, fmt::format_string<Args...> format,
               Args&&... args) -> void {
-        log(level, fmt::format(format, std::forward<Args>(args)...), loc);
+        if (!enabled(level))
+            return;
+        detail::Message message;
+        fmt::format_to(std::back_inserter(message), format, std::forward<Args>(args)...);
+        log(level, {message.data(), message.size()}, loc);
     }
+
+    auto log_at(std::chrono::system_clock::time_point timestamp, Level level,
+                std::string_view message,
+                const std::source_location& loc = std::source_location::current()) -> void;
+
+    auto set_flush_level(Level level) -> void;
+
+    auto set_error_handler(ErrorHandler handler) -> void;
+
+    auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
 
     auto flush() -> void;
 
 private:
     friend class AsyncLogger;
 
-    auto write_record(LogRecord const& record) -> void;
+    auto write_record(LogRecord const& record) -> bool;
+
+    auto report_error(std::string_view message) noexcept -> void;
 
     KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 
-    std::string name_;
+    detail::Message name_;
     std::shared_ptr<spdlog::logger> native_;
-    std::string pattern_;
+    detail::Message pattern_;
+    std::atomic<std::size_t> failed_{0};
+    std::mutex error_mutex_;
+    ErrorHandler error_handler_;
 
     static auto to_spdlog(Level level) noexcept -> spdlog::level::level_enum;
 };

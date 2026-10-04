@@ -1,21 +1,25 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/thread/object_pool.hpp
-// Description: Declares a non-thread-safe reusable object pool with leases that
-//              return objects to the pool on release.
+// Description: Declares reusable and concurrent object pools with leases that
+//              return objects to their pool on release.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_THREAD_OBJECT_POOL_HPP
 #define KITZOO_THREAD_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/memory/advanced_types.hpp>
+#include <kitzoo/queue/concurrent_queue.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <new>
+#include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace kitzoo::thread {
 
@@ -33,9 +37,6 @@ public:
         auto operator()(T* ptr) const noexcept -> void { pool->destroy(ptr); }
     };
 
-    using UniquePtr = std::unique_ptr<T, Deleter>;
-    using SharedPtr = std::shared_ptr<T>;
-
     explicit ObjectPool(std::size_t chunk_size = 64)
         : chunk_size_{chunk_size == 0 ? 64 : chunk_size} {}
 
@@ -45,14 +46,14 @@ public:
     ObjectPool(ObjectPool&&) = delete;
 
     template <typename... Args>
-    KZ_NODISCARD auto acquire(Args&&... args) -> UniquePtr {
-        return UniquePtr{construct(std::forward<Args>(args)...), Deleter{this}};
+    KZ_NODISCARD auto acquire(Args&&... args) -> std::unique_ptr<T, Deleter> {
+        return std::unique_ptr<T, Deleter>{construct(std::forward<Args>(args)...), Deleter{this}};
     }
 
     template <typename... Args>
-    KZ_NODISCARD auto acquire_shared(Args&&... args) -> SharedPtr {
+    KZ_NODISCARD auto acquire_shared(Args&&... args) -> memory::SharedPtr<T> {
         auto object = acquire(std::forward<Args>(args)...);
-        return SharedPtr{object.release(), [this](T* ptr) { destroy(ptr); }};
+        return memory::SharedPtr<T>{object.release(), Deleter{this}, memory::MiAllocator<T>{}};
     }
 
     template <typename... Args>
@@ -87,19 +88,80 @@ public:
 
 private:
     auto grow() -> void {
-        auto chunk = std::make_unique<Slot[]>(chunk_size_);
-        auto* slots = chunk.get();
+        memory::Vector<Slot> chunk(chunk_size_);
+        auto* slots = chunk.data();
+        // Commit ownership before publishing slots in the free list.
+        chunks_.push_back(std::move(chunk));
         for (std::size_t i = 0; i + 1 < chunk_size_; ++i)
             slots[i].next = &slots[i + 1];
         slots[chunk_size_ - 1].next = nullptr;
         free_ = slots;
-        chunks_.push_back(std::move(chunk));
     }
 
     std::size_t chunk_size_;
-    std::vector<std::unique_ptr<Slot[]>> chunks_;
+    memory::Vector<memory::Vector<Slot>> chunks_;
     Slot* free_{nullptr};
     std::size_t live_{0};
+};
+
+template <typename T>
+class ConcurrentObjectPool {
+public:
+    struct Deleter {
+        ConcurrentObjectPool* pool;
+
+        auto operator()(T* object) const noexcept -> void {
+            if (object != nullptr)
+                (void)pool->objects_.enqueue(memory::UniquePtr<T>{object});
+        }
+    };
+
+    ConcurrentObjectPool() = default;
+    ConcurrentObjectPool(ConcurrentObjectPool const&) = delete;
+    auto operator=(ConcurrentObjectPool const&) -> ConcurrentObjectPool& = delete;
+    ConcurrentObjectPool(ConcurrentObjectPool&&) = delete;
+    auto operator=(ConcurrentObjectPool&&) -> ConcurrentObjectPool& = delete;
+
+    auto add(memory::UniquePtr<T> object) -> void {
+        if (!object)
+            throw std::invalid_argument{"cannot add a null object"};
+        if (!objects_.enqueue(std::move(object)))
+            throw std::bad_alloc{};
+    }
+
+    KZ_NODISCARD auto acquire() -> std::unique_ptr<T, Deleter> {
+        memory::UniquePtr<T> object;
+        objects_.wait_dequeue(object);
+        return std::unique_ptr<T, Deleter>{object.release(), Deleter{this}};
+    }
+
+    KZ_NODISCARD auto try_acquire() -> std::optional<std::unique_ptr<T, Deleter>> {
+        memory::UniquePtr<T> object;
+        if (!objects_.try_dequeue(object))
+            return std::nullopt;
+        return std::unique_ptr<T, Deleter>{object.release(), Deleter{this}};
+    }
+
+    template <typename Rep, typename Period>
+    KZ_NODISCARD auto acquire_for(std::chrono::duration<Rep, Period> timeout)
+        -> std::optional<std::unique_ptr<T, Deleter>> {
+        memory::UniquePtr<T> object;
+        if (!objects_.wait_dequeue_timed(object, timeout))
+            return std::nullopt;
+        return std::unique_ptr<T, Deleter>{object.release(), Deleter{this}};
+    }
+
+    KZ_NODISCARD auto acquire_shared() -> memory::SharedPtr<T> {
+        auto object = acquire();
+        return memory::SharedPtr<T>{object.release(), Deleter{this}, memory::MiAllocator<T>{}};
+    }
+
+    KZ_NODISCARD auto available_approx() const noexcept -> std::size_t {
+        return objects_.size_approx();
+    }
+
+private:
+    kitzoo::queue::BlockingConcurrentQueue<memory::UniquePtr<T>> objects_;
 };
 
 }  // namespace kitzoo::thread

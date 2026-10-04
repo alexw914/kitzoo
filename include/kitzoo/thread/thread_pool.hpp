@@ -1,8 +1,7 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/thread/thread_pool.hpp
-// Description: Declares the fixed-size worker pool, task submission API, and
-//              orderly shutdown behavior.
+// Description: Declares the built-in worker pool and re-exports BS thread pool types.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_THREAD_THREAD_POOL_HPP
@@ -11,6 +10,7 @@
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/utilities/unique_function.hpp>
 
+#include <BS_thread_pool.hpp>
 #include <atomic>
 #include <condition_variable>
 #include <functional>
@@ -25,6 +25,11 @@
 #include <vector>
 
 namespace kitzoo::thread {
+
+using BSLightThreadPool = BS::light_thread_pool;
+using BSPriorityThreadPool = BS::priority_thread_pool;
+using BSPauseThreadPool = BS::pause_thread_pool;
+using BSWdcThreadPool = BS::wdc_thread_pool;
 
 class ThreadPool {
 public:

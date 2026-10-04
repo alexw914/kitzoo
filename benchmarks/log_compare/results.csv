@@ -1,0 +1,9 @@
+case,library,submit_ns_per_call,complete_ns_per_call,delivered
+filtered,mlog,3.13696,3.13696,0
+filtered,spdlog,1.25619,1.25619,0
+sync1,mlog,1031.74,1072.4,20000
+sync1,spdlog,304.382,304.409,20000
+async1,mlog,718.669,2381.91,20000
+async1,spdlog,277.526,283.581,20000
+async4,mlog,450.421,2063.32,80000
+async4,spdlog,278.107,375.695,80000

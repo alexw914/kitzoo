@@ -8,6 +8,6 @@
 #ifndef KITZOO_JSON_HPP
 #define KITZOO_JSON_HPP
 
-#include <kitzoo/json/json.hpp>
+#include <kitzoo/json/reader.hpp>
 
 #endif  // KITZOO_JSON_HPP

@@ -39,6 +39,9 @@
   格式检查使用 `clang-format --dry-run --Werror <修改的文件>`。
 - 使用四空格缩进，禁止制表符，行宽上限 100；大括号和 include 排序交给
   clang-format。文本使用 LF，Windows `.bat`、`.cmd` 使用 CRLF。
+- 指针 `*`、引用 `&` 和右值引用 `&&` 均紧靠类型名，例如 `Type* pointer`、
+  `std::vector<std::uint32_t>& values`、`Type&& value`。禁止从已有代码推断
+  对齐风格；`.clang-format` 使用 `DerivePointerAlignment: false` 和 Left 对齐。
 - 相邻函数实现、类型定义之间保留一个空行，不连续堆叠，也不使用多个空行。
   函数声明之间保留一个空行；紧密相关的重载可成组排列。
 - 新增和修改的函数声明、定义使用尾置返回类型：

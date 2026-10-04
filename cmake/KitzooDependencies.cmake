@@ -29,6 +29,4 @@ include(dependencies/concurrentqueue)
 include(dependencies/thread_pool)
 include(dependencies/cxxopts)
 
-if(KITZOO_WITH_MIMALLOC)
-    include(dependencies/mimalloc)
-endif()
+include(dependencies/mimalloc)

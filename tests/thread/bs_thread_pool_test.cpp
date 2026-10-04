@@ -1,4 +1,10 @@
-#include <kitzoo/thread/bs_thread_pool.hpp>
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/thread/bs_thread_pool_test.cpp
+// Description: Verifies BS thread pool aliases exposed by the public thread pool header.
+// -----------------------------------------------------------------------------
+
+#include <kitzoo/thread/thread_pool.hpp>
 
 #include <gtest/gtest.h>
 
