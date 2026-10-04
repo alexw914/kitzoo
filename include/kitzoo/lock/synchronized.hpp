@@ -5,7 +5,8 @@
 //              provides scoped access under its mutex.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOCK_SYNCHRONIZED_HPP
+#define KITZOO_LOCK_SYNCHRONIZED_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -30,6 +31,7 @@ public:
         std::lock_guard lock{mutex_};
         return std::forward<F>(f)(value_);
     }
+
     template <typename F>
     auto read(F&& f) const -> decltype(auto)
         requires requires(Mutex const& m) { std::shared_lock{m}; }
@@ -37,6 +39,7 @@ public:
         std::shared_lock lock{mutex_};
         return std::forward<F>(f)(value_);
     }
+
     KZ_NODISCARD auto copy() const -> T
         requires std::is_copy_constructible_v<T>
     {
@@ -50,3 +53,5 @@ private:
 };
 
 }  // namespace kitzoo::lock
+
+#endif  // KITZOO_LOCK_SYNCHRONIZED_HPP

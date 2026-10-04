@@ -5,7 +5,8 @@
 //              standard-library random engines.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_UTILITIES_RANDOM_HPP
+#define KITZOO_UTILITIES_RANDOM_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -53,3 +54,5 @@ auto shuffle(Range&& range) -> void {
 }
 
 }  // namespace kitzoo::util
+
+#endif  // KITZOO_UTILITIES_RANDOM_HPP

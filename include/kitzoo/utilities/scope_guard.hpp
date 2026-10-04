@@ -5,7 +5,8 @@
 //              unless dismissed.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_UTILITIES_SCOPE_GUARD_HPP
+#define KITZOO_UTILITIES_SCOPE_GUARD_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -34,6 +35,7 @@ public:
     }
 
     auto dismiss() noexcept -> void { active_ = false; }
+
     KZ_NODISCARD auto active() const noexcept -> bool { return active_; }
 
 private:
@@ -50,3 +52,5 @@ KZ_NODISCARD auto make_scope_guard(F&& f) -> ScopeGuard<std::decay_t<F>> {
 }
 
 }  // namespace kitzoo::util
+
+#endif  // KITZOO_UTILITIES_SCOPE_GUARD_HPP

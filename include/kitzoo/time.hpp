@@ -5,7 +5,10 @@
 //              deadlines, and timestamp utilities.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_TIME_HPP
+#define KITZOO_TIME_HPP
 
 #include <kitzoo/time/time.hpp>
 #include <kitzoo/time/timer.hpp>
+
+#endif  // KITZOO_TIME_HPP

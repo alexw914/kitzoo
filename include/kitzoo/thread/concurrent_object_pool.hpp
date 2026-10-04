@@ -5,7 +5,8 @@
 //              ConcurrentQueue for non-blocking lease acquisition.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_THREAD_CONCURRENT_OBJECT_POOL_HPP
+#define KITZOO_THREAD_CONCURRENT_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/queue/concurrent_queue.hpp>
@@ -24,11 +25,13 @@ class ConcurrentObjectPool {
 public:
     struct Deleter {
         ConcurrentObjectPool* pool;
+
         auto operator()(T* object) const noexcept -> void {
             if (object != nullptr)
                 (void)pool->objects_.enqueue(std::unique_ptr<T>{object});
         }
     };
+
     using UniquePtr = std::unique_ptr<T, Deleter>;
     using SharedPtr = std::shared_ptr<T>;
 
@@ -44,17 +47,20 @@ public:
         if (!objects_.enqueue(std::move(object)))
             throw std::bad_alloc{};
     }
+
     KZ_NODISCARD auto acquire() -> UniquePtr {
         std::unique_ptr<T> object;
         objects_.wait_dequeue(object);
         return UniquePtr{object.release(), Deleter{this}};
     }
+
     KZ_NODISCARD auto try_acquire() -> std::optional<UniquePtr> {
         std::unique_ptr<T> object;
         if (!objects_.try_dequeue(object))
             return std::nullopt;
         return UniquePtr{object.release(), Deleter{this}};
     }
+
     template <typename Rep, typename Period>
     KZ_NODISCARD auto acquire_for(std::chrono::duration<Rep, Period> timeout)
         -> std::optional<UniquePtr> {
@@ -63,7 +69,9 @@ public:
             return std::nullopt;
         return UniquePtr{object.release(), Deleter{this}};
     }
+
     KZ_NODISCARD auto acquire_shared() -> SharedPtr { return SharedPtr{acquire()}; }
+
     KZ_NODISCARD auto available_approx() const noexcept -> std::size_t {
         return objects_.size_approx();
     }
@@ -73,3 +81,5 @@ private:
 };
 
 }  // namespace kitzoo::thread
+
+#endif  // KITZOO_THREAD_CONCURRENT_OBJECT_POOL_HPP

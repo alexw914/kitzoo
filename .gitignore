@@ -7,7 +7,6 @@ cmake-build-*/
 .idea/
 *.xcodeproj
 *.xcworkspace
-AGENTS.md
 
 # Dependencies fetched by CMake
 _deps/

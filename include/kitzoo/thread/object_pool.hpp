@@ -5,7 +5,8 @@
 //              return objects to the pool on release.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_THREAD_OBJECT_POOL_HPP
+#define KITZOO_THREAD_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -28,13 +29,16 @@ class ObjectPool {
 public:
     struct Deleter {
         ObjectPool* pool;
+
         auto operator()(T* ptr) const noexcept -> void { pool->destroy(ptr); }
     };
+
     using UniquePtr = std::unique_ptr<T, Deleter>;
     using SharedPtr = std::shared_ptr<T>;
 
     explicit ObjectPool(std::size_t chunk_size = 64)
         : chunk_size_{chunk_size == 0 ? 64 : chunk_size} {}
+
     ObjectPool(ObjectPool const&) = delete;
     auto operator=(ObjectPool const&) -> ObjectPool& = delete;
     auto operator=(ObjectPool&&) -> ObjectPool& = delete;
@@ -44,11 +48,13 @@ public:
     KZ_NODISCARD auto acquire(Args&&... args) -> UniquePtr {
         return UniquePtr{construct(std::forward<Args>(args)...), Deleter{this}};
     }
+
     template <typename... Args>
     KZ_NODISCARD auto acquire_shared(Args&&... args) -> SharedPtr {
         auto object = acquire(std::forward<Args>(args)...);
         return SharedPtr{object.release(), [this](T* ptr) { destroy(ptr); }};
     }
+
     template <typename... Args>
     KZ_NODISCARD auto construct(Args&&... args) -> T* {
         if (free_ == nullptr)
@@ -66,6 +72,7 @@ public:
         ++live_;
         return object;
     }
+
     auto destroy(T* object) noexcept -> void {
         if (object == nullptr)
             return;
@@ -75,6 +82,7 @@ public:
         free_ = slot;
         --live_;
     }
+
     KZ_NODISCARD auto allocated_count() const noexcept -> std::size_t { return live_; }
 
 private:
@@ -87,6 +95,7 @@ private:
         free_ = slots;
         chunks_.push_back(std::move(chunk));
     }
+
     std::size_t chunk_size_;
     std::vector<std::unique_ptr<Slot[]>> chunks_;
     Slot* free_{nullptr};
@@ -94,3 +103,5 @@ private:
 };
 
 }  // namespace kitzoo::thread
+
+#endif  // KITZOO_THREAD_OBJECT_POOL_HPP

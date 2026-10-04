@@ -5,7 +5,8 @@
 //              standard-library containers.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_MEMORY_MIMALLOC_ALLOCATOR_HPP
+#define KITZOO_MEMORY_MIMALLOC_ALLOCATOR_HPP
 
 #if !defined(KZ_WITH_MIMALLOC)
 #error "kitzoo/memory/mimalloc_allocator.hpp requires the kitzoo::memory target"
@@ -26,6 +27,7 @@ public:
     using value_type = T;
 
     MimallocAllocator() noexcept = default;
+
     template <typename U>
     constexpr MimallocAllocator(MimallocAllocator<U> const&) noexcept {}
 
@@ -37,6 +39,7 @@ public:
             throw std::bad_alloc{};
         return static_cast<T*>(memory);
     }
+
     auto deallocate(T* memory, std::size_t) noexcept -> void { mi_free(memory); }
 
     template <typename U>
@@ -46,9 +49,11 @@ public:
 };
 
 template <typename T, typename U>
-constexpr auto operator==(MimallocAllocator<T> const&, MimallocAllocator<U> const&) noexcept
-    -> bool {
+constexpr auto operator==(MimallocAllocator<T> const&,
+                          MimallocAllocator<U> const&) noexcept -> bool {
     return true;
 }
 
 }  // namespace kitzoo::memory
+
+#endif  // KITZOO_MEMORY_MIMALLOC_ALLOCATOR_HPP

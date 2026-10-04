@@ -5,7 +5,8 @@
 //              and parsing operations.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_UTILITIES_UUID_HPP
+#define KITZOO_UTILITIES_UUID_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -25,6 +26,7 @@ public:
     using Bytes = std::array<std::uint8_t, 16>;
 
     constexpr Uuid() noexcept = default;
+
     explicit constexpr Uuid(Bytes bytes) noexcept : bytes_{bytes} {}
 
     KZ_NODISCARD static auto random() -> Uuid {
@@ -65,12 +67,14 @@ public:
     }
 
     KZ_NODISCARD constexpr auto bytes() const noexcept -> Bytes const& { return bytes_; }
+
     KZ_NODISCARD constexpr auto is_nil() const noexcept -> bool {
         for (auto byte : bytes_)
             if (byte != 0)
                 return false;
         return true;
     }
+
     KZ_NODISCARD auto to_string() const -> std::string {
         constexpr char digits[] = "0123456789abcdef";
         std::string text;
@@ -111,3 +115,5 @@ struct std::hash<kitzoo::util::Uuid> {
         return value;
     }
 };
+
+#endif  // KITZOO_UTILITIES_UUID_HPP

@@ -5,7 +5,8 @@
 //              the public kitzoo API.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CORE_MACRO_HPP
+#define KITZOO_CORE_MACRO_HPP
 
 #if defined(_WIN32)
 #if defined(KITZOO_SHARED_LIBRARY)
@@ -53,3 +54,5 @@
 #define KITZOO_RESTRICT KZ_RESTRICT
 #define KITZOO_STRINGIFY(value) KZ_STRINGIFY(value)
 #define KITZOO_STRINGIFY_EXPANDED(value) KZ_STRINGIFY_EXPANDED(value)
+
+#endif  // KITZOO_CORE_MACRO_HPP

@@ -5,7 +5,8 @@
 //              C++ language level for portable conditional compilation.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CORE_DEFINE_H
+#define KITZOO_CORE_DEFINE_H
 
 #if defined(__clang__)
 #define KZ_COMPILER_CLANG 1
@@ -69,3 +70,5 @@
 #else
 #define KZ_CPP20 0
 #endif
+
+#endif  // KITZOO_CORE_DEFINE_H

@@ -5,7 +5,8 @@
 //              public logging and check macros.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOG_LOGGER_HPP
+#define KITZOO_LOG_LOGGER_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -67,6 +68,7 @@ public:
     auto set_pattern(std::string pattern) -> void;
 
     auto set_level(Level level) noexcept -> void;
+
     KZ_NODISCARD auto enabled(Level level) const noexcept -> bool {
         return native_->should_log(to_spdlog(level));
     }
@@ -86,6 +88,7 @@ private:
     friend class AsyncLogger;
 
     auto write_record(LogRecord const& record) -> void;
+
     KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 
     std::string name_;
@@ -140,3 +143,5 @@ KZ_NODISCARD auto default_logger() -> Logger&;
         }                               \
     } while (false)
 #endif
+
+#endif  // KITZOO_LOG_LOGGER_HPP

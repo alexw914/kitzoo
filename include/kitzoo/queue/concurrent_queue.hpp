@@ -5,7 +5,8 @@
 //              BlockingConcurrentQueue through kitzoo names.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_QUEUE_CONCURRENT_QUEUE_HPP
+#define KITZOO_QUEUE_CONCURRENT_QUEUE_HPP
 
 #include <blockingconcurrentqueue.h>
 #include <concurrentqueue.h>
@@ -19,3 +20,5 @@ template <typename T, typename Traits = moodycamel::ConcurrentQueueDefaultTraits
 using BlockingConcurrentQueue = moodycamel::BlockingConcurrentQueue<T, Traits>;
 
 }  // namespace kitzoo::queue
+
+#endif  // KITZOO_QUEUE_CONCURRENT_QUEUE_HPP

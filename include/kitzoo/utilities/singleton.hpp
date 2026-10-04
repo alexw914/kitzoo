@@ -5,7 +5,8 @@
 //              singleton type.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_UTILITIES_SINGLETON_HPP
+#define KITZOO_UTILITIES_SINGLETON_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -48,3 +49,5 @@ private:
 };
 
 }  // namespace kitzoo::util
+
+#endif  // KITZOO_UTILITIES_SINGLETON_HPP

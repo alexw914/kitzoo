@@ -5,7 +5,8 @@
 //              for measuring and representing time.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_TIME_TIME_HPP
+#define KITZOO_TIME_TIME_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -57,6 +58,7 @@ public:
 
 private:
     explicit Deadline(std::chrono::steady_clock::time_point tp) noexcept : at_{tp} {}
+
     std::chrono::steady_clock::time_point at_;
 };
 
@@ -64,3 +66,5 @@ KZ_NODISCARD auto format_timestamp(
     std::chrono::system_clock::time_point tp = std::chrono::system_clock::now()) -> std::string;
 
 }  // namespace kitzoo::time
+
+#endif  // KITZOO_TIME_TIME_HPP

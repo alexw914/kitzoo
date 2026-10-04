@@ -5,8 +5,11 @@
 //              by the selected crypto integration.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CRYPTO_HPP
+#define KITZOO_CRYPTO_HPP
 
 #if defined(KZ_WITH_OPENSSL)
 #include <kitzoo/crypto/aes.hpp>
 #endif
+
+#endif  // KITZOO_CRYPTO_HPP

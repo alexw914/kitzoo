@@ -5,7 +5,8 @@
 //              available when the crypto target is enabled.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CRYPTO_AES_HPP
+#define KITZOO_CRYPTO_AES_HPP
 
 #if !defined(KZ_WITH_OPENSSL)
 #error "kitzoo/crypto/aes.hpp requires the kitzoo::crypto target"
@@ -25,11 +26,13 @@ enum class Padding {
 };
 
 KZ_NODISCARD auto aes_cbc_encrypt(std::span<std::byte const> data, std::span<std::byte const> key,
-                                  std::span<std::byte const> iv, Padding padding = Padding::Pkcs7)
-    -> std::vector<std::byte>;
+                                  std::span<std::byte const> iv,
+                                  Padding padding = Padding::Pkcs7) -> std::vector<std::byte>;
 
 KZ_NODISCARD auto aes_cbc_decrypt(std::span<std::byte const> ciphertext,
                                   std::span<std::byte const> key, std::span<std::byte const> iv,
                                   Padding padding = Padding::Pkcs7) -> std::vector<std::byte>;
 
 }  // namespace kitzoo::crypto
+
+#endif  // KITZOO_CRYPTO_AES_HPP

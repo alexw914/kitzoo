@@ -5,7 +5,8 @@
 //              on its worker thread until stopped.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_TIME_TIMER_HPP
+#define KITZOO_TIME_TIMER_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/utilities/unique_function.hpp>
@@ -26,6 +27,7 @@ public:
         if (interval_ <= std::chrono::milliseconds::zero())
             throw std::invalid_argument{"timer interval must be positive"};
     }
+
     ~Timer() { stop(); }
 
     Timer(Timer const&) = delete;
@@ -77,3 +79,5 @@ private:
 };
 
 }  // namespace kitzoo::time
+
+#endif  // KITZOO_TIME_TIMER_HPP

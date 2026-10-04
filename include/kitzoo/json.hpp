@@ -5,6 +5,9 @@
 //              nlohmann/json integration.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_JSON_HPP
+#define KITZOO_JSON_HPP
 
 #include <kitzoo/json/json.hpp>
+
+#endif  // KITZOO_JSON_HPP

@@ -5,6 +5,9 @@ and third-party libraries together behind modular headers and CMake targets.
 It supports Linux, macOS, and Windows. Applications can link only the modules
 they need.
 
+Repository coding conventions are documented in [AGENTS.md](AGENTS.md), including
+file headers, include guards, clang-format, and naming rules.
+
 ## Repository structure
 
 ```text

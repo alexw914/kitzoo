@@ -5,7 +5,8 @@
 //              configures this template during the build.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CORE_VERSION_HPP
+#define KITZOO_CORE_VERSION_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -22,9 +23,11 @@ struct version {
     constexpr auto operator<=>(version const&) const = default;
 };
 
+// clang-format off: preserve CMake substitution tokens.
 inline constexpr version library_version {
     @PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@,
 };
+// clang-format on
 
 inline constexpr std::string_view version_string = "@PROJECT_VERSION@";
 
@@ -39,3 +42,5 @@ struct build_info {
 KZ_NODISCARD KZ_EXPORT build_info const& current_build_info() noexcept;
 
 }  // namespace kitzoo
+
+#endif  // KITZOO_CORE_VERSION_HPP

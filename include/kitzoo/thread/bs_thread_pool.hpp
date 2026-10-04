@@ -5,7 +5,8 @@
 //              thread-pool integration target.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_THREAD_BS_THREAD_POOL_HPP
+#define KITZOO_THREAD_BS_THREAD_POOL_HPP
 
 #include <BS_thread_pool.hpp>
 #include <cstddef>
@@ -21,3 +22,5 @@ using BSPauseThreadPool = BS::pause_thread_pool;
 using BSWdcThreadPool = BS::wdc_thread_pool;
 
 }  // namespace kitzoo::thread
+
+#endif  // KITZOO_THREAD_BS_THREAD_POOL_HPP

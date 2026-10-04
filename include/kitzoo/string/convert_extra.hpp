@@ -5,7 +5,8 @@
 //              helpers.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_STRING_CONVERT_EXTRA_HPP
+#define KITZOO_STRING_CONVERT_EXTRA_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -27,3 +28,5 @@ KZ_NODISCARD auto base64_decode(std::string_view b64) -> std::optional<std::vect
 KZ_NODISCARD auto equals_ignore_case(std::string_view a, std::string_view b) noexcept -> bool;
 
 }  // namespace kitzoo::str
+
+#endif  // KITZOO_STRING_CONVERT_EXTRA_HPP

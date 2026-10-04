@@ -5,7 +5,8 @@
 //              helpers with explicit parse results.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_STRING_CONVERT_HPP
+#define KITZOO_STRING_CONVERT_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/string/string_utils.hpp>
@@ -85,3 +86,5 @@ KZ_NODISCARD auto from_number(T value) -> std::string {
 }
 
 }  // namespace kitzoo::str
+
+#endif  // KITZOO_STRING_CONVERT_HPP

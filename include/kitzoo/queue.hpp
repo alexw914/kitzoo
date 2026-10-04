@@ -5,8 +5,11 @@
 //              and their integration headers.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_QUEUE_HPP
+#define KITZOO_QUEUE_HPP
 
 #include <kitzoo/queue/blocking_queue.hpp>
 #include <kitzoo/queue/concurrent_queue.hpp>
 #include <kitzoo/queue/spsc_queue.hpp>
+
+#endif  // KITZOO_QUEUE_HPP

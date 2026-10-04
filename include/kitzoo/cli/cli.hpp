@@ -5,7 +5,8 @@
 //              value types in the kitzoo CLI namespace.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CLI_CLI_HPP
+#define KITZOO_CLI_CLI_HPP
 
 #include <cxxopts.hpp>
 
@@ -16,3 +17,5 @@ using ParseResult = cxxopts::ParseResult;
 using cxxopts::value;
 
 }  // namespace kitzoo::cli
+
+#endif  // KITZOO_CLI_CLI_HPP

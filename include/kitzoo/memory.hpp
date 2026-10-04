@@ -5,8 +5,11 @@
 //              allocator integrations.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_MEMORY_HPP
+#define KITZOO_MEMORY_HPP
 
 #if defined(KZ_WITH_MIMALLOC)
 #include <kitzoo/memory/mimalloc_allocator.hpp>
 #endif
+
+#endif  // KITZOO_MEMORY_HPP

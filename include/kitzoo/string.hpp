@@ -5,8 +5,11 @@
 //              utilities and conversion helpers.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_STRING_HPP
+#define KITZOO_STRING_HPP
 
 #include <kitzoo/string/convert.hpp>
 #include <kitzoo/string/convert_extra.hpp>
 #include <kitzoo/string/string_utils.hpp>
+
+#endif  // KITZOO_STRING_HPP

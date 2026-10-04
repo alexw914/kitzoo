@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: include/kitzoo/os/osadaptor.hpp
+// Description: Declares the singleton OS adaptor for system queries, thread
+//              operations, process CPU time, and IPC path allocation.
+// -----------------------------------------------------------------------------
+
 #ifndef KITZOO_OS_OSADAPTOR_HPP
 #define KITZOO_OS_OSADAPTOR_HPP
 
@@ -104,4 +111,4 @@ private:
 
 }  // namespace kitzoo::os
 
-#endif
+#endif  // KITZOO_OS_OSADAPTOR_HPP

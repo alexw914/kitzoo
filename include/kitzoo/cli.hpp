@@ -5,6 +5,9 @@
 //              cxxopts integration API.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CLI_HPP
+#define KITZOO_CLI_HPP
 
 #include <kitzoo/cli/cli.hpp>
+
+#endif  // KITZOO_CLI_HPP

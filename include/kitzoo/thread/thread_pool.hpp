@@ -5,7 +5,8 @@
 //              orderly shutdown behavior.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_THREAD_THREAD_POOL_HPP
+#define KITZOO_THREAD_THREAD_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/utilities/unique_function.hpp>
@@ -87,3 +88,5 @@ auto ThreadPool::submit_task(F&& f, Args&&... args)
 }
 
 }  // namespace kitzoo::thread
+
+#endif  // KITZOO_THREAD_THREAD_POOL_HPP

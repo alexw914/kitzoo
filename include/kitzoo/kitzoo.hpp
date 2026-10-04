@@ -5,7 +5,8 @@
 //              include.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_KITZOO_HPP
+#define KITZOO_KITZOO_HPP
 
 #include <kitzoo/core.hpp>
 #include <kitzoo/lock.hpp>
@@ -17,3 +18,5 @@
 #include <kitzoo/thread.hpp>
 #include <kitzoo/time.hpp>
 #include <kitzoo/utilities.hpp>
+
+#endif  // KITZOO_KITZOO_HPP

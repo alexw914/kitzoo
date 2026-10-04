@@ -5,8 +5,11 @@
 //              compiler configuration facilities.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_CORE_HPP
+#define KITZOO_CORE_HPP
 
 #include <kitzoo/core/define.h>
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/version.hpp>
+
+#endif  // KITZOO_CORE_HPP

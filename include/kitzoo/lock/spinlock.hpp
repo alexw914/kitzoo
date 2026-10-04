@@ -5,7 +5,8 @@
 //              reader-writer synchronization.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOCK_SPINLOCK_HPP
+#define KITZOO_LOCK_SPINLOCK_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -21,9 +22,11 @@ public:
         while (flag_.test_and_set(std::memory_order_acquire))
             std::this_thread::yield();
     }
+
     KZ_NODISCARD auto try_lock() noexcept -> bool {
         return !flag_.test_and_set(std::memory_order_acquire);
     }
+
     auto unlock() noexcept -> void { flag_.clear(std::memory_order_release); }
 
 private:
@@ -40,6 +43,7 @@ public:
             std::this_thread::yield();
         state_.store(kWriterActive, std::memory_order_release);
     }
+
     KZ_NODISCARD auto try_lock() noexcept -> bool {
         if (writer_gate_.test_and_set(std::memory_order_acquire))
             return false;
@@ -50,10 +54,12 @@ public:
         writer_gate_.clear(std::memory_order_release);
         return false;
     }
+
     auto unlock() noexcept -> void {
         state_.store(0, std::memory_order_release);
         writer_gate_.clear(std::memory_order_release);
     }
+
     auto lock_shared() noexcept -> void {
         auto state = state_.load(std::memory_order_relaxed);
         for (;;) {
@@ -67,6 +73,7 @@ public:
             }
         }
     }
+
     KZ_NODISCARD auto try_lock_shared() noexcept -> bool {
         auto state = state_.load(std::memory_order_relaxed);
         while ((state & kWriterMask) == 0 && (state & kReaderMask) != kReaderMask) {
@@ -76,6 +83,7 @@ public:
         }
         return false;
     }
+
     auto unlock_shared() noexcept -> void { state_.fetch_sub(1, std::memory_order_release); }
 
 private:
@@ -88,3 +96,5 @@ private:
 };
 
 }  // namespace kitzoo::lock
+
+#endif  // KITZOO_LOCK_SPINLOCK_HPP

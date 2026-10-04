@@ -1,3 +1,10 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: src/os/osadaptor.cpp
+// Description: Implements system queries, thread operations, and IPC path
+//              allocation with Linux, macOS, and Windows backends.
+// -----------------------------------------------------------------------------
+
 // Thread and IPC operations adapted from reconstructed imosadaptor OSAdaptor.
 // Platform backends preserve operation semantics, not the original binary ABI.
 #include <kitzoo/os/osadaptor.hpp>

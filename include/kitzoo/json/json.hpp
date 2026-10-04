@@ -5,7 +5,8 @@
 //              around nlohmann/json.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_JSON_JSON_HPP
+#define KITZOO_JSON_JSON_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/os/filesystem.hpp>
@@ -80,3 +81,5 @@ KZ_NODISCARD auto get_at(Json const& j, std::string_view key) -> T {
 }
 
 }  // namespace kitzoo::json
+
+#endif  // KITZOO_JSON_JSON_HPP

@@ -5,7 +5,8 @@
 //              error-code overloads and atomic file writing.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_OS_FILESYSTEM_HPP
+#define KITZOO_OS_FILESYSTEM_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -60,3 +61,5 @@ KZ_NODISCARD auto file_size(std::filesystem::path const& path,
 KZ_NODISCARD auto file_size(std::filesystem::path const& path) -> std::uintmax_t;
 
 }  // namespace kitzoo::os
+
+#endif  // KITZOO_OS_FILESYSTEM_HPP

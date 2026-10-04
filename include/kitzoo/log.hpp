@@ -5,7 +5,10 @@
 //              and asynchronous logging.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOG_HPP
+#define KITZOO_LOG_HPP
 
 #include <kitzoo/log/async_logger.hpp>
 #include <kitzoo/log/logger.hpp>
+
+#endif  // KITZOO_LOG_HPP

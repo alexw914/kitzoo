@@ -5,7 +5,8 @@
 //              coordinates lease return, close, and waiting.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_THREAD_BLOCKING_OBJECT_POOL_HPP
+#define KITZOO_THREAD_BLOCKING_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -25,6 +26,7 @@ template <typename T>
 class BlockingObjectPool {
     struct Entry {
         explicit Entry(std::unique_ptr<T> value) : object{std::move(value)} {}
+
         std::unique_ptr<T> object;
         Entry* next{};
     };
@@ -33,11 +35,13 @@ public:
     struct Deleter {
         BlockingObjectPool* pool{};
         Entry* entry{};
+
         auto operator()(T*) const noexcept -> void {
             if (pool != nullptr)
                 pool->release(entry);
         }
     };
+
     using UniquePtr = std::unique_ptr<T, Deleter>;
     using SharedPtr = std::shared_ptr<T>;
 
@@ -141,3 +145,5 @@ private:
 };
 
 }  // namespace kitzoo::thread
+
+#endif  // KITZOO_THREAD_BLOCKING_OBJECT_POOL_HPP

@@ -5,7 +5,8 @@
 //              non-copyable callables.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP
+#define KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -32,6 +33,7 @@ class unique_function<R(Args...)> {
 
 public:
     unique_function() noexcept = default;
+
     unique_function(std::nullptr_t) noexcept {}
 
     template <typename F>
@@ -52,6 +54,7 @@ public:
     ~unique_function() { reset(); }
 
     unique_function(unique_function&& other) noexcept { move_from(std::move(other)); }
+
     auto operator=(unique_function&& other) noexcept -> unique_function& {
         if (this != &other) {
             reset();
@@ -126,3 +129,5 @@ private:
 };
 
 }  // namespace kitzoo::util
+
+#endif  // KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP

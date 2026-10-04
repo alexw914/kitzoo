@@ -5,7 +5,8 @@
 //              and shutdown-facing API.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOG_ASYNC_LOGGER_HPP
+#define KITZOO_LOG_ASYNC_LOGGER_HPP
 
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/log/logger.hpp>
@@ -58,3 +59,5 @@ private:
 };
 
 }  // namespace kitzoo::log
+
+#endif  // KITZOO_LOG_ASYNC_LOGGER_HPP

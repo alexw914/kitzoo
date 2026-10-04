@@ -5,7 +5,10 @@
 //              synchronized values.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_LOCK_HPP
+#define KITZOO_LOCK_HPP
 
 #include <kitzoo/lock/spinlock.hpp>
 #include <kitzoo/lock/synchronized.hpp>
+
+#endif  // KITZOO_LOCK_HPP

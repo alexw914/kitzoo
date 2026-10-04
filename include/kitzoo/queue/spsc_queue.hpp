@@ -5,13 +5,14 @@
 //              with acquire-release synchronization.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_QUEUE_SPSC_QUEUE_HPP
+#define KITZOO_QUEUE_SPSC_QUEUE_HPP
 
 #include <kitzoo/core/macro.hpp>
 
 #include <atomic>
-#include <memory>
 #include <cstddef>
+#include <memory>
 #include <new>
 #include <optional>
 #include <type_traits>
@@ -86,3 +87,5 @@ public:
 };
 
 }  // namespace kitzoo::queue
+
+#endif  // KITZOO_QUEUE_SPSC_QUEUE_HPP

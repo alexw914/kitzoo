@@ -5,7 +5,8 @@
 //              consumers can wait for items.
 // -----------------------------------------------------------------------------
 
-#pragma once
+#ifndef KITZOO_QUEUE_BLOCKING_QUEUE_HPP
+#define KITZOO_QUEUE_BLOCKING_QUEUE_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -89,3 +90,5 @@ private:
 };
 
 }  // namespace kitzoo::queue
+
+#endif  // KITZOO_QUEUE_BLOCKING_QUEUE_HPP
