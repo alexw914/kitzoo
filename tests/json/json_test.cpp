@@ -65,11 +65,11 @@ TEST(JsonTest, RoundTrip) {
 }
 
 TEST(JsonTest, SavesAndLoadsFile) {
-    auto const dir = fs::temp_directory();
+    auto const dir = os::temp_directory();
     auto const path = dir / "data.json";
     Json value{{"ready", true}, {"count", 3}};
     save_file(path, value);
     auto loaded = load_file(path);
     EXPECT_EQ(loaded, value);
-    fs::remove_all(dir);
+    os::remove_all(dir);
 }

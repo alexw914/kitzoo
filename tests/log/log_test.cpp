@@ -2,9 +2,9 @@
 // kitzoo/log tests
 // ---------------------------------------------------------------------------
 
-#include <kitzoo/filesystem/filesystem.hpp>
 #include <kitzoo/log/async_logger.hpp>
 #include <kitzoo/log/logger.hpp>
+#include <kitzoo/os/filesystem.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -146,7 +146,7 @@ TEST_F(LoggerTest, ConcurrentWritesNoCrash) {
 }
 
 TEST_F(LoggerTest, FileSinkWrites) {
-    auto dir = fs::temp_directory();
+    auto dir = os::temp_directory();
     auto const path = dir / "test.log";
     {
         Logger file_logger{"file"};
@@ -154,9 +154,9 @@ TEST_F(LoggerTest, FileSinkWrites) {
         file_logger.log(Level::Info, "to file");
         file_logger.flush();
     }
-    auto const content = fs::read_text(path);
+    auto const content = os::read_text(path);
     EXPECT_NE(content.find("to file"), std::string::npos);
-    fs::remove_all(dir);
+    os::remove_all(dir);
 }
 
 // -- AsyncLogger ---------------------------------------------------------------

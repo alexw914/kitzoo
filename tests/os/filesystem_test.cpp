@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// kitzoo/filesystem tests
+// kitzoo/os filesystem tests
 // ---------------------------------------------------------------------------
 
-#include <kitzoo/filesystem/filesystem.hpp>
+#include <kitzoo/os/filesystem.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-using namespace kitzoo::fs;
+using namespace kitzoo::os;
 
 class FilesystemTest : public ::testing::Test {
 protected:
@@ -148,7 +148,7 @@ TEST_F(FilesystemTest, RemoveAllRecursive) {
     auto sub = dir / "a" / "b";
     std::filesystem::create_directories(sub);
     write_text(sub / "f.txt", "x");
-    auto const removed = kitzoo::fs::remove_all(dir);
+    auto const removed = kitzoo::os::remove_all(dir);
     EXPECT_GT(removed, 1u);
     EXPECT_FALSE(std::filesystem::exists(dir));
 }
@@ -180,9 +180,9 @@ TEST_F(FilesystemTest, SetCurrentPathErrorCode) {
 
 TEST_F(FilesystemTest, CreateDirectories) {
     auto const path = make_path("nested/deep");
-    EXPECT_TRUE(kitzoo::fs::create_directories(path));
+    EXPECT_TRUE(kitzoo::os::create_directories(path));
     EXPECT_TRUE(std::filesystem::is_directory(path));
-    EXPECT_FALSE(kitzoo::fs::create_directories(path));
+    EXPECT_FALSE(kitzoo::os::create_directories(path));
 }
 
 TEST_F(FilesystemTest, ListDirectoryMissing) {
@@ -194,12 +194,12 @@ TEST_F(FilesystemTest, ListDirectoryMissing) {
 
 TEST_F(FilesystemTest, FileSize) {
     write_text(make_path("sized.txt"), "12345");
-    auto const size = kitzoo::fs::file_size(make_path("sized.txt"));
+    auto const size = kitzoo::os::file_size(make_path("sized.txt"));
     EXPECT_EQ(size, 5u);
 }
 
 TEST_F(FilesystemTest, FileSizeMissing) {
-    EXPECT_THROW(static_cast<void>(kitzoo::fs::file_size(make_path("nope"))),
+    EXPECT_THROW(static_cast<void>(kitzoo::os::file_size(make_path("nope"))),
                  std::filesystem::filesystem_error);
 }
 

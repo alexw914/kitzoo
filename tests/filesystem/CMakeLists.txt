@@ -1,1 +1,0 @@
-kitzoo_add_unit_test(filesystem SOURCES filesystem_test.cpp DEPENDS filesystem)

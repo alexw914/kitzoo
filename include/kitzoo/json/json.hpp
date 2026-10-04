@@ -8,7 +8,7 @@
 #pragma once
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/filesystem/filesystem.hpp>
+#include <kitzoo/os/filesystem.hpp>
 
 #include <filesystem>
 #include <nlohmann/json.hpp>
@@ -27,23 +27,23 @@ KZ_NODISCARD inline auto parse(std::string_view text) -> Json {
 }
 
 KZ_NODISCARD inline auto load_file(std::filesystem::path const& path) -> Json {
-    return parse(fs::read_text(path));
+    return parse(os::read_text(path));
 }
 
 KZ_NODISCARD inline auto serialize(Json const& value, int indent = 2) -> std::string {
     return value.dump(indent);
 }
 
-inline auto save_file(std::filesystem::path const& path, Json const& value, int indent = 2)
-    -> void {
+inline auto save_file(std::filesystem::path const& path, Json const& value,
+                      int indent = 2) -> void {
     auto text = serialize(value, indent);
-    fs::atomic_write(path, std::span<char const>{text.data(), text.size()});
+    os::atomic_write(path, std::span<char const>{text.data(), text.size()});
 }
 
 inline auto save_file(std::filesystem::path const& path, Json const& value, std::error_code& ec,
                       int indent = 2) -> void {
     auto text = serialize(value, indent);
-    fs::atomic_write(path, std::span<char const>{text.data(), text.size()}, ec);
+    os::atomic_write(path, std::span<char const>{text.data(), text.size()}, ec);
 }
 
 template <typename T>

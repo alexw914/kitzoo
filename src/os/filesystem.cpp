@@ -1,17 +1,17 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/filesystem/filesystem.cpp
+// File: src/os/filesystem.cpp
 // Description: Implements filesystem reading, writing, atomic replacement,
 //              temporary directories, and path enumeration.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/filesystem/filesystem.hpp>
+#include <kitzoo/os/filesystem.hpp>
 
 #include <cstdio>
 #include <fstream>
 #include <random>
 
-namespace kitzoo::fs {
+namespace kitzoo::os {
 
 namespace {
 
@@ -31,7 +31,8 @@ auto open_output(std::filesystem::path const& path, std::error_code& ec) -> std:
     return file;
 }
 
-void throw_if_error(std::error_code const& ec, std::filesystem::path const& path, char const* op) {
+auto throw_if_error(std::error_code const& ec, std::filesystem::path const& path,
+                    char const* op) -> void {
     if (ec)
         throw std::filesystem::filesystem_error{op, path, ec};
 }
@@ -103,8 +104,8 @@ auto read_text(std::filesystem::path const& path) -> std::string {
     return result;
 }
 
-auto write_file(std::filesystem::path const& path, std::span<char const> data, std::error_code& ec)
-    -> void {
+auto write_file(std::filesystem::path const& path, std::span<char const> data,
+                std::error_code& ec) -> void {
     write_file_impl(path, data, ec);
 }
 
@@ -114,8 +115,8 @@ auto write_file(std::filesystem::path const& path, std::span<char const> data) -
     throw_if_error(ec, path, "write_file");
 }
 
-auto write_text(std::filesystem::path const& path, std::string_view data, std::error_code& ec)
-    -> void {
+auto write_text(std::filesystem::path const& path, std::string_view data,
+                std::error_code& ec) -> void {
     std::span const bytes{data.data(), data.size()};
     write_file_impl(path, bytes, ec);
 }
@@ -213,8 +214,8 @@ auto remove_all(std::filesystem::path const& path) -> std::uintmax_t {
     return count;
 }
 
-auto list_directory(std::filesystem::path const& dir, std::error_code& ec)
-    -> std::vector<std::filesystem::path> {
+auto list_directory(std::filesystem::path const& dir,
+                    std::error_code& ec) -> std::vector<std::filesystem::path> {
     ec.clear();
     std::filesystem::directory_iterator it{dir, ec};
     if (ec)
@@ -246,4 +247,4 @@ auto file_size(std::filesystem::path const& path) -> std::uintmax_t {
     return std::filesystem::file_size(path);
 }
 
-}  // namespace kitzoo::fs
+}  // namespace kitzoo::os

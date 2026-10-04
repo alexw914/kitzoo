@@ -32,6 +32,7 @@ set(KITZOO_INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/kitzoo")
 
 # Consumers need transitive dependencies of compiled modules.
 set(KITZOO_CONFIG_FIND_DEPS "")
+string(APPEND KITZOO_CONFIG_FIND_DEPS "find_dependency(Threads)\n")
 string(APPEND KITZOO_CONFIG_FIND_DEPS "find_dependency(spdlog CONFIG)")
 string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(nlohmann_json CONFIG)")
 string(APPEND KITZOO_CONFIG_FIND_DEPS "\nfind_dependency(cxxopts CONFIG)")

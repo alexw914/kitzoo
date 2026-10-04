@@ -14,20 +14,34 @@ namespace kitzoo::util {
 template <typename T>
 class Singleton {
 public:
-    Singleton() = delete;
+    Singleton(const Singleton&) = delete;
+    Singleton(Singleton&&) = delete;
+    auto operator=(const Singleton&) -> Singleton& = delete;
+    auto operator=(Singleton&&) -> Singleton& = delete;
 
     KZ_NODISCARD static auto instance() -> T& {
         static T value;
         return value;
     }
+
+protected:
+    Singleton() = default;
+    ~Singleton() = default;
 };
 
 template <typename T>
 class EagerSingleton {
 public:
-    EagerSingleton() = delete;
+    EagerSingleton(const EagerSingleton&) = delete;
+    EagerSingleton(EagerSingleton&&) = delete;
+    auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
+    auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
 
     KZ_NODISCARD static auto instance() noexcept -> T& { return value_; }
+
+protected:
+    EagerSingleton() = default;
+    ~EagerSingleton() = default;
 
 private:
     inline static T value_{};
