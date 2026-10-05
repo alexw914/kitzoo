@@ -19,6 +19,13 @@
 
 namespace kitzoo::time {
 
+namespace detail {
+// First tick on the scheduled grid strictly after now; ticks missed by a slow
+// callback are skipped rather than fired back to back.
+KZ_NODISCARD auto next_tick(std::chrono::steady_clock::time_point scheduled, std::chrono::steady_clock::time_point now,
+                            std::chrono::milliseconds interval) noexcept -> std::chrono::steady_clock::time_point;
+} // namespace detail
+
 class Timer {
 public:
   explicit Timer(std::chrono::milliseconds interval);

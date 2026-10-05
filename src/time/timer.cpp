@@ -16,6 +16,17 @@ thread_local Timer* active_timer = nullptr;
 thread_local bool stop_from_callback = false;
 } // namespace
 
+namespace detail {
+
+auto next_tick(std::chrono::steady_clock::time_point scheduled, std::chrono::steady_clock::time_point now,
+               std::chrono::milliseconds interval) noexcept -> std::chrono::steady_clock::time_point {
+  if (now < scheduled)
+    return scheduled + interval;
+  return scheduled + interval * ((now - scheduled) / interval + 1);
+}
+
+} // namespace detail
+
 Timer::Timer(std::chrono::milliseconds interval) : interval_{interval} {
   if (interval_ <= std::chrono::milliseconds::zero())
     throw std::invalid_argument{"timer interval must be positive"};
@@ -43,10 +54,7 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
       callback_();
       if (stop_from_callback)
         break;
-      const auto now = std::chrono::steady_clock::now();
-      do
-        next += interval_;
-      while (next <= now);
+      next = detail::next_tick(next, std::chrono::steady_clock::now(), interval_);
       lock.lock();
     }
   }};
