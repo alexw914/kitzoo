@@ -211,7 +211,7 @@ KZ_NODISCARD auto default_logger() -> Logger&;
 
 #define KZ_CHECK_MSG(expr, ...)                                                                                        \
   do {                                                                                                                 \
-    if (!static_cast<bool>(expr)) {                                                                                    \
+    if (!(expr)) {                                                                                                     \
       KZ_LOG_ERROR(__VA_ARGS__);                                                                                       \
       ::kitzoo::log::default_logger().flush();                                                                         \
       std::abort();                                                                                                    \

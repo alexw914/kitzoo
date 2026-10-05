@@ -176,9 +176,11 @@ TEST(LogMacroTest, DisabledMacroDoesNotEvaluateArguments) {
 }
 
 TEST(LogMacroTest, CheckAbortsOnFailureInEveryBuildType) {
-  KZ_CHECK(1 + 1 == 2);
-  EXPECT_DEATH(KZ_CHECK(1 + 1 == 3), "");
-  EXPECT_DEATH(KZ_CHECK_MSG(false, "custom {}", 42), "");
+  // Runtime values avoid constant-condition warnings (MSVC C4127).
+  const auto value = std::stoi("2");
+  KZ_CHECK(value == 2);
+  EXPECT_DEATH(KZ_CHECK(value == 3), "");
+  EXPECT_DEATH(KZ_CHECK_MSG(value < 0, "custom {}", value), "");
 }
 
 TEST_F(LogTest, ExplicitTimestampIsPreservedWithoutTimezoneAssumptions) {

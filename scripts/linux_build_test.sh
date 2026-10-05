@@ -32,6 +32,6 @@ cmake -S "$ROOT" -B "$ROOT/build-linux/$PRESET" -G Ninja \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DKITZOO_SANITIZERS="$SANITIZERS" \
     -DKITZOO_BUILD_TESTS=ON -DKITZOO_BUILD_BENCHMARKS=ON -DKITZOO_BUILD_EXAMPLES=ON \
-    -DKITZOO_WITH_OPENSSL=ON -DKITZOO_WITH_MIMALLOC=ON
+    -DKITZOO_WITH_OPENSSL=ON
 cmake --build "$ROOT/build-linux/$PRESET"
 ctest --test-dir "$ROOT/build-linux/$PRESET" --output-on-failure --timeout 300
