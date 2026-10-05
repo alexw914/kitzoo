@@ -91,22 +91,14 @@ TEST(TimerTest, CanRestartWithNewCallbackAfterStop) {
   }
 }
 
-TEST(TimerTest, CallbackExceptionsDoNotStopLaterTicks) {
-  Timer timer(1ms);
-  std::promise<void> continued;
-  auto ready = continued.get_future();
-  std::atomic<int> calls{0};
-  timer.start([&] {
-    const int call = calls.fetch_add(1);
-    if (call == 0)
-      throw std::runtime_error("first tick failed");
-    if (call == 1)
-      continued.set_value();
-  });
-  const auto status = ready.wait_for(5s);
-  timer.stop();
-  EXPECT_EQ(status, std::future_status::ready);
-  EXPECT_GE(calls.load(), 2);
+TEST(TimerTest, CallbackExceptionTerminates) {
+  EXPECT_DEATH(
+      {
+        Timer timer(1ms);
+        timer.start([] { throw std::runtime_error("tick failed"); });
+        std::this_thread::sleep_for(1s);
+      },
+      "");
 }
 
 TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {

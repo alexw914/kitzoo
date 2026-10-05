@@ -31,7 +31,7 @@ public:
   // Control start/stop from the owning thread; stop joins the worker.
   // A callback may call stop(); the owner joins the worker later.
   // Callbacks run at a fixed rate; ticks missed by a slow callback are skipped.
-  // Callback exceptions are suppressed.
+  // Callbacks must not throw: an escaping exception terminates the process.
   auto start(kitzoo::core::unique_function<void()> callback) -> void;
 
   auto stop() noexcept -> void;

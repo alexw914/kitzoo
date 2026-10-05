@@ -36,8 +36,8 @@ public:
     Scope(Scope&& other) noexcept;
     auto operator=(Scope&& other) noexcept -> Scope&;
 
-    // Idempotent; explicit completion propagates callback exceptions.
-    // Destructor completion suppresses exceptions while retaining the result.
+    // Idempotent; explicit completion propagates callback exceptions. Completion
+    // from the destructor or move assignment terminates if the callback throws.
     auto finish() -> TimeDuration;
 
   private:

@@ -470,17 +470,20 @@ TEST(LogCallbackTest, CopiesPayloadBeforeCallbackReturns) {
   EXPECT_EQ(copied, std::string(1024, 'x'));
 }
 
-TEST_F(LogTest, SinkErrorsInvokeHandlerAndDoNotEscapeHandlerExceptions) {
+TEST_F(LogTest, SinkErrorsInvokeHandler) {
   std::vector<std::string> errors;
-  logger_->set_error_handler([&](std::string_view error) {
-    errors.emplace_back(error);
-    throw std::runtime_error("error callback failed");
-  });
+  logger_->set_error_handler([&](std::string_view error) { errors.emplace_back(error); });
   logger_->add_sink(std::make_shared<CallbackSink>([](const auto&) { throw std::runtime_error("output failed"); }));
   EXPECT_NO_THROW(logger_->log(Level::Error, "attempt"));
   ASSERT_EQ(errors.size(), 1u);
   EXPECT_NE(errors[0].find("output failed"), std::string::npos);
   EXPECT_EQ(logger_->failed_count(), 1u);
+}
+
+TEST_F(LogTest, ThrowingErrorHandlerTerminates) {
+  logger_->set_error_handler([](std::string_view) { throw std::runtime_error("error callback failed"); });
+  logger_->add_sink(std::make_shared<CallbackSink>([](const auto&) { throw std::runtime_error("output failed"); }));
+  EXPECT_DEATH(logger_->log(Level::Error, "attempt"), "");
 }
 
 TEST_F(LogTest, AsyncFlushIsReusableAndFlushesPriorRecords) {

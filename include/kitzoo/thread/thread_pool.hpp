@@ -14,7 +14,6 @@
 #include <BS_thread_pool.hpp>
 #include <atomic>
 #include <condition_variable>
-#include <exception>
 #include <functional>
 #include <future>
 #include <memory>
@@ -33,8 +32,6 @@ using BSWdcThreadPool = BS::wdc_thread_pool;
 
 class ThreadPool {
 public:
-  using ExceptionHandler = std::function<void(std::exception_ptr)>;
-
   explicit ThreadPool(std::size_t num_threads = 0);
   ~ThreadPool();
 
@@ -43,6 +40,8 @@ public:
   ThreadPool(ThreadPool&&) = delete;
   auto operator=(ThreadPool&&) -> ThreadPool& = delete;
 
+  // Detached tasks must not throw: an escaping exception terminates the process.
+  // submit_task reports exceptions through its future.
   template <typename F, typename... Args>
   auto detach_task(F&& f, Args&&... args) -> void;
 
@@ -59,13 +58,9 @@ public:
 
   auto shutdown() -> void;
 
-  // Receives exceptions from detached tasks; submit_task reports through its future.
-  auto set_exception_handler(ExceptionHandler handler) -> void;
-
 private:
   auto enqueue_task(kitzoo::core::unique_function<void()> task) -> void;
   auto worker_loop() -> void;
-  auto report_exception(std::exception_ptr error) noexcept -> void;
 
   memory::Vector<std::jthread> workers_;
   memory::Queue<kitzoo::core::unique_function<void()>> tasks_;
@@ -73,7 +68,6 @@ private:
   mutable std::condition_variable cv_;
   mutable std::condition_variable tasks_done_cv_;
   std::size_t running_tasks_{0};
-  ExceptionHandler exception_handler_;
   std::atomic<bool> accepting_{true};
 };
 

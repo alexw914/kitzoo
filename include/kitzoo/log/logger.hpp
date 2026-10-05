@@ -124,6 +124,7 @@ public:
 
   auto set_flush_level(Level level) -> void;
 
+  // The handler must not throw: it runs from noexcept error reporting.
   auto set_error_handler(ErrorHandler handler) -> void;
 
   KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }

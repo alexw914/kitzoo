@@ -100,20 +100,27 @@ TEST(TimeWatcherTest, ExplicitCallbackExceptionRetainsResultAndIsNotRepeated) {
   EXPECT_EQ(calls, 1);
 }
 
-TEST(TimeWatcherTest, DestructorCompletesDuringUnwindAndSuppressesCallbackException) {
+TEST(TimeWatcherTest, DestructorCompletesDuringUnwind) {
   TimeWatcher watcher;
   int calls = 0;
   try {
-    auto scope = watcher.scope("unwind", [&](std::string_view, TimeDuration) {
-      ++calls;
-      throw std::runtime_error("callback failed");
-    });
+    auto scope = watcher.scope("unwind", [&](std::string_view, TimeDuration) { ++calls; });
     throw std::logic_error("work failed");
   } catch (const std::logic_error& error) {
     EXPECT_STREQ(error.what(), "work failed");
   }
   EXPECT_EQ(calls, 1);
   EXPECT_TRUE(watcher.last_result("unwind"));
+}
+
+TEST(TimeWatcherTest, ThrowingCallbackInDestructorTerminates) {
+  EXPECT_DEATH(
+      {
+        TimeWatcher watcher;
+        auto scope =
+            watcher.scope("fatal", [](std::string_view, TimeDuration) { throw std::runtime_error("callback failed"); });
+      },
+      "");
 }
 
 TEST(TimeWatcherTest, ScopeCanOutliveWatcher) {

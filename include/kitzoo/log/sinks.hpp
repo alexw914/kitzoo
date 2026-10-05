@@ -44,7 +44,7 @@ public:
   // Removes only closed regular files in this sink's naming namespace.
   auto cleanup() -> std::size_t;
 
-  // Latest background cleanup failure; cleared after a successful cleanup.
+  // Latest cleanup failure, background or explicit; cleared by a cleanup without errors.
   auto cleanup_error() -> std::string;
 
 private:

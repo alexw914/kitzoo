@@ -174,31 +174,14 @@ TEST(ThreadPoolTest, DetachTaskRunsAndWaitWaitsForCompletion) {
   EXPECT_EQ(pool.get_tasks_total(), 0u);
 }
 
-TEST(ThreadPoolTest, ExceptionHandlerReceivesDetachedFailures) {
-  ThreadPool pool{1};
-  std::promise<std::string> reported;
-  auto message = reported.get_future();
-  pool.set_exception_handler([&reported](std::exception_ptr error) {
-    try {
-      std::rethrow_exception(error);
-    } catch (const std::exception& e) {
-      reported.set_value(e.what());
-    }
-  });
-  auto submitted = pool.submit_task([]() -> int { throw std::logic_error{"submitted"}; });
-  EXPECT_THROW(static_cast<void>(submitted.get()), std::logic_error);
-  pool.detach_task([] { throw std::runtime_error{"detached"}; });
-  ASSERT_EQ(message.wait_for(std::chrono::seconds{5}), std::future_status::ready);
-  EXPECT_EQ(message.get(), "detached");
-  pool.set_exception_handler([](std::exception_ptr) { throw std::runtime_error{"handler"}; });
-  pool.detach_task([] { throw std::runtime_error{"ignored"}; });
-  EXPECT_EQ(pool.submit_task([] { return 1; }).get(), 1);
-}
-
-TEST(ThreadPoolTest, DetachedExceptionDoesNotStopWorker) {
-  ThreadPool pool{1};
-  pool.detach_task([] { throw std::runtime_error{"detached"}; });
-  EXPECT_EQ(pool.submit_task([] { return 42; }).get(), 42);
+TEST(ThreadPoolTest, DetachedExceptionTerminates) {
+  EXPECT_DEATH(
+      {
+        ThreadPool pool{1};
+        pool.detach_task([] { throw std::runtime_error{"detached"}; });
+        pool.wait();
+      },
+      "");
 }
 
 template <typename Pool>

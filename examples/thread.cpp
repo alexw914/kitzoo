@@ -7,7 +7,6 @@
 #include <kitzoo/thread.hpp>
 
 #include <cstdio>
-#include <exception>
 #include <stdexcept>
 
 auto main() -> int {
@@ -21,17 +20,14 @@ auto main() -> int {
   auto task = pool.submit_task([]() -> int { return 42; });
   std::printf("task result: %d\n", task.get());
 
-  // kitzoo ThreadPool reports exceptions from detached tasks to a handler.
+  // kitzoo ThreadPool returns task exceptions through the future.
   kitzoo::thread::ThreadPool workers{2};
-  workers.set_exception_handler([](std::exception_ptr error) -> void {
-    try {
-      std::rethrow_exception(error);
-    } catch (const std::exception& e) {
-      std::printf("detached task failed: %s\n", e.what());
-    }
-  });
-  workers.detach_task([] { throw std::runtime_error{"sensor offline"}; });
-  workers.wait();
+  auto failed = workers.submit_task([]() -> int { throw std::runtime_error{"sensor offline"}; });
+  try {
+    static_cast<void>(failed.get());
+  } catch (const std::exception& e) {
+    std::printf("submitted task failed: %s\n", e.what());
+  }
 
   // Local object reuse and shared lease ownership.
   kitzoo::thread::LocalObjectPool<int> objects{1};

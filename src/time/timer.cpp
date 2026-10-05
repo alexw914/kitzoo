@@ -40,10 +40,7 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
       if (token.stop_requested())
         break;
       lock.unlock();
-      try {
-        callback_();
-      } catch (...) {
-      }
+      callback_();
       if (stop_from_callback)
         break;
       const auto now = std::chrono::steady_clock::now();

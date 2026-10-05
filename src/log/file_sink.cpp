@@ -132,25 +132,43 @@ auto ManagedFileSink::current_file() -> std::filesystem::path {
   return impl_->current;
 }
 
+// Filesystem errors skip the affected file and are reported through cleanup_error().
 auto ManagedFileSink::cleanup_files() -> std::size_t {
   struct ClosedFile {
     std::filesystem::path path;
     std::filesystem::file_time_type modified;
   };
 
+  std::error_code first_error;
+  auto record = [&first_error](const std::error_code& error) -> bool {
+    if (error && !first_error)
+      first_error = error;
+    return !error;
+  };
+  auto remove = [&record](const std::filesystem::path& path) -> bool {
+    std::error_code error;
+    const bool removed = std::filesystem::remove(path, error);
+    return record(error) && removed;
+  };
+
   memory::Vector<ClosedFile> files;
   const auto now = std::filesystem::file_time_type::clock::now();
   std::size_t removed = 0;
-  for (const auto& entry : std::filesystem::directory_iterator(impl_->directory)) {
-    if (entry.path() == impl_->current || !std::filesystem::is_regular_file(entry.symlink_status()))
+  std::error_code error;
+  for (std::filesystem::directory_iterator it{impl_->directory, error}, end; record(error) && it != end;
+       it.increment(error)) {
+    const auto& entry = *it;
+    if (entry.path() == impl_->current || !std::filesystem::is_regular_file(entry.symlink_status(error)) ||
+        !record(error))
       continue;
-    const auto name = entry.path().filename().string();
-    if (!owned_filename(name, impl_->prefix))
+    if (!owned_filename(entry.path().filename().string(), impl_->prefix))
       continue;
-    const auto modified = entry.last_write_time();
+    const auto modified = entry.last_write_time(error);
+    if (!record(error))
+      continue;
     if (impl_->options.max_age != std::chrono::seconds::zero() && modified <= now &&
         std::chrono::duration_cast<std::chrono::seconds>(now - modified) >= impl_->options.max_age) {
-      if (std::filesystem::remove(entry.path()))
+      if (remove(entry.path()))
         ++removed;
     } else {
       files.push_back({entry.path(), modified});
@@ -161,10 +179,10 @@ auto ManagedFileSink::cleanup_files() -> std::size_t {
       return first.modified != second.modified ? first.modified < second.modified : first.path < second.path;
     });
     for (std::size_t index = 0; index < files.size() - impl_->options.max_files; ++index)
-      if (std::filesystem::remove(files[index].path))
+      if (remove(files[index].path))
         ++removed;
   }
-  impl_->cleanup_error.clear();
+  impl_->cleanup_error = first_error ? first_error.message() : std::string{};
   return removed;
 }
 
@@ -186,22 +204,7 @@ auto ManagedFileSink::cleanup_loop(std::stop_token stop) -> void {
     wake.wait_for(lock, stop, impl_->options.cleanup_interval, []() -> bool { return false; });
     if (stop.stop_requested())
       break;
-    try {
-      cleanup();
-    } catch (const std::exception& error) {
-      std::lock_guard sink_lock(mutex_);
-      // Allocation failure while recording diagnostics must not terminate the worker.
-      try {
-        impl_->cleanup_error.assign(error.what());
-      } catch (...) {
-      }
-    } catch (...) {
-      std::lock_guard sink_lock(mutex_);
-      try {
-        impl_->cleanup_error = "Unknown log cleanup failure";
-      } catch (...) {
-      }
-    }
+    cleanup();
   }
 }
 } // namespace kitzoo::log

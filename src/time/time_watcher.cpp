@@ -63,10 +63,7 @@ TimeWatcher::Scope::Scope(memory::SharedPtr<State> state, memory::String name, W
     : state_(std::move(state)), name_(std::move(name)), callback_(std::move(callback)) {}
 
 TimeWatcher::Scope::~Scope() noexcept {
-  try {
-    finish();
-  } catch (...) {
-  }
+  finish();
 }
 
 TimeWatcher::Scope::Scope(Scope&& other) noexcept
@@ -75,10 +72,7 @@ TimeWatcher::Scope::Scope(Scope&& other) noexcept
 
 auto TimeWatcher::Scope::operator=(Scope&& other) noexcept -> Scope& {
   if (this != &other) {
-    try {
-      finish();
-    } catch (...) {
-    }
+    finish();
     state_ = std::move(other.state_);
     name_ = std::move(other.name_);
     callback_ = std::move(other.callback_);

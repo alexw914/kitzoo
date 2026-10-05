@@ -21,6 +21,18 @@ namespace kitzoo::log {
 namespace {
 thread_local AsyncLogger* active_worker = nullptr;
 thread_local Logger* active_error_handler = nullptr;
+// Errors are reported synchronously, so a per-thread count detects failed writes.
+thread_local std::size_t reported_errors = 0;
+
+// Exposes spdlog's sink dispatch, which reports per-sink exceptions to the error
+// handler, for records that keep their original timestamp and thread.
+class NativeLogger final : public spdlog::logger {
+public:
+  using spdlog::logger::logger;
+
+  auto write(const spdlog::details::log_msg& message) -> void { sink_it_(message); }
+};
+
 constexpr auto kDefaultPattern = "[%Y-%m-%d %H:%M:%S.%e] [%l] [tid=%t] [%n] %s:%# %v";
 } // namespace
 
@@ -35,7 +47,7 @@ auto Logger::to_spdlog(Level level) noexcept -> spdlog::level::level_enum {
 }
 
 Logger::Logger(std::string name, const Level level)
-    : name_{name.data(), name.size()}, native_{memory::make_shared<spdlog::logger>(std::move(name))},
+    : name_{name.data(), name.size()}, native_{memory::make_shared<NativeLogger>(std::move(name))},
       pattern_{kDefaultPattern} {
   native_->set_level(to_spdlog(level));
   native_->set_pattern(pattern_);
@@ -64,22 +76,20 @@ auto Logger::set_error_handler(ErrorHandler handler) -> void {
 
 auto Logger::report_error(std::string_view message) noexcept -> void {
   failed_.fetch_add(1, std::memory_order_relaxed);
+  ++reported_errors;
   if (active_error_handler == this)
     return;
   auto* previous = active_error_handler;
   active_error_handler = this;
-  try {
-    ErrorHandler handler;
-    {
-      std::lock_guard lock(error_mutex_);
-      handler = error_handler_;
-    }
-    if (handler)
-      handler(message);
-    else
-      std::fprintf(stderr, "Logger: %.*s\n", static_cast<int>(message.size()), message.data());
-  } catch (...) {
+  ErrorHandler handler;
+  {
+    std::lock_guard lock(error_mutex_);
+    handler = error_handler_;
   }
+  if (handler)
+    handler(message);
+  else
+    std::fprintf(stderr, "Logger: %.*s\n", static_cast<int>(message.size()), message.data());
   active_error_handler = previous;
 }
 
@@ -111,23 +121,9 @@ auto Logger::write_record(const LogRecord& record) -> bool {
   const auto message = spdlog::string_view_t{record.message.data(), record.message.size()};
   spdlog::details::log_msg msg{record.timestamp, loc, record.logger_name, to_spdlog(record.level), message};
   msg.thread_id = std::hash<std::thread::id>{}(record.thread_id);
-  bool success = true;
-  for (const auto& sink : native_->sinks()) {
-    if (!sink->should_log(msg.level))
-      continue;
-    try {
-      sink->log(msg);
-    } catch (const std::exception& error) {
-      success = false;
-      report_error(error.what());
-    } catch (...) {
-      success = false;
-      report_error("unknown sink exception");
-    }
-  }
-  if (msg.level >= native_->flush_level())
-    flush();
-  return success;
+  const auto errors_before = reported_errors;
+  static_cast<NativeLogger&>(*native_).write(msg);
+  return reported_errors == errors_before;
 }
 
 auto Logger::log(const Level level, const std::string_view message, const std::source_location& loc) -> void {
@@ -232,24 +228,10 @@ auto AsyncLogger::worker_loop() -> void {
     }
     space_.notify_all();
     if (work.barrier) {
-      try {
-        logger_->flush();
-        work.barrier->set_value();
-      } catch (...) {
-        ++failed_;
-        work.barrier->set_exception(std::current_exception());
-      }
-    } else {
-      try {
-        if (!logger_->write_record(work.record))
-          ++failed_;
-      } catch (const std::exception& error) {
-        ++failed_;
-        logger_->report_error(error.what());
-      } catch (...) {
-        ++failed_;
-        logger_->report_error("unknown worker exception");
-      }
+      logger_->flush();
+      work.barrier->set_value();
+    } else if (!logger_->write_record(work.record)) {
+      ++failed_;
     }
   }
   active_worker = nullptr;
