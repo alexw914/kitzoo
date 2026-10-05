@@ -47,3 +47,30 @@ jobs:
         run: brew install ninja openssl@3
       - name: Build and test all targets
         run: ./scripts/macos_build_test.sh release
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libssl-dev gcovr
+      - name: Build and test with coverage
+        # Debug keeps line mapping exact; optimized builds merge and drop lines.
+        run: |
+          cmake -S . -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DKITZOO_ENABLE_COVERAGE=ON -DKITZOO_BUILD_TESTS=ON \
+            -DKITZOO_BUILD_EXAMPLES=OFF -DKITZOO_WITH_OPENSSL=ON
+          cmake --build build-coverage
+          ctest --test-dir build-coverage --output-on-failure --timeout 300
+      - name: Coverage report
+        run: |
+          mkdir -p coverage
+          gcovr --root . --filter include/ --filter src/ --exclude-throw-branches \
+            --print-summary --txt coverage/summary.txt --html-details coverage/index.html build-coverage
+          { echo '```'; cat coverage/summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
