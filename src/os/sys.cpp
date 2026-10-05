@@ -5,6 +5,7 @@
 //              allocation with Linux, macOS, and Windows backends.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/core/scopeguard.hpp>
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/os/sys.hpp>
 
@@ -154,6 +155,9 @@ auto stacktrace(const int max_frames) -> std::vector<std::string> {
   char** symbols = ::backtrace_symbols(frames.data(), n);
   if (symbols == nullptr)
     return {};
+  KZ_SCOPE_EXIT {
+    std::free(symbols);
+  };
 
   std::vector<std::string> out;
   out.reserve(static_cast<std::size_t>(n));
@@ -165,14 +169,15 @@ auto stacktrace(const int max_frames) -> std::vector<std::string> {
     }
     int status = 0;
     char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+    KZ_SCOPE_EXIT {
+      std::free(demangled);
+    };
     std::string entry = status == 0 ? demangled : info.dli_sname;
-    std::free(demangled);
     const auto offset =
         static_cast<const char*>(frames[static_cast<std::size_t>(i)]) - static_cast<const char*>(info.dli_saddr);
     entry += " + " + std::to_string(offset);
     out.push_back(std::move(entry));
   }
-  std::free(symbols);
   return out;
 #endif
 }
@@ -256,6 +261,9 @@ auto get_thread_name(std::thread::native_handle_type id) -> std::string {
   PWSTR wide = nullptr;
   if (!function || FAILED(function(id, &wide)))
     return {};
+  KZ_SCOPE_EXIT {
+    LocalFree(wide);
+  };
   const auto size = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
   std::string result;
   if (size > 0) {
@@ -263,7 +271,6 @@ auto get_thread_name(std::thread::native_handle_type id) -> std::string {
     WideCharToMultiByte(CP_UTF8, 0, wide, -1, result.data(), size, nullptr, nullptr);
     result.pop_back();
   }
-  LocalFree(wide);
   return result;
 #else
   char name[64]{};

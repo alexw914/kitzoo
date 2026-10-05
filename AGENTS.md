@@ -54,7 +54,7 @@
 - 注释保持精简，只说明代码无法直接表达的约束或原因；修改代码时不添加
   描述改动过程的注释，不为显而易见的逻辑添加注释。
 - 库实现（`include/`、`src/`）不使用 `try`/`catch`：资源回滚使用 RAII 或
-  `core::ScopeGuard`；可预期的失败通过返回值（如 `std::optional`、
+  `KZ_SCOPE_FAIL`；可预期的失败通过返回值（如 `std::optional`、
   `std::error_code`、`bool`）报告；线程或 `noexcept` 边界上的用户回调和
   handler 不得抛出异常，抛出即终止进程；第三方接口优先使用其不抛异常的形式。
   示例和测试不受此限制。

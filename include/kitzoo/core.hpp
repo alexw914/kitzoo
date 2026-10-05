@@ -10,7 +10,7 @@
 
 #include <kitzoo/core/cli.hpp>
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/core/scope_guard.hpp>
+#include <kitzoo/core/scopeguard.hpp>
 #include <kitzoo/core/singleton.hpp>
 #include <kitzoo/core/unique_function.hpp>
 #include <kitzoo/core/version.hpp>

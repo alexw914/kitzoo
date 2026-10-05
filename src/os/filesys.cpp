@@ -5,6 +5,7 @@
 //              temporary directories, and path enumeration.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/core/scopeguard.hpp>
 #include <kitzoo/os/filesys.hpp>
 
 #include <algorithm>
@@ -57,15 +58,20 @@ auto sync_file(const std::filesystem::path& path, std::error_code& ec) -> void {
     ec = std::error_code{static_cast<int>(::GetLastError()), std::system_category()};
     return;
   }
+  KZ_SCOPE_EXIT {
+    ::CloseHandle(handle);
+  };
   if (!::FlushFileBuffers(handle))
     ec = std::error_code{static_cast<int>(::GetLastError()), std::system_category()};
-  ::CloseHandle(handle);
 #else
   const auto fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
   if (fd < 0) {
     ec = std::error_code{errno, std::generic_category()};
     return;
   }
+  KZ_SCOPE_EXIT {
+    ::close(fd);
+  };
 #if defined(__APPLE__)
   // fsync on macOS does not flush the drive cache.
   const auto result = ::fcntl(fd, F_FULLFSYNC) == 0 ? 0 : ::fsync(fd);
@@ -74,7 +80,6 @@ auto sync_file(const std::filesystem::path& path, std::error_code& ec) -> void {
 #endif
   if (result != 0)
     ec = std::error_code{errno, std::generic_category()};
-  ::close(fd);
 #endif
 }
 

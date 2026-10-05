@@ -7,7 +7,7 @@
 #ifndef KITZOO_MEMORY_MEMORY_HPP
 #define KITZOO_MEMORY_MEMORY_HPP
 
-#include <kitzoo/core/scope_guard.hpp>
+#include <kitzoo/core/scopeguard.hpp>
 #include <kitzoo/memory/miallocator.hpp>
 
 #include <deque>
@@ -104,9 +104,10 @@ auto make_unique_with_deleter(Deleter deleter, Args&&... args) -> UniquePtr<T, D
   // The deleter must reclaim mimalloc storage or transfer its ownership.
   MiAllocator<T> allocator;
   auto* address = allocator.allocate(1);
-  core::ScopeGuard release{[&] { allocator.deallocate(address, 1); }};
+  KZ_SCOPE_FAIL {
+    allocator.deallocate(address, 1);
+  };
   std::construct_at(address, std::forward<Args>(args)...);
-  release.dismiss();
   return UniquePtr<T, Deleter>{address, std::move(deleter)};
 }
 
@@ -176,14 +177,16 @@ private:
   static auto alloc_array(Allocator allocator, std::size_t count) -> SharedPtr<T[]> {
     using Traits = std::allocator_traits<Allocator>;
     auto* address = allocator.allocate(count);
-    std::size_t constructed = 0;
-    core::ScopeGuard release{[&] {
-      std::destroy_n(address, constructed);
-      allocator.deallocate(address, count);
-    }};
-    for (; constructed < count; ++constructed)
-      Traits::construct(allocator, address + constructed);
-    release.dismiss();
+    {
+      // Scoped to construction: shared_ptr below frees the array itself on failure.
+      std::size_t constructed = 0;
+      KZ_SCOPE_FAIL {
+        std::destroy_n(address, constructed);
+        allocator.deallocate(address, count);
+      };
+      for (; constructed < count; ++constructed)
+        Traits::construct(allocator, address + constructed);
+    }
     // shared_ptr invokes the deleter if allocating its control block fails.
     return SharedPtr<T[]>(
         address,

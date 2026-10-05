@@ -4,6 +4,7 @@
 // Description: Implements mimalloc-backed pools and native shared mappings.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/core/scopeguard.hpp>
 #include <kitzoo/memory/basicmemory.hpp>
 
 #include <cstdint>
@@ -200,15 +201,14 @@ auto BasicMemory::init_shared(const SharedBasicMemoryConfig& config) -> bool {
                                     static_cast<DWORD>(bytes), wide.c_str());
   if (!mapping)
     return false;
-  if (GetLastError() == ERROR_ALREADY_EXISTS) {
-    CloseHandle(mapping);
+  const bool existed = GetLastError() == ERROR_ALREADY_EXISTS;
+  core::ScopeGuard close_mapping{[&]() noexcept { CloseHandle(mapping); }};
+  if (existed)
     return false;
-  }
   pool->storage = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, config.memory_size_bytes);
-  if (!pool->storage) {
-    CloseHandle(mapping);
+  if (!pool->storage)
     return false;
-  }
+  close_mapping.dismiss();
   impl_->mapping = mapping;
 #else
   if (name.front() != '/' || name.size() == 1 || name.find('/', 1) != std::string::npos ||
@@ -217,17 +217,17 @@ auto BasicMemory::init_shared(const SharedBasicMemoryConfig& config) -> bool {
   const auto fd = shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     return false;
-  if (ftruncate(fd, static_cast<off_t>(config.memory_size_bytes)) != 0) {
+  // The mapping stays valid after its descriptor closes.
+  KZ_SCOPE_EXIT {
     close(fd);
-    shm_unlink(name.c_str());
+  };
+  core::ScopeGuard unlink{[&]() noexcept { shm_unlink(name.c_str()); }};
+  if (ftruncate(fd, static_cast<off_t>(config.memory_size_bytes)) != 0)
     return false;
-  }
   auto* storage = mmap(nullptr, config.memory_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  close(fd);
-  if (storage == MAP_FAILED) {
-    shm_unlink(name.c_str());
+  if (storage == MAP_FAILED)
     return false;
-  }
+  unlink.dismiss();
   pool->storage = storage;
 #endif
   impl_->shared_name = std::move(owned_name);
