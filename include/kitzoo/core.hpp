@@ -9,7 +9,6 @@
 #define KITZOO_CORE_HPP
 
 #include <kitzoo/core/cli.hpp>
-#include <kitzoo/core/define.h>
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/singleton.hpp>
 #include <kitzoo/core/unique_function.hpp>
