@@ -6,8 +6,8 @@
 
 #include <kitzoo/memory/basicmemory.hpp>
 
-#include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <mimalloc.h>
 #include <mutex>
@@ -35,11 +35,15 @@ auto valid_alignment(std::size_t alignment) -> bool {
 struct SharedPool {
   void* storage = nullptr;
   std::size_t bytes = 0;
-  std::size_t cursor = 0;
-  // Allocation starts store byte sizes; continuation blocks store a sentinel.
-  Vector<std::size_t> blocks;
+  // Address-ordered, coalesced free extents: first block -> block count.
+  Map<std::size_t, std::size_t> free_extents;
+  // Allocation start block -> requested byte size.
+  Map<std::size_t, std::size_t> allocations;
 
-  explicit SharedPool(std::size_t size) : bytes(size), blocks(size / kBlockSize, 0) {}
+  explicit SharedPool(std::size_t size) : bytes(size) {
+    if (size / kBlockSize != 0)
+      free_extents.emplace(0, size / kBlockSize);
+  }
 
   auto contains(const void* address) const -> bool {
     const auto value = reinterpret_cast<std::uintptr_t>(address);
@@ -47,22 +51,29 @@ struct SharedPool {
     return storage != nullptr && value >= base && value - base < bytes;
   }
 
+  static auto block_count(std::size_t size) -> std::size_t { return size / kBlockSize + (size % kBlockSize != 0); }
+
+  // First fit over free extents; mappings are page-aligned, so block starts are 16-byte aligned.
   auto allocate(std::size_t size, std::size_t alignment) -> void* {
-    if (size == 0 || size > blocks.size() * kBlockSize || !valid_alignment(alignment))
+    if (size == 0 || size > bytes || !valid_alignment(alignment))
       return nullptr;
-    const auto count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
+    const auto count = block_count(size);
     const auto base = reinterpret_cast<std::uintptr_t>(storage);
-    for (std::size_t scanned = 0; scanned < blocks.size(); ++scanned) {
-      const auto index = (cursor + scanned) % blocks.size();
-      if (count > blocks.size() - index || (base + index * kBlockSize) % alignment != 0)
+    for (auto it = free_extents.begin(); it != free_extents.end(); ++it) {
+      const auto [start, length] = *it;
+      const auto address = base + start * kBlockSize;
+      const auto aligned = (address + alignment - 1) / alignment * alignment;
+      if ((aligned - base) % kBlockSize != 0)
         continue;
-      auto first = blocks.begin() + static_cast<std::ptrdiff_t>(index);
-      auto last = first + static_cast<std::ptrdiff_t>(count);
-      if (!std::all_of(first, last, [](std::size_t block) -> bool { return block == 0; }))
+      const auto index = (aligned - base) / kBlockSize;
+      if (index + count > start + length)
         continue;
-      std::fill(first, last, std::numeric_limits<std::size_t>::max());
-      *first = size;
-      cursor = (index + count) % blocks.size();
+      free_extents.erase(it);
+      if (index > start)
+        free_extents.emplace(start, index - start);
+      if (index + count < start + length)
+        free_extents.emplace(index + count, start + length - index - count);
+      allocations.emplace(index, size);
       return static_cast<unsigned char*>(storage) + index * kBlockSize;
     }
     return nullptr;
@@ -70,13 +81,29 @@ struct SharedPool {
 
   auto deallocate(void* address, std::size_t size) -> void {
     const auto offset = reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(storage);
-    if (offset % kBlockSize != 0 || offset / kBlockSize >= blocks.size() || size == 0)
+    if (offset % kBlockSize != 0)
       return;
-    const auto index = offset / kBlockSize;
-    if (blocks[index] != size || size == std::numeric_limits<std::size_t>::max())
+    const auto found = allocations.find(offset / kBlockSize);
+    if (found == allocations.end() || found->second != size)
       return;
-    const auto count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
-    std::fill_n(blocks.begin() + static_cast<std::ptrdiff_t>(index), count, 0);
+    auto start = found->first;
+    auto length = block_count(size);
+    allocations.erase(found);
+    const auto next = free_extents.lower_bound(start);
+    if (next != free_extents.end() && start + length == next->first) {
+      length += next->second;
+      free_extents.erase(next);
+    }
+    const auto after = free_extents.lower_bound(start);
+    if (after != free_extents.begin()) {
+      const auto previous = std::prev(after);
+      if (previous->first + previous->second == start) {
+        start = previous->first;
+        length += previous->second;
+        free_extents.erase(previous);
+      }
+    }
+    free_extents.emplace(start, length);
   }
 };
 

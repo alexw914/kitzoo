@@ -128,6 +128,27 @@ TEST(BasicMemoryTest, PoolsMappingsAndConcurrentAllocation) {
   memory.deallocate(spill, 144);
   memory.deallocate(shared, 128);
 
+  // Freed neighbours coalesce, so a fragmented pool becomes contiguous again.
+  void* quarters[4];
+  for (auto*& quarter : quarters) {
+    quarter = memory.allocate_shared(32);
+    ASSERT_EQ(memory.memory_type(quarter), MemoryType::Shared);
+  }
+  memory.deallocate(quarters[0], 32);
+  memory.deallocate(quarters[2], 32);
+  auto* fragmented = memory.allocate_shared(64);
+  EXPECT_EQ(memory.memory_type(fragmented), MemoryType::Virtual);
+  memory.deallocate(fragmented, 64);
+  memory.deallocate(quarters[1], 31); // A wrong size must not release the block.
+  auto* still_fragmented = memory.allocate_shared(64);
+  EXPECT_EQ(memory.memory_type(still_fragmented), MemoryType::Virtual);
+  memory.deallocate(still_fragmented, 64);
+  memory.deallocate(quarters[1], 32);
+  auto* merged = memory.allocate_shared(96);
+  EXPECT_EQ(merged, memory.shared_memory_address());
+  memory.deallocate(merged, 96);
+  memory.deallocate(quarters[3], 32);
+
   {
     std::pmr::vector<int> mapped{memory.shared_resource()};
     mapped.push_back(42);
