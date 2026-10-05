@@ -78,6 +78,29 @@ TEST(StrTrimTest, ConstexprWorks) {
 // join
 // ============================================================================
 
+TEST(StrSplitTest, SplitsOnDelimiterAndKeepsEmptyFields) {
+  using V = std::vector<std::string_view>;
+  EXPECT_EQ(split("a,b,,c", ","), (V{"a", "b", "", "c"}));
+  EXPECT_EQ(split(",a,", ","), (V{"", "a", ""}));
+  EXPECT_EQ(split("", ","), (V{""}));
+  EXPECT_EQ(split("a::b::c", "::"), (V{"a", "b", "c"}));
+  EXPECT_EQ(split("abc", ""), (V{"abc"}));
+}
+
+TEST(StrSplitTest, SkipEmptyDropsEmptyFields) {
+  using V = std::vector<std::string_view>;
+  EXPECT_EQ(split(",a,,b,", ",", true), (V{"a", "b"}));
+  EXPECT_TRUE(split("", ",", true).empty());
+}
+
+TEST(StrSplitTest, ViewsReferToInput) {
+  const std::string input = "key=value";
+  const auto parts = split(input, "=");
+  ASSERT_EQ(parts.size(), 2u);
+  EXPECT_EQ(parts[1].data(), input.data() + 4);
+  EXPECT_EQ(join(parts, "="), input);
+}
+
 TEST(StrJoinTest, EmptySpan) {
   const auto result = join(std::span<const std::string_view>{}, ",");
   EXPECT_TRUE(result.empty());

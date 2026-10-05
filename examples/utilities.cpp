@@ -29,13 +29,13 @@ auto main() -> int {
   // UUID generation.
   std::printf("uuid:        %s\n", kitzoo::util::Uuid::random().to_string().c_str());
 
-  // String parsing, trimming, case conversion, and hexadecimal encoding.
+  // String splitting, parsing, trimming, case conversion, and hexadecimal encoding.
   {
     using namespace kitzoo::util;
-    std::string input = "  42,Hello  ";
-    const auto separator = input.find(',');
-    const auto number = to_number<int>(std::string_view{input}.substr(0, separator));
-    const auto text = trim(std::string_view{input}.substr(separator + 1));
+    const std::string input = "  42,Hello  ";
+    const auto fields = split(input, ",");
+    const auto number = to_number<int>(fields[0]);
+    const auto text = trim(fields[1]);
     const auto encoded = hex_encode(std::as_bytes(std::span{text.data(), text.size()}));
     const auto decoded = hex_decode(encoded);
     std::printf("number=%d text=%.*s upper=%s hex=%s decoded=%zu bytes\n", number.value(),

@@ -8,6 +8,23 @@
 
 namespace kitzoo::util {
 
+auto split(const std::string_view s, const std::string_view delimiter, const bool skip_empty)
+    -> std::vector<std::string_view> {
+  if (delimiter.empty())
+    return {s};
+  std::vector<std::string_view> parts;
+  std::size_t start = 0;
+  while (true) {
+    const auto end = s.find(delimiter, start);
+    const auto part = s.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start);
+    if (!skip_empty || !part.empty())
+      parts.push_back(part);
+    if (end == std::string_view::npos)
+      return parts;
+    start = end + delimiter.size();
+  }
+}
+
 auto join(const std::span<const std::string_view> parts, const std::string_view separator) -> std::string {
   if (parts.empty())
     return {};

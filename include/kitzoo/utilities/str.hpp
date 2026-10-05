@@ -48,6 +48,11 @@ KZ_NODISCARD constexpr auto trim_right(std::string_view s) noexcept -> std::stri
   return s.substr(0, end + 1);
 }
 
+// Views refer to the input. An empty delimiter yields the whole input; skip_empty
+// drops empty fields such as those between adjacent delimiters.
+KZ_NODISCARD auto split(std::string_view s, std::string_view delimiter, bool skip_empty = false)
+    -> std::vector<std::string_view>;
+
 KZ_NODISCARD auto join(std::span<const std::string_view> parts, std::string_view separator) -> std::string;
 
 KZ_NODISCARD auto join(std::initializer_list<std::string_view> parts, std::string_view separator) -> std::string;
