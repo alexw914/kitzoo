@@ -1,6 +1,8 @@
-// ---------------------------------------------------------------------------
-// kitzoo/utilities random helper tests
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/utilities/random_test.cpp
+// Description: Verifies random operations and edge cases.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/utilities/random.hpp>
 

@@ -1,57 +1,14 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/string/convert_extra.cpp
-// Description: Implements hexadecimal, Base64, and byte-buffer conversions
-//              declared by the string module.
+// File: src/utilities/base64.cpp
+// Description: Implements Base64 encoding and decoding of byte sequences.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/string/convert_extra.hpp>
+#include <kitzoo/utilities/base64.hpp>
 
 #include <cstdint>
 
-namespace kitzoo::str {
-
-namespace {
-constexpr char kHexDigits[] = "0123456789abcdef";
-
-auto hex_value(char c) noexcept -> int {
-  if (c >= '0' && c <= '9')
-    return c - '0';
-  if (c >= 'a' && c <= 'f')
-    return c - 'a' + 10;
-  if (c >= 'A' && c <= 'F')
-    return c - 'A' + 10;
-  return -1;
-}
-} // namespace
-
-auto hex_encode(std::span<std::byte const> const data) -> std::string {
-  std::string out;
-  out.resize(data.size() * 2);
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    auto const b = static_cast<unsigned char>(data[i]);
-    out[i * 2] = kHexDigits[b >> 4];
-    out[i * 2 + 1] = kHexDigits[b & 0x0F];
-  }
-  return out;
-}
-
-auto hex_decode(std::string_view const hex) -> std::optional<std::vector<std::byte>> {
-  if (hex.size() % 2 != 0) {
-    return std::nullopt;
-  }
-  std::vector<std::byte> out;
-  out.reserve(hex.size() / 2);
-  for (std::size_t i = 0; i < hex.size(); i += 2) {
-    auto const hi = hex_value(hex[i]);
-    auto const lo = hex_value(hex[i + 1]);
-    if (hi < 0 || lo < 0) {
-      return std::nullopt;
-    }
-    out.push_back(static_cast<std::byte>((hi << 4) | lo));
-  }
-  return out;
-}
+namespace kitzoo::util {
 
 namespace {
 constexpr char kB64Alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -142,18 +99,4 @@ auto base64_decode(std::string_view const b64) -> std::optional<std::vector<std:
   return out;
 }
 
-auto equals_ignore_case(std::string_view const a, std::string_view const b) noexcept -> bool {
-  if (a.size() != b.size())
-    return false;
-  for (std::size_t i = 0; i < a.size(); ++i) {
-    auto const ca = static_cast<unsigned char>(a[i]);
-    auto const cb = static_cast<unsigned char>(b[i]);
-    auto const la = (ca >= 'A' && ca <= 'Z') ? ca + 32 : ca;
-    auto const lb = (cb >= 'A' && cb <= 'Z') ? cb + 32 : cb;
-    if (la != lb)
-      return false;
-  }
-  return true;
-}
-
-} // namespace kitzoo::str
+} // namespace kitzoo::util

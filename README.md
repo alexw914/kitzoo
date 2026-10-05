@@ -8,15 +8,14 @@ Applications can link the modules they need.
 
 | Module | Functionality |
 | --- | --- |
-| `core` | Version information, platform helpers, and command-line parsing. |
-| `utilities` | Random values, UUIDs, singletons, and optional AES encryption/decryption. |
-| `string` | String processing, number conversion, and encoding. |
-| `time` | Time queries, calendar conversion, timers, and measurements. |
+| `core` | Version information, platform helpers, command-line parsing, singletons, and move-only callables. |
+| `utilities` | String processing, encoding, random values, UUIDs, and optional AES encryption. |
+| `time` | Clocks, calendar conversion, elapsed measurements, timelines, and periodic callbacks. |
 | `os` | System queries, thread configuration, and file/directory operations. |
 | `memory` | Memory allocation, buffers, containers, and shared memory. |
 | `queue` | Blocking and concurrent queues. |
 | `thread` | Thread pools, object pools, and synchronization. |
-| `log` | Synchronous and asynchronous logging. |
+| `log` | Synchronous/asynchronous logging, file rollover, and retention. |
 | `json` | JSON parsing, file loading, and serialization. |
 
 CMake targets use the `kitzoo::<module>` naming convention.
@@ -61,7 +60,7 @@ FetchContent_Declare(kitzoo
     GIT_TAG <release-or-commit>)
 FetchContent_MakeAvailable(kitzoo)
 
-target_link_libraries(app PRIVATE kitzoo::core kitzoo::string)
+target_link_libraries(app PRIVATE kitzoo::core kitzoo::utilities)
 ```
 
 ### Installed package
@@ -74,7 +73,7 @@ Configure your application with `-DCMAKE_PREFIX_PATH=/path/to/prefix`, then use:
 
 ```cmake
 find_package(kitzoo CONFIG REQUIRED)
-target_link_libraries(app PRIVATE kitzoo::core kitzoo::string)
+target_link_libraries(app PRIVATE kitzoo::core kitzoo::utilities)
 ```
 
 ## Reference

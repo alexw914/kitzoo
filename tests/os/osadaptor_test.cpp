@@ -1,9 +1,12 @@
-// ---------------------------------------------------------------------------
-// kitzoo/os OSAdaptor tests
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/os/osadaptor_test.cpp
+// Description: Verifies osadaptor operations and edge cases.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/os/osadaptor.hpp>
 
+#include <cstdlib>
 #include <filesystem>
 #include <future>
 #include <type_traits>
@@ -86,6 +89,7 @@ TEST(OSAdaptorWindowsTest, PriorityAndAffinity) {
 #endif
 
 #if defined(__linux__)
+#include <cstdlib>
 #include <filesystem>
 #include <future>
 #include <limits>
@@ -182,48 +186,45 @@ TEST(OSAdaptorTest, UniqueSocketPathsAndNoFdLeak) {
 }
 #endif
 
-#include <cstdlib>
-#include <gtest/gtest.h>
-
 using namespace kitzoo::os;
 
-TEST(SystemTest, GetEnvExisting) {
+TEST(OSAdaptorSystemTest, GetEnvExisting) {
   // PATH exists on every supported platform
   auto const path = OSAdaptor::instance().get_env("PATH");
   ASSERT_TRUE(path.has_value());
   EXPECT_FALSE(path->empty());
 }
 
-TEST(SystemTest, GetEnvMissing) {
+TEST(OSAdaptorSystemTest, GetEnvMissing) {
   EXPECT_FALSE(OSAdaptor::instance().get_env("KITZOO_DEFINITELY_NOT_SET_12345").has_value());
 }
 
-TEST(SystemTest, Hostname) {
+TEST(OSAdaptorSystemTest, Hostname) {
   auto const hn = OSAdaptor::instance().hostname();
   EXPECT_FALSE(hn.empty());
 }
 
-TEST(SystemTest, CpuCount) {
+TEST(OSAdaptorSystemTest, CpuCount) {
   EXPECT_GE(OSAdaptor::instance().cpu_count(), 1u);
 }
 
-TEST(SystemTest, Pid) {
+TEST(OSAdaptorSystemTest, Pid) {
   EXPECT_GT(OSAdaptor::instance().current_pid(), 0L);
   EXPECT_EQ(OSAdaptor::instance().current_pid(),
             OSAdaptor::instance().current_pid()); // stable within process
 }
 
-TEST(SystemTest, PageSize) {
+TEST(OSAdaptorSystemTest, PageSize) {
   auto const ps = OSAdaptor::instance().page_size();
   EXPECT_GT(ps, 0u);
   EXPECT_EQ(ps & (ps - 1), 0u); // power of two
 }
 
-TEST(SystemTest, TotalMemory) {
+TEST(OSAdaptorSystemTest, TotalMemory) {
   EXPECT_GT(OSAdaptor::instance().total_memory(), 0u);
 }
 
-TEST(SystemTest, Username) {
+TEST(OSAdaptorSystemTest, Username) {
   // Environment-dependent: containers often lack $USER AND a utmp entry for
   // getlogin_r. If both are unavailable, OSAdaptor::instance().username() legitimately returns
   // "".
@@ -234,14 +235,14 @@ TEST(SystemTest, Username) {
   EXPECT_FALSE(name.empty());
 }
 
-TEST(SystemTest, HomeDir) {
+TEST(OSAdaptorSystemTest, HomeDir) {
   if (!OSAdaptor::instance().get_env("HOME").has_value() && !OSAdaptor::instance().get_env("USERPROFILE").has_value()) {
     GTEST_SKIP() << "no HOME/USERPROFILE in this environment";
   }
   EXPECT_FALSE(OSAdaptor::instance().home_dir().empty());
 }
 
-TEST(SystemTest, StacktraceCapturesFrames) {
+TEST(OSAdaptorSystemTest, StacktraceCapturesFrames) {
   auto const frames = OSAdaptor::instance().stacktrace();
   // Symbol names are only resolvable when the binary exports them
   // (-rdynamic); without it we still get return addresses. Only assert
@@ -251,11 +252,11 @@ TEST(SystemTest, StacktraceCapturesFrames) {
     EXPECT_FALSE(frame.empty());
 }
 
-TEST(SystemTest, StacktraceRespectsFrameLimit) {
+TEST(OSAdaptorSystemTest, StacktraceRespectsFrameLimit) {
   EXPECT_EQ(OSAdaptor::instance().stacktrace(1).size(), 1u);
 }
 
-TEST(SystemTest, StacktraceRejectsNonPositiveFrameLimit) {
+TEST(OSAdaptorSystemTest, StacktraceRejectsNonPositiveFrameLimit) {
   EXPECT_TRUE(OSAdaptor::instance().stacktrace(0).empty());
   EXPECT_TRUE(OSAdaptor::instance().stacktrace(-1).empty());
 }

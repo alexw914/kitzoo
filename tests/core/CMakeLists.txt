@@ -1,2 +1,4 @@
 kitzoo_add_unit_test(version SOURCES version_test.cpp)
 kitzoo_add_unit_test(cli SOURCES cli_test.cpp)
+kitzoo_add_unit_test(singleton SOURCES singleton_test.cpp)
+kitzoo_add_unit_test(unique_function SOURCES unique_function_test.cpp)

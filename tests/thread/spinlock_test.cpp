@@ -29,7 +29,7 @@ TEST(SpinLockTest, ProtectsSharedState) {
   EXPECT_EQ(value, 40000);
 }
 
-TEST(RWSpinLockTest, SupportsSharedAndExclusiveLocking) {
+TEST(SpinLockRwTest, SupportsSharedAndExclusiveLocking) {
   kitzoo::thread::RWSpinLock lock;
   {
     std::shared_lock first{lock};

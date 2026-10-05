@@ -50,7 +50,7 @@ auto ThreadPool::wait() -> void {
   tasks_done_cv_.wait(lock, [this] { return tasks_.empty() && running_tasks_ == 0; });
 }
 
-auto ThreadPool::enqueue_task(kitzoo::util::unique_function<void()> task) -> void {
+auto ThreadPool::enqueue_task(kitzoo::core::unique_function<void()> task) -> void {
   {
     std::lock_guard lock{mutex_};
     if (!accepting_.load(std::memory_order_acquire)) {
@@ -76,7 +76,7 @@ auto ThreadPool::shutdown() -> void {
 
 auto ThreadPool::worker_loop() -> void {
   while (true) {
-    kitzoo::util::unique_function<void()> task;
+    kitzoo::core::unique_function<void()> task;
     {
       std::unique_lock lock{mutex_};
       cv_.wait(lock, [this] { return !tasks_.empty() || !accepting_.load(std::memory_order_acquire); });

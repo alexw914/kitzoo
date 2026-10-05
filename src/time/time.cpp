@@ -1,9 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: src/time/time.cpp
-// Description: Implements checked nanosecond dates, timestamp formatting and optional PTP reads.
+// Description: Implements basic clocks, calendar conversion and steady timing utilities.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <cstdint>
@@ -65,12 +66,69 @@ auto local_date(std::time_t seconds, unsigned fraction) -> DateTime {
 
 } // namespace
 
+Stopwatch::Stopwatch() noexcept : start_(std::chrono::steady_clock::now()) {}
+
+auto Stopwatch::reset() noexcept -> void {
+  start_ = std::chrono::steady_clock::now();
+}
+
+auto Stopwatch::elapsed() const noexcept -> std::chrono::steady_clock::duration {
+  return std::chrono::steady_clock::now() - start_;
+}
+
+Deadline::Deadline(std::chrono::steady_clock::time_point target) noexcept : at_(target) {}
+
+auto Deadline::after(std::chrono::nanoseconds duration) noexcept -> Deadline {
+  return Deadline{std::chrono::steady_clock::now() + duration};
+}
+
+auto Deadline::at(std::chrono::steady_clock::time_point target) noexcept -> Deadline {
+  return Deadline{target};
+}
+
+auto Deadline::expired() const noexcept -> bool {
+  return std::chrono::steady_clock::now() >= at_;
+}
+
+auto Deadline::remaining() const noexcept -> std::chrono::steady_clock::duration {
+  return at_ - std::chrono::steady_clock::now();
+}
+
+auto Deadline::time_point() const noexcept -> std::chrono::steady_clock::time_point {
+  return at_;
+}
+
 auto utc_timestamp() -> TimeStamp {
   return system_timestamp(std::chrono::system_clock::now());
 }
 
 auto steady_timestamp() noexcept -> TimeDuration {
   return std::chrono::duration_cast<TimeDuration>(std::chrono::steady_clock::now().time_since_epoch());
+}
+
+auto ptp_timestamp(std::string_view device) -> std::optional<TimeDuration> {
+#if defined(__linux__)
+  if (device.empty() || device.find('\0') != std::string_view::npos)
+    return std::nullopt;
+  memory::String const path{device};
+  auto const descriptor = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+  if (descriptor < 0)
+    return std::nullopt;
+  auto const clock = static_cast<clockid_t>((~static_cast<unsigned>(descriptor) << 3) | 3U);
+  timespec value{};
+  auto const status = clock_gettime(clock, &value);
+  close(descriptor);
+  if (status != 0 || value.tv_nsec < 0 || value.tv_nsec >= kNanosecondsPerSecond)
+    return std::nullopt;
+  try {
+    return checked_timestamp(value.tv_sec, static_cast<unsigned>(value.tv_nsec)).time_since_epoch();
+  } catch (std::out_of_range const&) {
+    return std::nullopt;
+  }
+#else
+  (void)device;
+  return std::nullopt;
+#endif
 }
 
 auto to_date_time(TimeStamp timestamp, TimeZone zone) -> DateTime {
@@ -164,31 +222,6 @@ auto format_timestamp(TimeStamp tp, TimeZone zone, TimestampPrecision precision)
   std::snprintf(output, sizeof(output), ".%0*u", static_cast<int>(digits), date.nanosecond / divisor);
   result += output;
   return result;
-}
-
-auto ptp_timestamp(std::string_view device) -> std::optional<TimeDuration> {
-#if defined(__linux__)
-  if (device.empty() || device.find('\0') != std::string_view::npos)
-    return std::nullopt;
-  std::string const path{device};
-  auto const descriptor = open(path.c_str(), O_RDONLY | O_CLOEXEC);
-  if (descriptor < 0)
-    return std::nullopt;
-  auto const clock = static_cast<clockid_t>((~static_cast<unsigned>(descriptor) << 3) | 3U);
-  timespec value{};
-  auto const status = clock_gettime(clock, &value);
-  close(descriptor);
-  if (status != 0 || value.tv_nsec < 0 || value.tv_nsec >= kNanosecondsPerSecond)
-    return std::nullopt;
-  try {
-    return checked_timestamp(value.tv_sec, static_cast<unsigned>(value.tv_nsec)).time_since_epoch();
-  } catch (std::out_of_range const&) {
-    return std::nullopt;
-  }
-#else
-  (void)device;
-  return std::nullopt;
-#endif
 }
 
 } // namespace kitzoo::time

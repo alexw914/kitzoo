@@ -1,14 +1,16 @@
-// ---------------------------------------------------------------------------
-// kitzoo/utilities unique_function tests
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/core/unique_function_test.cpp
+// Description: Verifies ownership and invocation of move-only callable wrappers.
+// -----------------------------------------------------------------------------
 
-#include <kitzoo/utilities/unique_function.hpp>
+#include <kitzoo/core/unique_function.hpp>
 
 #include <gtest/gtest.h>
 #include <memory>
 #include <string>
 
-using namespace kitzoo::util;
+using namespace kitzoo::core;
 
 TEST(UniqueFunctionTest, Empty) {
   unique_function<void()> f;
@@ -56,7 +58,7 @@ struct Watchdog {
 
   ~Watchdog() { --alive; }
 
-  void operator()() {}
+  auto operator()() -> void {}
 };
 
 } // namespace

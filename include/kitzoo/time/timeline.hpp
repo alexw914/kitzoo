@@ -7,8 +7,9 @@
 #ifndef KITZOO_TIME_TIMELINE_HPP
 #define KITZOO_TIME_TIMELINE_HPP
 
+#include <kitzoo/core/singleton.hpp>
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/time/time.hpp>
-#include <kitzoo/utilities/singleton.hpp>
 
 #include <atomic>
 #include <functional>
@@ -102,13 +103,13 @@ public:
   auto type() const noexcept -> TimelineType override;
 
 private:
-  std::shared_ptr<Timeline> source_;
+  memory::SharedPtr<Timeline> source_;
   std::atomic<TimeDuration::rep> offset_;
 };
 
 // Optional global timeline. Initialize once before its first query; defaults to system.
 // Independent timeline objects remain available for tests or multiple replay streams.
-class Time : public util::Singleton<Time> {
+class Time : public core::Singleton<Time> {
 public:
   auto init(std::shared_ptr<Timeline> timeline) -> bool;
 
@@ -121,14 +122,14 @@ public:
   auto sleep_for(TimeDuration duration, TimeDuration timeout = {}, std::stop_token stop = {}) -> bool;
 
 private:
-  friend class util::Singleton<Time>;
+  friend class core::Singleton<Time>;
   Time();
 
-  auto selected_timeline() -> std::shared_ptr<Timeline>;
+  auto selected_timeline() -> memory::SharedPtr<Timeline>;
 
   std::mutex mutex_;
   bool initialized_ = false;
-  std::shared_ptr<Timeline> timeline_;
+  memory::SharedPtr<Timeline> timeline_;
 };
 
 } // namespace kitzoo::time

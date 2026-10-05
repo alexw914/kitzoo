@@ -53,8 +53,8 @@ public:
   AsyncLogger(AsyncLogger const&) = delete;
   auto operator=(AsyncLogger const&) -> AsyncLogger& = delete;
 
-  auto log(Level level, std::string_view message,
-           std::source_location const& loc = std::source_location::current()) -> void;
+  auto log(Level level, std::string_view message, std::source_location const& loc = std::source_location::current())
+      -> void;
 
   template <typename... Args>
   auto logf(Level level, const std::source_location& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
@@ -81,11 +81,11 @@ private:
 
   auto log_owned(Level level, memory::String message, const std::source_location& loc) -> void;
 
-  std::shared_ptr<Logger> logger_;
+  memory::SharedPtr<Logger> logger_;
 
   struct Work {
     LogRecord record{};
-    std::shared_ptr<std::promise<void>> barrier;
+    memory::SharedPtr<std::promise<void>> barrier;
   };
 
   AsyncLoggerOptions options_;

@@ -8,7 +8,7 @@
 #ifndef KITZOO_OS_OSADAPTOR_HPP
 #define KITZOO_OS_OSADAPTOR_HPP
 
-#include <kitzoo/utilities/singleton.hpp>
+#include <kitzoo/core/singleton.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -27,7 +27,7 @@ enum class OSAdaptorShedPolicy : std::uint8_t {
   Fifo,
 };
 
-class OSAdaptor : public kitzoo::util::Singleton<OSAdaptor> {
+class OSAdaptor : public kitzoo::core::Singleton<OSAdaptor> {
 public:
   auto get_env(std::string_view name) -> std::optional<std::string>;
 
@@ -96,7 +96,7 @@ public:
   auto remove_unique_domain_socket_address(const std::string& address) -> bool;
 
 private:
-  friend class kitzoo::util::Singleton<OSAdaptor>;
+  friend class kitzoo::core::Singleton<OSAdaptor>;
 
   OSAdaptor() = default;
 

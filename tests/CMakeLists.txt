@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------
 # Test infrastructure
 # ---------------------------------------------------------------------------
-# kitzoo_add_unit_test(name SOURCES ... [DEPENDS module ...] [TIMEOUT seconds])
+# kitzoo_add_unit_test(name SOURCES ... [DEPENDS module ...])
 #
 # Creates a test executable linked against kitzoo::core and GTest::gtest_main,
-# registered with CTest via gtest_discover_tests. Timeouts default to 30s.
+# registered with CTest via gtest_discover_tests.
 # Sanitizer environment is configured per-test.
 # ---------------------------------------------------------------------------
 
@@ -55,13 +55,11 @@ endfunction()
 
 # -- Test subdirectories ------------------------------------------------------
 add_subdirectory(core)
-add_subdirectory(utilities)
-add_subdirectory(string)
-add_subdirectory(time)
-add_subdirectory(thread)
-add_subdirectory(queue)
-add_subdirectory(memory)
-add_subdirectory(log)
-add_subdirectory(os)
-
 add_subdirectory(json)
+add_subdirectory(log)
+add_subdirectory(memory)
+add_subdirectory(os)
+add_subdirectory(queue)
+add_subdirectory(thread)
+add_subdirectory(time)
+add_subdirectory(utilities)

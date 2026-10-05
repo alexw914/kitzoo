@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/time/time.hpp
-// Description: Declares stopwatches, deadlines, calendar conversion and nanosecond clocks.
+// Description: Defines time types and declares clocks, calendars and steady timing utilities.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_TIME_TIME_HPP
@@ -16,15 +16,16 @@
 
 namespace kitzoo::time {
 
+using TimeStamp = std::chrono::sys_time<std::chrono::nanoseconds>;
+using TimeDuration = std::chrono::nanoseconds;
+
 class Stopwatch {
 public:
-  Stopwatch() noexcept : start_{std::chrono::steady_clock::now()} {}
+  Stopwatch() noexcept;
 
-  auto reset() noexcept -> void { start_ = std::chrono::steady_clock::now(); }
+  auto reset() noexcept -> void;
 
-  KZ_NODISCARD auto elapsed() const noexcept -> std::chrono::steady_clock::duration {
-    return std::chrono::steady_clock::now() - start_;
-  }
+  KZ_NODISCARD auto elapsed() const noexcept -> std::chrono::steady_clock::duration;
 
   template <typename Duration = std::chrono::milliseconds>
   KZ_NODISCARD auto elapsed_as() const noexcept -> Duration {
@@ -35,30 +36,33 @@ private:
   std::chrono::steady_clock::time_point start_;
 };
 
+// Targets and remaining durations use the steady clock; remaining may be negative.
 class Deadline {
 public:
-  KZ_NODISCARD static auto after(std::chrono::nanoseconds d) noexcept -> Deadline {
-    return Deadline{std::chrono::steady_clock::now() + d};
-  }
+  KZ_NODISCARD static auto after(std::chrono::nanoseconds duration) noexcept -> Deadline;
 
-  KZ_NODISCARD static auto at(std::chrono::steady_clock::time_point tp) noexcept -> Deadline { return Deadline{tp}; }
+  KZ_NODISCARD static auto at(std::chrono::steady_clock::time_point target) noexcept -> Deadline;
 
-  KZ_NODISCARD auto expired() const noexcept -> bool { return std::chrono::steady_clock::now() >= at_; }
+  KZ_NODISCARD auto expired() const noexcept -> bool;
 
-  KZ_NODISCARD auto remaining() const noexcept -> std::chrono::steady_clock::duration {
-    return at_ - std::chrono::steady_clock::now();
-  }
+  KZ_NODISCARD auto remaining() const noexcept -> std::chrono::steady_clock::duration;
 
-  KZ_NODISCARD auto time_point() const noexcept -> std::chrono::steady_clock::time_point { return at_; }
+  KZ_NODISCARD auto time_point() const noexcept -> std::chrono::steady_clock::time_point;
 
 private:
-  explicit Deadline(std::chrono::steady_clock::time_point tp) noexcept : at_{tp} {}
+  explicit Deadline(std::chrono::steady_clock::time_point target) noexcept;
 
   std::chrono::steady_clock::time_point at_;
 };
 
-using TimeStamp = std::chrono::sys_time<std::chrono::nanoseconds>;
-using TimeDuration = std::chrono::nanoseconds;
+auto utc_timestamp() -> TimeStamp;
+
+// Epoch is implementation-defined; use differences, never calendar conversion.
+auto steady_timestamp() noexcept -> TimeDuration;
+
+// Linux dynamic PTP clock; unsupported platforms/device failures return nullopt.
+// Its timescale is hardware-configured and is not automatically converted to UTC.
+auto ptp_timestamp(std::string_view device = "/dev/ptp0") -> std::optional<TimeDuration>;
 
 enum class TimeZone {
   Utc,
@@ -84,11 +88,6 @@ struct DateTime {
   unsigned day_of_year = 1;
 };
 
-auto utc_timestamp() -> TimeStamp;
-
-// Epoch is implementation-defined; use differences, never calendar conversion.
-auto steady_timestamp() noexcept -> TimeDuration;
-
 auto to_date_time(TimeStamp timestamp, TimeZone zone = TimeZone::Utc) -> DateTime;
 
 // Validates dates and nanosecond range; weekday/day_of_year are derived, not inputs.
@@ -97,10 +96,6 @@ auto from_date_time(DateTime const& date, TimeZone zone = TimeZone::Utc) -> Time
 
 auto format_timestamp(TimeStamp tp = utc_timestamp(), TimeZone zone = TimeZone::Local,
                       TimestampPrecision precision = TimestampPrecision::Milliseconds) -> std::string;
-
-// Linux dynamic PTP clock; unsupported platforms/device failures return nullopt.
-// Its timescale is hardware-configured and is not automatically converted to UTC.
-auto ptp_timestamp(std::string_view device = "/dev/ptp0") -> std::optional<TimeDuration>;
 
 } // namespace kitzoo::time
 

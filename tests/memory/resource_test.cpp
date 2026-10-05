@@ -27,7 +27,7 @@ struct alignas(256) AlignedValue {
 
 } // namespace
 
-TEST(MemoryResourceTest, LimitsAlignmentStatisticsAndRollback) {
+TEST(ResourceTest, LimitsAlignmentStatisticsAndRollback) {
   using namespace kitzoo::memory;
   LimitedResource budget{1024};
   EXPECT_EQ(budget.capacity(), 1024U);
@@ -60,7 +60,7 @@ TEST(MemoryResourceTest, LimitsAlignmentStatisticsAndRollback) {
   EXPECT_EQ(budget.stats().used_bytes, 0U);
 }
 
-TEST(MemoryResourceTest, ContainerResourcePropagationAndObjectHelpers) {
+TEST(ResourceTest, ContainerResourcePropagationAndObjectHelpers) {
   using namespace kitzoo::memory;
   LimitedResource first{65536};
   LimitedResource second{65536};
@@ -99,7 +99,7 @@ TEST(MemoryResourceTest, ContainerResourcePropagationAndObjectHelpers) {
   EXPECT_EQ(second.stats().used_bytes, 0U);
 }
 
-TEST(MemoryResourceTest, WeakPointerRetainsControlBlockUntilReset) {
+TEST(ResourceTest, WeakPointerRetainsControlBlockUntilReset) {
   using namespace kitzoo::memory;
   LimitedResource budget{4096};
   WeakPtr<int> weak;
@@ -119,7 +119,7 @@ TEST(MemoryResourceTest, WeakPointerRetainsControlBlockUntilReset) {
   EXPECT_EQ(budget.stats().allocation_count, 0U);
 }
 
-TEST(MemoryResourceTest, ArrayControlBlockFailureReclaimsStorage) {
+TEST(ResourceTest, ArrayControlBlockFailureReclaimsStorage) {
   using namespace kitzoo::memory;
   LimitedResource tiny{sizeof(int)};
   Memory objects{&tiny};
@@ -127,7 +127,7 @@ TEST(MemoryResourceTest, ArrayControlBlockFailureReclaimsStorage) {
   EXPECT_EQ(tiny.stats().used_bytes, 0U);
 }
 
-TEST(MemoryResourceTest, ConcurrentBudgetNeverExceedsCapacity) {
+TEST(ResourceTest, ConcurrentBudgetNeverExceedsCapacity) {
   using namespace kitzoo::memory;
   LimitedResource budget{256};
   std::atomic<bool> failed = false;

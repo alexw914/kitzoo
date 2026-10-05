@@ -1,24 +1,68 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/string/convert.hpp
-// Description: Declares string-to-number and number-to-string conversion
-//              helpers with explicit parse results.
+// File: include/kitzoo/utilities/str.hpp
+// Description: Declares string processing, numeric parsing, and hexadecimal conversion.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_STRING_CONVERT_HPP
-#define KITZOO_STRING_CONVERT_HPP
+#ifndef KITZOO_UTILITIES_STR_HPP
+#define KITZOO_UTILITIES_STR_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/string/string_utils.hpp>
 
 #include <charconv>
 #include <concepts>
+#include <cstddef>
+#include <initializer_list>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
-namespace kitzoo::str {
+namespace kitzoo::util {
+
+namespace detail {
+inline constexpr std::string_view kAsciiWhitespace = " \t\n\r\f\v";
+}
+
+KZ_NODISCARD constexpr auto trim(std::string_view s) noexcept -> std::string_view {
+  auto const start = s.find_first_not_of(detail::kAsciiWhitespace);
+  if (start == std::string_view::npos)
+    return {};
+  auto const end = s.find_last_not_of(detail::kAsciiWhitespace);
+  return s.substr(start, end - start + 1);
+}
+
+KZ_NODISCARD constexpr auto trim_left(std::string_view s) noexcept -> std::string_view {
+  auto const start = s.find_first_not_of(detail::kAsciiWhitespace);
+  if (start == std::string_view::npos)
+    return {};
+  return s.substr(start);
+}
+
+KZ_NODISCARD constexpr auto trim_right(std::string_view s) noexcept -> std::string_view {
+  auto const end = s.find_last_not_of(detail::kAsciiWhitespace);
+  if (end == std::string_view::npos)
+    return {};
+  return s.substr(0, end + 1);
+}
+
+KZ_NODISCARD auto join(std::span<std::string_view const> parts, std::string_view separator) -> std::string;
+
+KZ_NODISCARD auto join(std::initializer_list<std::string_view> parts, std::string_view separator) -> std::string;
+
+KZ_NODISCARD auto replace_all(std::string_view s, std::string_view from, std::string_view to) -> std::string;
+
+KZ_NODISCARD auto to_lower(std::string_view s) -> std::string;
+
+KZ_NODISCARD auto to_upper(std::string_view s) -> std::string;
+
+KZ_NODISCARD auto hex_encode(std::span<std::byte const> data) -> std::string;
+
+KZ_NODISCARD auto hex_decode(std::string_view hex) -> std::optional<std::vector<std::byte>>;
+
+KZ_NODISCARD auto equals_ignore_case(std::string_view a, std::string_view b) noexcept -> bool;
 
 template <std::integral T>
 KZ_NODISCARD auto to_number(std::string_view s, int base = 10) noexcept -> std::optional<T> {
@@ -85,6 +129,6 @@ KZ_NODISCARD auto from_number(T value) -> std::string {
   return {buf, static_cast<std::size_t>(ptr - buf)};
 }
 
-} // namespace kitzoo::str
+} // namespace kitzoo::util
 
-#endif // KITZOO_STRING_CONVERT_HPP
+#endif // KITZOO_UTILITIES_STR_HPP

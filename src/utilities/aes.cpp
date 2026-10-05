@@ -5,6 +5,7 @@
 //              EVP, including padding validation and error handling.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/utilities/aes.hpp>
 
 #include <memory>
@@ -15,7 +16,7 @@ namespace kitzoo::util {
 
 namespace {
 
-using EvpCtx = std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)>;
+using EvpCtx = memory::UniquePtr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)>;
 
 auto cipher_for(std::size_t const key_size) -> EVP_CIPHER const* {
   switch (key_size) {

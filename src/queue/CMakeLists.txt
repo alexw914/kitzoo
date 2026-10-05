@@ -1,6 +1,6 @@
 include(GNUInstallDirs)
 
-kitzoo_add_module(queue DEPENDS core)
+kitzoo_add_module(queue DEPENDS core memory)
 
 target_include_directories(
     kitzoo_queue SYSTEM

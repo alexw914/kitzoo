@@ -170,19 +170,19 @@ TEST(ThreadPoolTest, DetachedExceptionDoesNotStopWorker) {
 }
 
 template <typename Pool>
-class BSThreadPoolTest : public ::testing::Test {};
+class ThreadPoolBsTest : public ::testing::Test {};
 
-using BSThreadPoolTypes = ::testing::Types<BSLightThreadPool, BSPriorityThreadPool, BSPauseThreadPool, BSWdcThreadPool>;
-TYPED_TEST_SUITE(BSThreadPoolTest, BSThreadPoolTypes);
+using ThreadPoolBsTypes = ::testing::Types<BSLightThreadPool, BSPriorityThreadPool, BSPauseThreadPool, BSWdcThreadPool>;
+TYPED_TEST_SUITE(ThreadPoolBsTest, ThreadPoolBsTypes);
 
-TYPED_TEST(BSThreadPoolTest, SubmitsTasksAndReturnsResults) {
+TYPED_TEST(ThreadPoolBsTest, SubmitsTasksAndReturnsResults) {
   TypeParam pool{2};
 
   EXPECT_EQ(pool.get_thread_count(), 2u);
   EXPECT_EQ(pool.submit_task([]() -> int { return 42; }).get(), 42);
 }
 
-TYPED_TEST(BSThreadPoolTest, PropagatesTaskExceptions) {
+TYPED_TEST(ThreadPoolBsTest, PropagatesTaskExceptions) {
   TypeParam pool{1};
   auto future = pool.submit_task([]() -> int { throw std::runtime_error{"bad"}; });
 
@@ -190,7 +190,7 @@ TYPED_TEST(BSThreadPoolTest, PropagatesTaskExceptions) {
   EXPECT_EQ(pool.submit_task([]() -> int { return 42; }).get(), 42);
 }
 
-TYPED_TEST(BSThreadPoolTest, WaitDrainsDetachedTasks) {
+TYPED_TEST(ThreadPoolBsTest, WaitDrainsDetachedTasks) {
   std::atomic<int> counter{0};
   TypeParam pool{2};
 

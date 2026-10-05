@@ -10,7 +10,6 @@
 #include <mutex>
 #include <new>
 #include <stdexcept>
-#include <unordered_map>
 
 namespace kitzoo::memory {
 namespace {
@@ -47,13 +46,13 @@ struct LimitedResource::Impl {
   std::pmr::memory_resource* upstream;
   mutable std::mutex mutex;
   MemoryStats stats;
-  std::unordered_map<void const*, Allocation> allocations;
+  UnorderedMap<void const*, Allocation> allocations;
 
   Impl(std::size_t limit, std::pmr::memory_resource* resource) : capacity(limit), upstream(resource) {}
 };
 
 LimitedResource::LimitedResource(std::size_t capacity, std::pmr::memory_resource* upstream)
-    : impl_(std::make_unique<Impl>(capacity, upstream)) {
+    : impl_(memory::make_unique<Impl>(capacity, upstream)) {
   if (!upstream)
     throw std::invalid_argument("LimitedResource requires an upstream resource");
 }

@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: tests/memory/byte_buffer_test.cpp
+// File: tests/memory/bytebuffer_test.cpp
 // Description: Verifies aligned byte storage, growth, ownership transfer and aliased appends.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/byte_buffer.hpp>
+#include <kitzoo/memory/bytebuffer.hpp>
 
 #include <cstdint>
 #include <cstring>

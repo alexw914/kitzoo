@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: tests/memory/mi_allocator_test.cpp
+// File: tests/memory/miallocator_test.cpp
 // Description: Verifies direct mimalloc allocation through standard containers.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/mi_allocator.hpp>
+#include <kitzoo/memory/miallocator.hpp>
 
 #include <gtest/gtest.h>
 #include <limits>

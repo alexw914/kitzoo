@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/memory/byte_buffer.cpp
+// File: src/memory/bytebuffer.cpp
 // Description: Implements aligned byte-buffer growth and exception-safe mimalloc ownership.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/byte_buffer.hpp>
+#include <kitzoo/memory/bytebuffer.hpp>
 
 #include <algorithm>
 #include <cstdint>

@@ -8,9 +8,9 @@
 #include <kitzoo/core/build_config.hpp>
 #include <kitzoo/core/version.hpp>
 
-namespace kitzoo {
+namespace kitzoo::core {
 
-build_info const& current_build_info() noexcept {
+auto current_build_info() noexcept -> build_info const& {
   static const build_info info{
       .lib_version = library_version,
       .version_str = version_string,
@@ -25,4 +25,4 @@ build_info const& current_build_info() noexcept {
   return info;
 }
 
-} // namespace kitzoo
+} // namespace kitzoo::core

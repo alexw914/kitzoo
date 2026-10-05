@@ -9,9 +9,9 @@
 #define KITZOO_QUEUE_BLOCKING_QUEUE_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/memory/memory.hpp>
 
 #include <condition_variable>
-#include <deque>
 #include <mutex>
 #include <optional>
 #include <utility>
@@ -85,7 +85,7 @@ public:
 private:
   mutable std::mutex mutex_;
   std::condition_variable cv_;
-  std::deque<T> deque_;
+  memory::Deque<T> deque_;
   bool closed_{false};
 };
 

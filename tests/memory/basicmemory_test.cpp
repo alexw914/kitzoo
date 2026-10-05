@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: tests/memory/basic_memory_test.cpp
+// File: tests/memory/basicmemory_test.cpp
 // Description: Verifies singleton budgets, shared mappings, fallback and concurrent allocation.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/basic_memory.hpp>
+#include <kitzoo/memory/basicmemory.hpp>
 #include <kitzoo/memory/memory.hpp>
 
 #include <atomic>

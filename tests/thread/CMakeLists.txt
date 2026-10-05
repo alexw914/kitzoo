@@ -1,5 +1,4 @@
 kitzoo_add_unit_test(thread_pool SOURCES thread_pool_test.cpp DEPENDS thread)
 kitzoo_add_unit_test(object_pool SOURCES object_pool_test.cpp DEPENDS thread)
-kitzoo_add_unit_test(local_object_pool SOURCES local_object_pool_test.cpp DEPENDS thread)
 kitzoo_add_unit_test(spinlock SOURCES spinlock_test.cpp DEPENDS thread)
 kitzoo_add_unit_test(synchronized SOURCES synchronized_test.cpp DEPENDS thread)

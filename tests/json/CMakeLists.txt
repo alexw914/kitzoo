@@ -1,1 +1,1 @@
-kitzoo_add_unit_test(json SOURCES reader_test.cpp DEPENDS json)
+kitzoo_add_unit_test(reader SOURCES reader_test.cpp DEPENDS json log)

@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace kitzoo {
+namespace kitzoo::core {
 
 struct version {
   std::uint16_t major;
@@ -39,8 +39,8 @@ struct build_info {
   std::string_view sanitizers;
 };
 
-KZ_NODISCARD KZ_EXPORT build_info const& current_build_info() noexcept;
+KZ_NODISCARD KZ_EXPORT auto current_build_info() noexcept -> build_info const&;
 
-} // namespace kitzoo
+} // namespace kitzoo::core
 
 #endif // KITZOO_CORE_VERSION_HPP

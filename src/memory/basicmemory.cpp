@@ -1,17 +1,16 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/memory/basic_memory.cpp
+// File: src/memory/basicmemory.cpp
 // Description: Implements mimalloc-backed pools and native shared mappings.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/basic_memory.hpp>
+#include <kitzoo/memory/basicmemory.hpp>
 
 #include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <mimalloc.h>
 #include <mutex>
-#include <vector>
 
 #if defined(_WIN32)
 #ifndef NOMINMAX
@@ -38,7 +37,7 @@ struct SharedPool {
   std::size_t bytes = 0;
   std::size_t cursor = 0;
   // Allocation starts store byte sizes; continuation blocks store a sentinel.
-  std::vector<std::size_t> blocks;
+  Vector<std::size_t> blocks;
 
   explicit SharedPool(std::size_t size) : bytes(size), blocks(size / kBlockSize, 0) {}
 
@@ -118,9 +117,9 @@ struct BasicMemory::Impl {
   explicit Impl(BasicMemory& owner) : ordinary_resource(owner, false), shared_resource(owner, true) {}
 
   mutable std::mutex mutex;
-  std::unique_ptr<LimitedResource> virtual_budget;
-  std::unique_ptr<SharedPool> shared_pool;
-  std::string shared_name;
+  UniquePtr<LimitedResource> virtual_budget;
+  UniquePtr<SharedPool> shared_pool;
+  String shared_name;
 #if defined(_WIN32)
   HANDLE mapping = nullptr;
 #endif
@@ -142,7 +141,7 @@ struct BasicMemory::Impl {
   }
 };
 
-BasicMemory::BasicMemory() : impl_(std::make_unique<Impl>(*this)) {}
+BasicMemory::BasicMemory() : impl_(memory::make_unique<Impl>(*this)) {}
 
 BasicMemory::~BasicMemory() = default;
 
@@ -150,7 +149,7 @@ auto BasicMemory::init_virtual(BasicMemoryConfig const& config) -> bool {
   std::lock_guard lock(impl_->mutex);
   if (impl_->virtual_budget || config.memory_size_bytes == 0)
     return false;
-  impl_->virtual_budget = std::make_unique<LimitedResource>(config.memory_size_bytes);
+  impl_->virtual_budget = memory::make_unique<LimitedResource>(config.memory_size_bytes);
   return true;
 }
 
@@ -160,9 +159,9 @@ auto BasicMemory::init_shared(SharedBasicMemoryConfig const& config) -> bool {
   if (impl_->shared_pool || config.memory_size_bytes < kBlockSize || name.empty() ||
       name.find('\0') != std::string::npos)
     return false;
-  auto pool = std::make_unique<SharedPool>(config.memory_size_bytes);
+  auto pool = memory::make_unique<SharedPool>(config.memory_size_bytes);
   // Prepare all throwing allocations before acquiring OS resources.
-  auto owned_name = name;
+  String owned_name{name.data(), name.size()};
 #if defined(_WIN32)
   auto const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.c_str(), -1, nullptr, 0);
   if (length <= 0)
@@ -263,7 +262,7 @@ auto BasicMemory::virtual_stats() const -> MemoryStats {
 
 auto BasicMemory::get_shared_memory_name() const -> std::string {
   std::lock_guard lock(impl_->mutex);
-  return impl_->shared_name;
+  return {impl_->shared_name.data(), impl_->shared_name.size()};
 }
 
 auto BasicMemory::get_memory_size_bytes() const -> std::size_t {

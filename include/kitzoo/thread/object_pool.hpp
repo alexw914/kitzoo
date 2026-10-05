@@ -9,7 +9,7 @@
 #define KITZOO_THREAD_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/memory/advanced_types.hpp>
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/queue/concurrent_queue.hpp>
 
 #include <chrono>

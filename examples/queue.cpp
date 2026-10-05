@@ -1,13 +1,10 @@
-// ---------------------------------------------------------------------------
-// kitzoo example: queues
-//
-// Demonstrates:
-//   - BlockingQueue: MPMC handoff with close() shutdown semantics
-//   - SPSCQueue: lock-free single-producer/single-consumer ring
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: examples/queue.cpp
+// Description: Demonstrates blocking, single-producer, and concurrent queues.
+// -----------------------------------------------------------------------------
 
-#include <kitzoo/queue/blocking_queue.hpp>
-#include <kitzoo/queue/spsc_queue.hpp>
+#include <kitzoo/queue.hpp>
 
 #include <cstdio>
 #include <thread>
@@ -15,7 +12,7 @@
 using namespace kitzoo;
 using namespace kitzoo::queue;
 
-int main() {
+auto main() -> int {
   // BlockingQueue: two producers feed one consumer; close() ends the stream.
   {
     BlockingQueue<int> queue;
@@ -53,7 +50,7 @@ int main() {
       }
     });
 
-    long sum = 0;
+    long long sum = 0;
     for (int seen = 0; seen < kCount;) {
       if (auto const item = queue.pop()) {
         sum += *item;
@@ -63,7 +60,16 @@ int main() {
       }
     }
     producer.join();
-    std::printf("spsc queue sum: %ld\n", sum);
+    std::printf("spsc queue sum: %lld\n", sum);
+  }
+
+  // ConcurrentQueue supports multiple producers and consumers.
+  {
+    ConcurrentQueue<int> queue;
+    queue.enqueue(42);
+    int value = 0;
+    if (queue.try_dequeue(value))
+      std::printf("concurrent queue value: %d\n", value);
   }
 
   return 0;

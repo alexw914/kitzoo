@@ -1,6 +1,8 @@
-// ---------------------------------------------------------------------------
-// kitzoo/queue BlockingQueue tests
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/queue/blocking_queue_test.cpp
+// Description: Verifies blocking queue operations and edge cases.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/queue/blocking_queue.hpp>
 

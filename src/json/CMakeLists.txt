@@ -7,7 +7,7 @@ target_include_directories(kitzoo_json INTERFACE
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_compile_features(kitzoo_json INTERFACE cxx_std_20)
 target_link_libraries(
-    kitzoo_json INTERFACE kitzoo::os nlohmann_json::nlohmann_json)
+    kitzoo_json INTERFACE kitzoo::os kitzoo::memory nlohmann_json::nlohmann_json)
 kitzoo_apply_warnings(kitzoo_json)
 kitzoo_apply_sanitizers(kitzoo_json)
 if(KITZOO_INSTALL)

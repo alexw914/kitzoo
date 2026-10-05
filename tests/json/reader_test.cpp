@@ -5,15 +5,18 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/json.hpp>
+#include <kitzoo/log.hpp>
 
+#include <cstdio>
 #include <gtest/gtest.h>
+#include <type_traits>
 #include <utility>
 
 using namespace kitzoo::json;
 
 namespace {
 
-class JsonReaderFileTest : public testing::Test {
+class ReaderFileTest : public testing::Test {
 protected:
   auto SetUp() -> void override { dir_ = kitzoo::os::FsAdaptor::instance().temp_directory(); }
 
@@ -27,7 +30,7 @@ protected:
 
 } // namespace
 
-TEST(JsonReaderTest, AcceptsJsonTextOverloads) {
+TEST(ReaderTest, AcceptsJsonTextOverloads) {
   std::string const text = R"({"workers":4})";
   Reader from_string(text);
   Reader from_view(std::string_view{text});
@@ -39,7 +42,50 @@ TEST(JsonReaderTest, AcceptsJsonTextOverloads) {
   }
 }
 
-TEST(JsonReaderTest, OwnsCopiedAndMovedJsonValues) {
+TEST(ReaderTest, ErrorReferenceTracksLoadsAndCopies) {
+  static_assert(std::is_same_v<decltype(std::declval<Reader const&>().error_info()), kitzoo::memory::String const&>);
+  static_assert(noexcept(std::declval<Reader const&>().error_info()));
+  Reader reader;
+  auto const& error = reader.error_info();
+  EXPECT_TRUE(error.empty());
+  ASSERT_FALSE(reader.parse("{bad"));
+  EXPECT_FALSE(error.empty());
+  EXPECT_EQ(&error, &reader.error_info());
+  Reader copy = reader;
+  EXPECT_EQ(copy.error_info(), error);
+  ASSERT_TRUE(reader.parse("{\"value\":1}"));
+  EXPECT_TRUE(error.empty());
+  EXPECT_TRUE(reader.is_parse_success());
+  EXPECT_FALSE(copy.is_parse_success());
+  EXPECT_FALSE(copy.error_info().empty());
+}
+
+TEST(ReaderTest, ErrorInfoWorksWithLoggerAndPrintWithoutStringCopies) {
+  Reader reader("{bad");
+  ASSERT_FALSE(reader.is_parse_success());
+  std::string captured;
+  kitzoo::log::LoggerOptions options;
+  options.sinks.push_back(
+      kitzoo::memory::make_shared<kitzoo::log::CallbackSink>([&](spdlog::details::log_msg const& message) -> void {
+        captured.assign(message.payload.data(), message.payload.size());
+      }));
+  kitzoo::log::Logger logger("reader", options);
+  logger.log(kitzoo::log::Level::Error, reader.error_info());
+  EXPECT_EQ(captured, "Invalid JSON text");
+  logger.logf(kitzoo::log::Level::Error, std::source_location::current(), "JSON failed: {}", reader.error_info());
+  EXPECT_EQ(captured, "JSON failed: Invalid JSON text");
+
+  auto close_file = [](std::FILE* file) noexcept -> void { (void)std::fclose(file); };
+  kitzoo::memory::UniquePtr<std::FILE, decltype(close_file)> output{std::tmpfile(), close_file};
+  ASSERT_TRUE(output);
+  fmt::print(output.get(), "{}", reader.error_info());
+  std::rewind(output.get());
+  char text[64]{};
+  const auto size = std::fread(text, 1, sizeof(text), output.get());
+  EXPECT_EQ(std::string_view(text, size), "Invalid JSON text");
+}
+
+TEST(ReaderTest, OwnsCopiedAndMovedJsonValues) {
   Json original{{"workers", 4}};
   Reader copy(original);
   original["workers"] = 8;
@@ -58,7 +104,7 @@ TEST(JsonReaderTest, OwnsCopiedAndMovedJsonValues) {
   EXPECT_FALSE(invalid.error_info().empty());
 }
 
-TEST(JsonReaderTest, FailedParsePreservesDocumentAndSuccessfulParseClearsError) {
+TEST(ReaderTest, FailedParsePreservesDocumentAndSuccessfulParseClearsError) {
   Reader reader;
   EXPECT_TRUE(reader.raw().is_object());
   ASSERT_TRUE(reader.parse("[1,2,3]"));
@@ -74,7 +120,7 @@ TEST(JsonReaderTest, FailedParsePreservesDocumentAndSuccessfulParseClearsError) 
   EXPECT_TRUE(reader.raw().is_null());
 }
 
-TEST_F(JsonReaderFileTest, ReadsFilesystemPathAndStringPath) {
+TEST_F(ReaderFileTest, ReadsFilesystemPathAndStringPath) {
   auto const path = dir_ / "config.json";
   kitzoo::os::FsAdaptor::instance().write_text(path, R"({"workers":4})");
   Reader from_path(path);
@@ -88,7 +134,7 @@ TEST_F(JsonReaderFileTest, ReadsFilesystemPathAndStringPath) {
   EXPECT_FALSE(path_as_text.is_parse_success());
 }
 
-TEST_F(JsonReaderFileTest, FileErrorsPreserveDocumentAndAllowRecovery) {
+TEST_F(ReaderFileTest, FileErrorsPreserveDocumentAndAllowRecovery) {
   auto const path = dir_ / "config.json";
   Reader reader(Json{{"workers", 4}});
   EXPECT_FALSE(reader.load_file(path));

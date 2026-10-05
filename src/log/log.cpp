@@ -46,6 +46,8 @@ Logger::Logger(std::string name, const LoggerOptions& options) : Logger(std::mov
     set_pattern(options.pattern);
   for (const auto& sink : options.sinks)
     add_sink(sink);
+  if (options.file)
+    add_file_sink(*options.file);
   set_flush_level(options.flush_level);
   set_error_handler(options.error_handler);
 }
@@ -85,6 +87,12 @@ auto Logger::add_sink(SinkPtr sink) -> void {
     throw std::invalid_argument("sink must not be null");
   sink->set_pattern(std::string(pattern_.data(), pattern_.size()));
   native_->sinks().push_back(std::move(sink));
+}
+
+auto Logger::add_file_sink(FileSinkOptions const& options) -> memory::SharedPtr<ManagedFileSink> {
+  auto sink = memory::make_shared<ManagedFileSink>(options);
+  add_sink(sink);
+  return sink;
 }
 
 auto Logger::set_pattern(std::string pattern) -> void {
@@ -138,8 +146,8 @@ auto Logger::flush() -> void {
 
 auto default_logger() -> Logger& {
   static auto* instance = [] {
-    auto logger = std::make_unique<Logger>("default");
-    logger->add_sink(std::make_shared<ConsoleSink>());
+    auto logger = memory::make_unique<Logger>("default");
+    logger->add_sink(memory::make_shared<ConsoleSink>());
     return logger.release();
   }();
   return *instance;

@@ -7,6 +7,7 @@
 
 // Thread and IPC operations adapted from reconstructed imosadaptor OSAdaptor.
 // Platform backends preserve operation semantics, not the original binary ABI.
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/os/osadaptor.hpp>
 
 #include <cstdint>
@@ -39,7 +40,7 @@
 namespace kitzoo::os {
 
 auto OSAdaptor::get_env(std::string_view const name) -> std::optional<std::string> {
-  std::string const key{name};
+  memory::String const key{name};
   if (char const* value = std::getenv(key.c_str())) {
     return std::string{value};
   }
@@ -134,7 +135,7 @@ auto OSAdaptor::stacktrace(int const max_frames) -> std::vector<std::string> {
   // The capture API returns a USHORT frame count. Windows provides addresses;
   // symbol resolution would additionally require DbgHelp and symbol files.
   auto const capacity = static_cast<DWORD>(max_frames > 65535 ? 65535 : max_frames);
-  std::vector<void*> frames(capacity);
+  memory::Vector<void*> frames(capacity);
   auto const count = ::CaptureStackBackTrace(0, capacity, frames.data(), nullptr);
   std::vector<std::string> out;
   out.reserve(count);
@@ -145,7 +146,7 @@ auto OSAdaptor::stacktrace(int const max_frames) -> std::vector<std::string> {
   }
   return out;
 #else
-  std::vector<void*> frames(static_cast<std::size_t>(max_frames));
+  memory::Vector<void*> frames(static_cast<std::size_t>(max_frames));
   int const n = ::backtrace(frames.data(), static_cast<int>(frames.size()));
   if (n <= 0)
     return {};

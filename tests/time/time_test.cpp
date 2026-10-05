@@ -1,23 +1,24 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: tests/time/time_test.cpp
-// Description: Verifies steady measurements, deadlines and calendar boundaries.
+// Description: Verifies basic clocks, calendar boundaries, steady timing and combined headers.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/time.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <chrono>
 #include <gtest/gtest.h>
-#include <limits>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 
 namespace {
 using namespace kitzoo::time;
 using namespace std::chrono_literals;
 using Clock = std::chrono::steady_clock;
 
-TEST(StopwatchTest, ElapsedIsNonNegativeAndMonotonic) {
+TEST(TimeStopwatchTest, ElapsedIsNonNegativeAndMonotonic) {
   Stopwatch watch;
   auto previous = watch.elapsed();
   EXPECT_GE(previous, Clock::duration::zero());
@@ -28,7 +29,7 @@ TEST(StopwatchTest, ElapsedIsNonNegativeAndMonotonic) {
   }
 }
 
-TEST(StopwatchTest, TypedElapsedMatchesDurationConversionBounds) {
+TEST(TimeStopwatchTest, TypedElapsedMatchesDurationConversionBounds) {
   Stopwatch watch;
   const auto before = watch.elapsed();
   const auto microseconds = watch.elapsed_as<std::chrono::microseconds>();
@@ -37,7 +38,7 @@ TEST(StopwatchTest, TypedElapsedMatchesDurationConversionBounds) {
   EXPECT_LE(microseconds, std::chrono::duration_cast<std::chrono::microseconds>(after));
 }
 
-TEST(StopwatchTest, ResetMeasuresFromNewOrigin) {
+TEST(TimeStopwatchTest, ResetMeasuresFromNewOrigin) {
   Stopwatch watch;
   std::this_thread::sleep_for(1ms);
   EXPECT_GE(watch.elapsed(), 1ms);
@@ -48,7 +49,7 @@ TEST(StopwatchTest, ResetMeasuresFromNewOrigin) {
   EXPECT_LE(elapsed, Clock::now() - before_reset);
 }
 
-TEST(DeadlineTest, PreservesExplicitPastAndFutureTargets) {
+TEST(TimeDeadlineTest, PreservesExplicitPastAndFutureTargets) {
   const auto now = Clock::now();
   const auto past = Deadline::at(now - 1h);
   const auto future = Deadline::at(now + 1h);
@@ -60,7 +61,7 @@ TEST(DeadlineTest, PreservesExplicitPastAndFutureTargets) {
   EXPECT_GT(future.remaining(), Clock::duration::zero());
 }
 
-TEST(DeadlineTest, RelativeZeroAndNegativeDurationsAreExpired) {
+TEST(TimeDeadlineTest, RelativeZeroAndNegativeDurationsAreExpired) {
   EXPECT_TRUE(Deadline::after(0ns).expired());
   EXPECT_TRUE(Deadline::after(-1s).expired());
   const auto before = Clock::now();
@@ -69,7 +70,7 @@ TEST(DeadlineTest, RelativeZeroAndNegativeDurationsAreExpired) {
   EXPECT_LE(deadline.time_point(), Clock::now() + 1h);
 }
 
-TEST(CalendarTimeTest, FormatsEveryPrecisionWithoutRounding) {
+TEST(TimeCalendarTimeTest, FormatsEveryPrecisionWithoutRounding) {
   const auto timestamp = from_date_time({2040, 2, 29, 12, 34, 56, 123456789});
   EXPECT_EQ(format_timestamp(timestamp, TimeZone::Utc, TimestampPrecision::Seconds), "2040-02-29 12:34:56");
   EXPECT_EQ(format_timestamp(timestamp, TimeZone::Utc, TimestampPrecision::Milliseconds), "2040-02-29 12:34:56.123");
@@ -78,7 +79,7 @@ TEST(CalendarTimeTest, FormatsEveryPrecisionWithoutRounding) {
             "2040-02-29 12:34:56.123456789");
 }
 
-TEST(CalendarTimeTest, LeapDateRoundTripPreservesAllFieldsBeyond2038) {
+TEST(TimeCalendarTimeTest, LeapDateRoundTripPreservesAllFieldsBeyond2038) {
   const DateTime input{2040, 2, 29, 12, 34, 56, 123456789};
   const auto timestamp = from_date_time(input);
   const auto date = to_date_time(timestamp);
@@ -94,7 +95,7 @@ TEST(CalendarTimeTest, LeapDateRoundTripPreservesAllFieldsBeyond2038) {
   EXPECT_EQ(from_date_time(date), timestamp);
 }
 
-TEST(CalendarTimeTest, EpochAndNegativeFractionNormalizeCorrectly) {
+TEST(TimeCalendarTimeTest, EpochAndNegativeFractionNormalizeCorrectly) {
   const auto epoch = to_date_time(TimeStamp{});
   EXPECT_EQ(epoch.year, 1970);
   EXPECT_EQ(epoch.weekday, 4u);
@@ -105,7 +106,7 @@ TEST(CalendarTimeTest, EpochAndNegativeFractionNormalizeCorrectly) {
   EXPECT_EQ(from_date_time({1969, 12, 31, 23, 59, 59, 999999999}), TimeStamp{-1ns});
 }
 
-TEST(CalendarTimeTest, FullNanosecondRangeRoundTrips) {
+TEST(TimeCalendarTimeTest, FullNanosecondRangeRoundTrips) {
   for (const auto value : {TimeDuration::min(), TimeDuration::max()}) {
     const TimeStamp timestamp{value};
     EXPECT_EQ(from_date_time(to_date_time(timestamp)), timestamp);
@@ -113,14 +114,14 @@ TEST(CalendarTimeTest, FullNanosecondRangeRoundTrips) {
   EXPECT_THROW(from_date_time({2500, 1, 1}), std::out_of_range);
 }
 
-TEST(CalendarTimeTest, RejectsInvalidCalendarAndClockFields) {
+TEST(TimeCalendarTimeTest, RejectsInvalidCalendarAndClockFields) {
   for (const DateTime date : {DateTime{2023, 2, 29}, DateTime{2024, 0, 1}, DateTime{2024, 13, 1}, DateTime{2024, 4, 31},
                               DateTime{2024, 1, 0}, DateTime{2024, 1, 1, 24}, DateTime{2024, 1, 1, 0, 60},
                               DateTime{2024, 1, 1, 0, 0, 60}, DateTime{2024, 1, 1, 0, 0, 0, 1000000000}})
     EXPECT_THROW(from_date_time(date), std::invalid_argument);
 }
 
-TEST(CalendarTimeTest, DerivedFieldsDoNotAffectCalendarInput) {
+TEST(TimeCalendarTimeTest, DerivedFieldsDoNotAffectCalendarInput) {
   DateTime date{2024, 1, 1};
   const auto timestamp = from_date_time(date);
   date.weekday = 99;
@@ -130,14 +131,14 @@ TEST(CalendarTimeTest, DerivedFieldsDoNotAffectCalendarInput) {
   EXPECT_EQ(to_date_time(timestamp).day_of_year, 1u);
 }
 
-TEST(CalendarTimeTest, LocalRoundTripDoesNotAssumeMachineTimezone) {
+TEST(TimeCalendarTimeTest, LocalRoundTripDoesNotAssumeMachineTimezone) {
   const auto timestamp = from_date_time({2024, 7, 15, 12, 34, 56, 987654321});
   const auto local = to_date_time(timestamp, TimeZone::Local);
   EXPECT_EQ(from_date_time(local, TimeZone::Local), timestamp);
   EXPECT_EQ(format_timestamp(timestamp).size(), 23u);
 }
 
-TEST(ClockTest, SystemAndSteadyReadingsUseTheirOwnDomains) {
+TEST(TimeClockTest, SystemAndSteadyReadingsUseTheirOwnDomains) {
   const auto before = std::chrono::system_clock::now();
   const auto timestamp = utc_timestamp();
   const auto after = std::chrono::system_clock::now();
@@ -147,11 +148,24 @@ TEST(ClockTest, SystemAndSteadyReadingsUseTheirOwnDomains) {
   EXPECT_GE(steady_timestamp(), steady);
 }
 
-TEST(ClockTest, UnavailablePtpReturnsEmptyWithoutRequiringHardware) {
+TEST(TimeClockTest, UnavailablePtpReturnsEmptyWithoutRequiringHardware) {
   EXPECT_FALSE(ptp_timestamp(""));
   EXPECT_FALSE(ptp_timestamp("/kitzoo_no_such_ptp_device"));
 #if !defined(__linux__)
   EXPECT_FALSE(ptp_timestamp());
 #endif
 }
+
+TEST(TimeIncludeTest, CombinedHeadersExposeExistingFacilities) {
+  static_assert(std::is_same_v<kitzoo::time::TimeDuration, std::chrono::nanoseconds>);
+  kitzoo::time::Stopwatch watch;
+  EXPECT_GE(watch.elapsed(), std::chrono::steady_clock::duration::zero());
+  EXPECT_TRUE(kitzoo::time::Deadline::after(std::chrono::nanoseconds::zero()).expired());
+  EXPECT_EQ(kitzoo::time::to_date_time(kitzoo::time::TimeStamp{}).year, 1970);
+  kitzoo::time::TimeWatcher watcher;
+  auto scope = watcher.scope("combined");
+  EXPECT_EQ(watcher.last_result("combined"), std::nullopt);
+  EXPECT_GE(scope.finish(), kitzoo::time::TimeDuration::zero());
+}
+
 } // namespace

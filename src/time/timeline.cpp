@@ -4,6 +4,7 @@
 // Description: Implements injectable timelines and cancellable waits with real-time timeouts.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/time/time.hpp>
 #include <kitzoo/time/timeline.hpp>
 
 #include <algorithm>
@@ -17,7 +18,7 @@ namespace kitzoo::time {
 auto Timeline::sleep_until(TimeDuration target, TimeDuration timeout, std::stop_token stop) const -> bool {
   if (timeout < TimeDuration::zero())
     throw std::invalid_argument("Timeline timeout must not be negative");
-  auto const started = std::chrono::steady_clock::now();
+  Stopwatch watch;
   std::mutex mutex;
   std::condition_variable_any wake;
   std::unique_lock lock(mutex);
@@ -28,7 +29,7 @@ auto Timeline::sleep_until(TimeDuration target, TimeDuration timeout, std::stop_
       return true;
     auto delay = std::chrono::duration_cast<TimeDuration>(std::chrono::milliseconds{1});
     if (timeout != TimeDuration::zero()) {
-      auto const elapsed = std::chrono::steady_clock::now() - started;
+      auto const elapsed = watch.elapsed();
       if (elapsed >= timeout)
         return false;
       delay = std::min(delay, timeout - std::chrono::duration_cast<TimeDuration>(elapsed));
@@ -100,7 +101,7 @@ auto CallbackTimeline::type() const noexcept -> TimelineType {
   return TimelineType::Callback;
 }
 
-Time::Time() : timeline_(std::make_shared<SystemTimeline>()) {}
+Time::Time() : timeline_(memory::make_shared<SystemTimeline>()) {}
 
 OffsetTimeline::OffsetTimeline(std::shared_ptr<Timeline> source, TimeDuration offset)
     : source_(std::move(source)), offset_(offset.count()) {
@@ -140,7 +141,7 @@ auto Time::init(std::shared_ptr<Timeline> timeline) -> bool {
   return true;
 }
 
-auto Time::selected_timeline() -> std::shared_ptr<Timeline> {
+auto Time::selected_timeline() -> memory::SharedPtr<Timeline> {
   std::lock_guard lock(mutex_);
   initialized_ = true;
   return timeline_;

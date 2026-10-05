@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/memory/mi_allocator.hpp
+// File: include/kitzoo/memory/miallocator.hpp
 // Description: Provides a stateless standard allocator that calls mimalloc directly.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_MEMORY_MI_ALLOCATOR_HPP
-#define KITZOO_MEMORY_MI_ALLOCATOR_HPP
+#ifndef KITZOO_MEMORY_MIALLOCATOR_HPP
+#define KITZOO_MEMORY_MIALLOCATOR_HPP
 
 #include <cstddef>
 #include <limits>
@@ -55,4 +55,4 @@ constexpr auto operator==(MiAllocator<T> const&, MiAllocator<U> const&) noexcept
 
 } // namespace kitzoo::memory
 
-#endif // KITZOO_MEMORY_MI_ALLOCATOR_HPP
+#endif // KITZOO_MEMORY_MIALLOCATOR_HPP

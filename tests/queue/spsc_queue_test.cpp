@@ -1,8 +1,8 @@
-// ---------------------------------------------------------------------------
-// kitzoo/queue SPSCQueue tests
-//
-// TSan is essential here: run with --preset tsan to verify lock-free correctness.
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/queue/spsc_queue_test.cpp
+// Description: Verifies spsc queue operations and edge cases.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/queue/spsc_queue.hpp>
 

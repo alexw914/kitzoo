@@ -7,7 +7,7 @@
 #ifndef KITZOO_OS_FSADAPTOR_HPP
 #define KITZOO_OS_FSADAPTOR_HPP
 
-#include <kitzoo/utilities/singleton.hpp>
+#include <kitzoo/core/singleton.hpp>
 
 #include <cstdint>
 #include <filesystem>
@@ -19,7 +19,7 @@
 
 namespace kitzoo::os {
 
-class FsAdaptor : public util::Singleton<FsAdaptor> {
+class FsAdaptor : public core::Singleton<FsAdaptor> {
 public:
   auto read_file(std::filesystem::path const& path, std::error_code& ec) const -> std::string;
   auto read_file(std::filesystem::path const& path) const -> std::string;
@@ -50,8 +50,8 @@ public:
   auto remove_all(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t;
   auto remove_all(std::filesystem::path const& path) const -> std::uintmax_t;
 
-  auto list_directory(std::filesystem::path const& dir,
-                      std::error_code& ec) const -> std::vector<std::filesystem::path>;
+  auto list_directory(std::filesystem::path const& dir, std::error_code& ec) const
+      -> std::vector<std::filesystem::path>;
   auto list_directory(std::filesystem::path const& dir) const -> std::vector<std::filesystem::path>;
 
   auto file_size(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t;
@@ -84,8 +84,8 @@ public:
 
   // Returns sorted paths. Recursive enumeration does not follow directory symlinks.
   // Returns no partial list on an enumeration error.
-  auto listdir(const std::filesystem::path& path, std::error_code& ec,
-               bool recursive = false) const -> std::vector<std::filesystem::path>;
+  auto listdir(const std::filesystem::path& path, std::error_code& ec, bool recursive = false) const
+      -> std::vector<std::filesystem::path>;
   auto listdir(const std::filesystem::path& path, bool recursive = false) const -> std::vector<std::filesystem::path>;
 
   auto append_text(const std::filesystem::path& path, std::string_view data, std::error_code& ec) const -> void;
@@ -97,8 +97,8 @@ public:
   auto copy_file(const std::filesystem::path& source, const std::filesystem::path& destination,
                  bool overwrite = false) const -> bool;
 
-  auto rename(const std::filesystem::path& source, const std::filesystem::path& destination,
-              std::error_code& ec) const -> void;
+  auto rename(const std::filesystem::path& source, const std::filesystem::path& destination, std::error_code& ec) const
+      -> void;
   auto rename(const std::filesystem::path& source, const std::filesystem::path& destination) const -> void;
 
   auto absolute(const std::filesystem::path& path, std::error_code& ec) const -> std::filesystem::path;
@@ -108,7 +108,7 @@ public:
   auto canonical(const std::filesystem::path& path) const -> std::filesystem::path;
 
 private:
-  friend class util::Singleton<FsAdaptor>;
+  friend class core::Singleton<FsAdaptor>;
   FsAdaptor() = default;
 };
 

@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/time.hpp
-// Description: Provides clocks, calendar conversion, timelines, timers and named measurements.
+// Description: Provides clocks, calendars, measurements, timelines and periodic callbacks.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_TIME_HPP

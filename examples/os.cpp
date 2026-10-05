@@ -1,14 +1,8 @@
-// ---------------------------------------------------------------------------
-// kitzoo example: OS queries, thread naming, and filesystem helpers
-//
-// Demonstrates:
-//   - OSAdaptor singleton: host, user, CPU, memory, and process queries
-//   - naming the current thread and querying process CPU time
-//   - current_path / set_current_path + relative paths
-//   - temp_directory + write_text / read_text
-//   - atomic_write (write-to-temp + rename: readers never see a torn write)
-//   - list_directory / file_size with standard filesystem errors
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: examples/os.cpp
+// Description: Demonstrates system queries, thread naming, and filesystem operations.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/os.hpp>
 
@@ -18,6 +12,7 @@
 using namespace kitzoo;
 
 auto main() -> int {
+  // System queries and current-thread operations.
   auto& adaptor = os::OSAdaptor::instance();
   std::printf("host: %s, user: %s\n", adaptor.hostname().c_str(), adaptor.username().c_str());
   std::printf("cpus: %u, page size: %zu, pid: %ld\n", adaptor.cpu_count(), adaptor.page_size(), adaptor.current_pid());
@@ -29,6 +24,7 @@ auto main() -> int {
   std::printf("thread named: %s\n", adaptor.set_current_thread_name("main", "example") ? "yes" : "no");
   std::printf("process CPU time: %llu ns\n", static_cast<unsigned long long>(adaptor.get_cpu_timestamp_ns()));
 
+  // Filesystem paths, file updates, and directory cleanup.
   auto& fs = os::FsAdaptor::instance();
   auto const original_dir = fs.current_path();
   std::printf("working directory: %s\n", original_dir.string().c_str());

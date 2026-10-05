@@ -9,23 +9,27 @@
 #define KITZOO_LOG_LOGGER_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/memory/advanced_types.hpp>
+#include <kitzoo/memory/memory.hpp>
 
 #include <atomic>
 #include <chrono>
+#include <filesystem>
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <source_location>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/logger.h>
+#include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/callback_sink.h>
 #include <spdlog/sinks/daily_file_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <stop_token>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -74,12 +78,54 @@ using DailyFileSink = spdlog::sinks::daily_file_sink_mt;
 using CallbackSink = spdlog::sinks::callback_sink_mt;
 using ErrorHandler = std::function<void(std::string_view)>;
 
+struct FileSinkOptions {
+  std::filesystem::path path;
+  std::size_t max_size_bytes{10 * 1024 * 1024};
+  // Zero disables the corresponding retention limit. Counts exclude the active file.
+  std::size_t max_files{10};
+  std::chrono::seconds max_age{std::chrono::hours{24 * 7}};
+  // Zero disables background cleanup; cleanup() remains available.
+  std::chrono::milliseconds cleanup_interval{std::chrono::hours{1}};
+};
+
+// One sink owns a base path; share that sink when several loggers write to it.
+// Generated files use <filename>.kzlog.<session>.<sink>.<sequence> names.
+class ManagedFileSink final : public spdlog::sinks::base_sink<std::mutex> {
+public:
+  explicit ManagedFileSink(FileSinkOptions const& options);
+
+  ~ManagedFileSink() override;
+
+  auto current_file() -> std::filesystem::path;
+
+  // Removes only closed regular files in this sink's naming namespace.
+  auto cleanup() -> std::size_t;
+
+  // Latest background cleanup failure; cleared after a successful cleanup.
+  auto cleanup_error() -> memory::String;
+
+private:
+  auto sink_it_(spdlog::details::log_msg const& message) -> void override;
+
+  auto flush_() -> void override;
+
+  auto open_file() -> void;
+
+  auto cleanup_files() -> std::size_t;
+
+  auto cleanup_loop(std::stop_token stop) -> void;
+
+  struct Impl;
+  memory::UniquePtr<Impl> impl_;
+};
+
 struct LoggerOptions {
   Level level{Level::Info};
   std::string pattern;
   std::vector<SinkPtr> sinks;
   Level flush_level{Level::Off};
   ErrorHandler error_handler;
+  std::optional<FileSinkOptions> file;
 };
 
 struct LogRecord;
@@ -94,14 +140,17 @@ public:
   auto operator=(Logger const&) -> Logger& = delete;
 
   auto add_sink(SinkPtr sink) -> void;
+
+  auto add_file_sink(FileSinkOptions const& options) -> memory::SharedPtr<ManagedFileSink>;
+
   auto set_pattern(std::string pattern) -> void;
 
   auto set_level(Level level) noexcept -> void;
 
   KZ_NODISCARD auto enabled(Level level) const noexcept -> bool { return native_->should_log(to_spdlog(level)); }
 
-  auto log(Level level, std::string_view message,
-           std::source_location const& loc = std::source_location::current()) -> void;
+  auto log(Level level, std::string_view message, std::source_location const& loc = std::source_location::current())
+      -> void;
 
   template <typename... Args>
   auto logf(Level level, std::source_location const& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
@@ -133,7 +182,7 @@ private:
   KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 
   memory::String name_;
-  std::shared_ptr<spdlog::logger> native_;
+  memory::SharedPtr<spdlog::logger> native_;
   memory::String pattern_;
   std::atomic<std::size_t> failed_{0};
   std::mutex error_mutex_;

@@ -8,6 +8,7 @@
 #define KITZOO_JSON_READER_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/os/fsadaptor.hpp>
 
 #include <filesystem>
@@ -56,7 +57,7 @@ public:
     std::error_code ec;
     auto text = os::FsAdaptor::instance().read_text(path, ec);
     if (ec) {
-      error_info_ = ec.message();
+      error_info_.assign(ec.message());
       return false;
     }
     return parse(text);
@@ -68,11 +69,11 @@ public:
 
   KZ_NODISCARD auto is_parse_success() const noexcept -> bool { return error_info_.empty(); }
 
-  KZ_NODISCARD auto error_info() const noexcept -> std::string const& { return error_info_; }
+  KZ_NODISCARD auto error_info() const noexcept -> memory::String const& { return error_info_; }
 
 private:
   Json json_ = Json::object();
-  std::string error_info_;
+  memory::String error_info_;
 };
 
 } // namespace kitzoo::json

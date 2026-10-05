@@ -7,6 +7,8 @@
 #ifndef KITZOO_MEMORY_RESOURCE_HPP
 #define KITZOO_MEMORY_RESOURCE_HPP
 
+#include <kitzoo/memory/memory.hpp>
+
 #include <cstddef>
 #include <memory>
 #include <memory_resource>
@@ -53,7 +55,7 @@ private:
   auto do_is_equal(std::pmr::memory_resource const& other) const noexcept -> bool override;
 
   struct Impl;
-  std::unique_ptr<Impl> impl_;
+  UniquePtr<Impl> impl_;
 };
 
 } // namespace kitzoo::memory

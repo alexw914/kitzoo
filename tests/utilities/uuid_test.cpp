@@ -1,3 +1,9 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/utilities/uuid_test.cpp
+// Description: Verifies uuid operations and edge cases.
+// -----------------------------------------------------------------------------
+
 #include <kitzoo/utilities/uuid.hpp>
 
 #include <gtest/gtest.h>

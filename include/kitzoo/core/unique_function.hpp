@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/utilities/unique_function.hpp
+// File: include/kitzoo/core/unique_function.hpp
 // Description: Declares a move-only type-erased callable wrapper for storing
 //              non-copyable callables.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP
-#define KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP
+#ifndef KITZOO_CORE_UNIQUE_FUNCTION_HPP
+#define KITZOO_CORE_UNIQUE_FUNCTION_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -16,7 +16,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace kitzoo::util {
+namespace kitzoo::core {
 
 template <typename Signature>
 class unique_function;
@@ -123,6 +123,6 @@ private:
   VTable const* vtable_ = nullptr;
 };
 
-} // namespace kitzoo::util
+} // namespace kitzoo::core
 
-#endif // KITZOO_UTILITIES_UNIQUE_FUNCTION_HPP
+#endif // KITZOO_CORE_UNIQUE_FUNCTION_HPP

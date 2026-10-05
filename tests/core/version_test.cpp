@@ -1,9 +1,15 @@
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/core/version_test.cpp
+// Description: Verifies version constants and build metadata.
+// -----------------------------------------------------------------------------
+
 #include <kitzoo/core/version.hpp>
 
 #include <gtest/gtest.h>
 #include <string_view>
 
-using namespace kitzoo;
+using namespace kitzoo::core;
 
 TEST(VersionTest, LibraryVersionIsNotAllZero) {
   auto v = library_version;
@@ -33,7 +39,7 @@ TEST(VersionTest, ThreeWayComparison) {
   EXPECT_GE(v3, v2);
 }
 
-TEST(BuildInfoTest, CurrentBuildInfoReturnsValid) {
+TEST(VersionBuildInfoTest, CurrentBuildInfoReturnsValid) {
   build_info const& info = current_build_info();
   EXPECT_EQ(info.lib_version, library_version);
   EXPECT_EQ(info.version_str, version_string);
@@ -41,7 +47,7 @@ TEST(BuildInfoTest, CurrentBuildInfoReturnsValid) {
   EXPECT_FALSE(info.sanitizers.empty());
 }
 
-TEST(BuildInfoTest, IsDebugMatchesContext) {
+TEST(VersionBuildInfoTest, IsDebugMatchesContext) {
   build_info const& info = current_build_info();
 #ifdef NDEBUG
   EXPECT_FALSE(info.is_debug);

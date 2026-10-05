@@ -1,4 +1,4 @@
-kitzoo_add_module(memory SOURCES basic_memory.cpp byte_buffer.cpp resource.cpp DEPENDS core utilities)
+kitzoo_add_module(memory SOURCES basicmemory.cpp bytebuffer.cpp resource.cpp DEPENDS core)
 find_package(Threads REQUIRED)
 target_link_libraries(kitzoo_memory PUBLIC mimalloc-static Threads::Threads)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

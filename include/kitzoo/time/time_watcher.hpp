@@ -7,6 +7,7 @@
 #ifndef KITZOO_TIME_TIME_WATCHER_HPP
 #define KITZOO_TIME_TIME_WATCHER_HPP
 
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <functional>
@@ -41,12 +42,12 @@ public:
 
   private:
     friend class TimeWatcher;
-    Scope(std::shared_ptr<State> state, std::string name, WatchCallback callback);
+    Scope(memory::SharedPtr<State> state, memory::String name, WatchCallback callback);
 
-    std::shared_ptr<State> state_;
-    std::string name_;
+    memory::SharedPtr<State> state_;
+    memory::String name_;
     WatchCallback callback_;
-    std::chrono::steady_clock::time_point start_;
+    Stopwatch watch_;
     TimeDuration result_{};
     bool active_ = true;
   };
@@ -64,7 +65,7 @@ public:
   auto scope(std::string name, WatchCallback callback = {}) -> Scope;
 
 private:
-  std::shared_ptr<State> state_;
+  memory::SharedPtr<State> state_;
 };
 
 } // namespace kitzoo::time

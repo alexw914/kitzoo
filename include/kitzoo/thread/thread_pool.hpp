@@ -8,7 +8,8 @@
 #define KITZOO_THREAD_THREAD_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/utilities/unique_function.hpp>
+#include <kitzoo/core/unique_function.hpp>
+#include <kitzoo/memory/memory.hpp>
 
 #include <BS_thread_pool.hpp>
 #include <atomic>
@@ -17,12 +18,10 @@
 #include <future>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace kitzoo::thread {
 
@@ -57,11 +56,11 @@ public:
   auto shutdown() -> void;
 
 private:
-  auto enqueue_task(kitzoo::util::unique_function<void()> task) -> void;
+  auto enqueue_task(kitzoo::core::unique_function<void()> task) -> void;
   auto worker_loop() -> void;
 
-  std::vector<std::jthread> workers_;
-  std::queue<kitzoo::util::unique_function<void()>> tasks_;
+  memory::Vector<std::jthread> workers_;
+  memory::Queue<kitzoo::core::unique_function<void()>> tasks_;
   mutable std::mutex mutex_;
   mutable std::condition_variable cv_;
   mutable std::condition_variable tasks_done_cv_;

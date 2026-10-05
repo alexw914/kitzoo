@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/memory/byte_buffer.hpp
+// File: include/kitzoo/memory/bytebuffer.hpp
 // Description: Declares movable mimalloc byte storage with optional alignment and growth.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_MEMORY_BYTE_BUFFER_HPP
-#define KITZOO_MEMORY_BYTE_BUFFER_HPP
+#ifndef KITZOO_MEMORY_BYTEBUFFER_HPP
+#define KITZOO_MEMORY_BYTEBUFFER_HPP
 
 #include <cstddef>
 #include <limits>
@@ -79,4 +79,4 @@ auto swap(ByteBuffer& left, ByteBuffer& right) noexcept -> void;
 
 } // namespace kitzoo::memory
 
-#endif // KITZOO_MEMORY_BYTE_BUFFER_HPP
+#endif // KITZOO_MEMORY_BYTEBUFFER_HPP

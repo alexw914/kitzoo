@@ -1,2 +1,0 @@
-kitzoo_add_unit_test(string_utils SOURCES string_utils_test.cpp DEPENDS string)
-kitzoo_add_unit_test(convert SOURCES convert_test.cpp DEPENDS string)

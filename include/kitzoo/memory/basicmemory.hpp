@@ -1,14 +1,15 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/memory/basic_memory.hpp
+// File: include/kitzoo/memory/basicmemory.hpp
 // Description: Declares the default allocation budget and native shared mapping facade.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_MEMORY_BASIC_MEMORY_HPP
-#define KITZOO_MEMORY_BASIC_MEMORY_HPP
+#ifndef KITZOO_MEMORY_BASICMEMORY_HPP
+#define KITZOO_MEMORY_BASICMEMORY_HPP
 
+#include <kitzoo/core/singleton.hpp>
+#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/memory/resource.hpp>
-#include <kitzoo/utilities/singleton.hpp>
 
 #include <cstddef>
 #include <memory>
@@ -31,7 +32,7 @@ enum class MemoryType {
   Unknown,
 };
 
-class BasicMemory : public util::Singleton<BasicMemory> {
+class BasicMemory : public core::Singleton<BasicMemory> {
 public:
   ~BasicMemory();
 
@@ -72,13 +73,13 @@ public:
   auto get_shared_memory_start_address() const -> void*;
 
 private:
-  friend class util::Singleton<BasicMemory>;
+  friend class core::Singleton<BasicMemory>;
   BasicMemory();
 
   struct Impl;
-  std::unique_ptr<Impl> impl_;
+  UniquePtr<Impl> impl_;
 };
 
 } // namespace kitzoo::memory
 
-#endif // KITZOO_MEMORY_BASIC_MEMORY_HPP
+#endif // KITZOO_MEMORY_BASICMEMORY_HPP

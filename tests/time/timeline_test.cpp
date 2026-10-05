@@ -4,9 +4,11 @@
 // Description: Verifies clock domains, replay progress, cancellation and selection.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/time/time.hpp>
 #include <kitzoo/time/timeline.hpp>
 
 #include <atomic>
+#include <cstdlib>
 #include <future>
 #include <gtest/gtest.h>
 #include <stdexcept>
@@ -162,7 +164,8 @@ TEST(TimelineTest, RejectsNegativeTimeoutAndRelativeTargetOverflow) {
   EXPECT_THROW(feeder.sleep_until(1s, -1ns), std::invalid_argument);
 }
 
-TEST(TimelineServiceTest, SelectionIsOneShotAndCallbackMayQueryService) {
+// One-shot global selection is checked in isolated child processes.
+auto verify_explicit_selection() -> void {
   auto& service = Time::instance();
   // Static setup also permits --gtest_repeat without trying to reset the singleton.
   static const bool initialized =
@@ -176,5 +179,26 @@ TEST(TimelineServiceTest, SelectionIsOneShotAndCallbackMayQueryService) {
   EXPECT_TRUE(service.is_valid());
   EXPECT_EQ(service.timestamp("camera"), 42ms);
   EXPECT_TRUE(service.sleep_for(0ns));
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
 }
+
+auto verify_default_selection() -> void {
+  auto& service = kitzoo::time::Time::instance();
+  EXPECT_FALSE(service.init(nullptr));
+  EXPECT_TRUE(service.is_valid());
+  EXPECT_EQ(service.timeline_type(), kitzoo::time::TimelineType::System);
+  const auto before = kitzoo::time::utc_timestamp().time_since_epoch();
+  EXPECT_GE(service.timestamp(), before);
+  EXPECT_FALSE(service.init(std::make_shared<kitzoo::time::FeederTimeline>()));
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+TEST(TimelineDeathTest, ExplicitSelectionIsOneShotAndCallbackMayQueryService) {
+  EXPECT_EXIT(verify_explicit_selection(), ::testing::ExitedWithCode(0), "");
+}
+
+TEST(TimelineDeathTest, FirstQuerySelectsSystemAndPreventsLaterInit) {
+  EXPECT_EXIT(verify_default_selection(), ::testing::ExitedWithCode(0), "");
+}
+
 } // namespace

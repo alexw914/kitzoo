@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: examples/logging.cpp
+// File: examples/log.cpp
 // Description: Demonstrates synchronous, callback, file and asynchronous logging.
 // -----------------------------------------------------------------------------
 
@@ -50,20 +50,28 @@ auto callback_and_historical_logging() -> void {
   logger.logf(Level::Info, std::source_location::current(), "inference result: objects={}", 3);
 }
 
-auto rotating_file_logging() -> void {
-  // FsAdaptor creates a unique directory owned by this example.
+// File logging: switch to new files by size and periodically clean closed files.
+auto managed_file_logging() -> void {
   const auto directory = kitzoo::os::FsAdaptor::instance().temp_directory();
-  const auto path = directory / "application.log";
+  std::filesystem::path latest;
   {
-    LoggerOptions options;
-    options.pattern = "%v";
-    options.sinks = {std::make_shared<RotatingFileSink>(path.string(), 256, 2)};
-    Logger logger("file", options);
+    Logger logger("file");
+    logger.set_pattern("%v");
+    FileSinkOptions file;
+    file.path = directory / "application.log";
+    file.max_size_bytes = 256;
+    file.max_files = 2; // Closed files; the active file is always retained.
+    file.max_age = std::chrono::hours{24};
+    file.cleanup_interval = std::chrono::minutes{1};
+    auto sink = logger.add_file_sink(file);
     for (int frame = 0; frame < 20; ++frame)
       logger.logf(Level::Info, std::source_location::current(), "frame={} status=processed", frame);
-    logger.flush(); // sink flush is not an fsync durability guarantee
-  } // release the file handle before reading or removing files on Windows
-  std::cout << "latest rotated file:\n" << kitzoo::os::FsAdaptor::instance().read_text(path);
+    logger.flush(); // Flush is not an fsync durability guarantee.
+    latest = sink->current_file();
+    std::cout << "manual cleanup removed " << sink->cleanup() << " files\n";
+  } // Joins the cleaner and releases file handles before removing the directory.
+  std::cout << "latest log file: " << latest.filename().string() << '\n'
+            << kitzoo::os::FsAdaptor::instance().read_text(latest);
   kitzoo::os::FsAdaptor::instance().remove_all(directory);
 }
 
@@ -94,6 +102,6 @@ auto asynchronous_logging() -> void {
 auto main() -> int {
   synchronous_logging();
   callback_and_historical_logging();
-  rotating_file_logging();
+  managed_file_logging();
   asynchronous_logging();
 }

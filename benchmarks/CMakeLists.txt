@@ -44,7 +44,6 @@ function(kitzoo_add_benchmark name)
 endfunction()
 
 # -- Benchmark subdirectories -------------------------------------------------
-add_subdirectory(string)
 add_subdirectory(queue)
 add_subdirectory(thread)
 add_subdirectory(log)
