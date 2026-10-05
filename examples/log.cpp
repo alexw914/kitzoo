@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
-#include <kitzoo/os/fsadaptor.hpp>
+#include <kitzoo/os/fs.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -52,7 +52,7 @@ auto callback_and_historical_logging() -> void {
 
 // File logging: switch to new files by size and periodically clean closed files.
 auto managed_file_logging() -> void {
-  const auto directory = kitzoo::os::FsAdaptor::instance().temp_directory();
+  const auto directory = kitzoo::os::temp_directory();
   std::filesystem::path latest;
   {
     Logger logger("file");
@@ -70,9 +70,8 @@ auto managed_file_logging() -> void {
     latest = sink->current_file();
     std::cout << "manual cleanup removed " << sink->cleanup() << " files\n";
   } // Joins the cleaner and releases file handles before removing the directory.
-  std::cout << "latest log file: " << latest.filename().string() << '\n'
-            << kitzoo::os::FsAdaptor::instance().read_text(latest);
-  kitzoo::os::FsAdaptor::instance().remove_all(directory);
+  std::cout << "latest log file: " << latest.filename().string() << '\n' << kitzoo::os::read_file(latest);
+  kitzoo::os::remove_path(directory, true);
 }
 
 auto asynchronous_logging() -> void {

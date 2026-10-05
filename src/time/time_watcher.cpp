@@ -24,7 +24,7 @@ struct TimeWatcher::State {
 
 TimeWatcher::TimeWatcher() : state_(memory::make_shared<State>()) {}
 
-auto TimeWatcher::begin(std::string name) -> void {
+auto TimeWatcher::begin(std::string_view name) -> void {
   std::lock_guard lock(state_->mutex);
   auto& record = state_->records[memory::String{name.data(), name.size()}];
   if (record.watch)
@@ -49,7 +49,7 @@ auto TimeWatcher::last_result(std::string_view name) const -> std::optional<Time
   return record == state_->records.end() ? std::nullopt : record->second.last;
 }
 
-auto TimeWatcher::scope(std::string name, WatchCallback callback) -> Scope {
+auto TimeWatcher::scope(std::string_view name, WatchCallback callback) -> Scope {
   memory::String owned_name{name.data(), name.size()};
   {
     std::lock_guard lock(state_->mutex);

@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
+#include <thread>
 
 namespace {
 using kitzoo::time::Timer;
@@ -104,6 +105,34 @@ TEST(TimerTest, CallbackExceptionsDoNotStopLaterTicks) {
   timer.stop();
   EXPECT_EQ(status, std::future_status::ready);
   EXPECT_GE(calls.load(), 2);
+}
+
+TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {
+  Timer timer(1ms);
+  std::promise<void> stopped;
+  auto ready = stopped.get_future();
+  std::atomic<int> calls{0};
+  timer.start([&] {
+    if (calls.fetch_add(1) == 0) {
+      timer.stop();
+      stopped.set_value();
+    }
+  });
+  ASSERT_EQ(ready.wait_for(5s), std::future_status::ready);
+  EXPECT_FALSE(timer.running());
+  std::this_thread::sleep_for(20ms);
+  EXPECT_EQ(calls.load(), 1);
+
+  std::promise<void> restarted;
+  auto again = restarted.get_future();
+  std::atomic<bool> fired{false};
+  timer.start([&] {
+    if (!fired.exchange(true))
+      restarted.set_value();
+  });
+  EXPECT_EQ(again.wait_for(5s), std::future_status::ready);
+  EXPECT_TRUE(timer.running());
+  timer.stop();
 }
 
 TEST(TimerTest, AcceptsMoveOnlyCallbackAndDestructorStopsWorker) {

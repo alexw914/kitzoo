@@ -20,7 +20,7 @@ namespace kitzoo::log {
 namespace {
 thread_local AsyncLogger* active_worker = nullptr;
 thread_local Logger* active_error_handler = nullptr;
-constexpr auto kDefaultPattern = "[%Y-%m-%d %H:%M:%S.%e] [%l] [tid=%t] [%n] %g:%# %v";
+constexpr auto kDefaultPattern = "[%Y-%m-%d %H:%M:%S.%e] [%l] [tid=%t] [%n] %s:%# %v";
 } // namespace
 
 auto Logger::to_spdlog(Level level) noexcept -> spdlog::level::level_enum {
@@ -37,7 +37,7 @@ Logger::Logger(std::string name, const Level level)
     : name_{name.data(), name.size()}, native_{memory::make_shared<spdlog::logger>(std::move(name))},
       pattern_{kDefaultPattern} {
   native_->set_level(to_spdlog(level));
-  native_->set_pattern(std::string(pattern_.data(), pattern_.size()));
+  native_->set_pattern(pattern_);
   native_->set_error_handler([this](const std::string& message) { report_error(message); });
 }
 
@@ -85,7 +85,7 @@ auto Logger::report_error(std::string_view message) noexcept -> void {
 auto Logger::add_sink(SinkPtr sink) -> void {
   if (!sink)
     throw std::invalid_argument("sink must not be null");
-  sink->set_pattern(std::string(pattern_.data(), pattern_.size()));
+  sink->set_pattern(pattern_);
   native_->sinks().push_back(std::move(sink));
 }
 
@@ -96,8 +96,8 @@ auto Logger::add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<
 }
 
 auto Logger::set_pattern(std::string pattern) -> void {
-  pattern_.assign(pattern.data(), pattern.size());
-  native_->set_pattern(std::string(pattern_.data(), pattern_.size()));
+  pattern_ = std::move(pattern);
+  native_->set_pattern(pattern_);
 }
 
 auto Logger::set_level(const Level level) noexcept -> void {

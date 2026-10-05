@@ -70,9 +70,9 @@ public:
 
   auto close() -> void;
 
-  auto rejected_count() const noexcept -> std::size_t { return rejected_.load(); }
+  KZ_NODISCARD auto rejected_count() const noexcept -> std::size_t { return rejected_.load(); }
 
-  auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
+  KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
 
   KZ_NODISCARD auto dropped_count() const noexcept -> std::size_t { return dropped_.load(std::memory_order_relaxed); }
 

@@ -11,8 +11,8 @@
 - 使用英文描述，不加入作者、日期或修改历史；这些信息由 Git 记录。
 - 头文件使用 include guard，禁止使用 `#pragma once`。
 - 宏名由公开头文件路径生成：从 `kitzoo/` 开始，将路径分隔符、点替换为
-  下划线并全部大写。例如 `include/kitzoo/os/osadaptor.hpp` 对应
-  `KITZOO_OS_OSADAPTOR_HPP`。不得重复或使用保留的双下划线。
+  下划线并全部大写。例如 `include/kitzoo/os/system.hpp` 对应
+  `KITZOO_OS_SYSTEM_HPP`。不得重复或使用保留的双下划线。
 - `.hpp.in` 模板按生成的 `.hpp` 路径命名，不将 `_IN` 加入宏名。
 - 模板中的 `@变量@` 占位符必须保持完整；必要时对该段使用
   `// clang-format off` 和 `// clang-format on` 保护。
@@ -21,16 +21,16 @@
 ```cpp
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/os/osadaptor.hpp
-// Description: Declares the singleton OS adaptor for system and thread operations.
+// File: include/kitzoo/os/system.hpp
+// Description: Declares system queries and thread operations.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_OS_OSADAPTOR_HPP
-#define KITZOO_OS_OSADAPTOR_HPP
+#ifndef KITZOO_OS_SYSTEM_HPP
+#define KITZOO_OS_SYSTEM_HPP
 
 // Declarations.
 
-#endif // KITZOO_OS_OSADAPTOR_HPP
+#endif // KITZOO_OS_SYSTEM_HPP
 ```
 
 ## 格式与函数
@@ -51,6 +51,8 @@
   调用方对象使用 `T&`；转移所有权时按需要使用值传递或 `T&&`。数值、指针、
   `std::string_view` 等轻量类型按值传递，不为使用引用而增加间接访问。
   既有公开接口的签名调整需要明确授权。
+- 注释保持精简，只说明代码无法直接表达的约束或原因；修改代码时不添加
+  描述改动过程的注释，不为显而易见的逻辑添加注释。
 - 头文件只声明需要编译的函数，实现在对应模块的 `.cpp` 中；模板、constexpr
   和有意采用头文件实现的代码例外。
 
@@ -59,17 +61,19 @@
 - 同一模块的公开代码统一使用该模块的命名空间，不按文件或功能另建公开
   命名空间；utilities 统一使用 `kitzoo::util`，其余模块使用
   `kitzoo::<module>`。内部辅助实现可使用 `detail` 或匿名命名空间。
-- 类、结构体和枚举类型使用大驼峰命名，例如 `ThreadPool`、`OSAdaptor`、
-  `OSAdaptorShedPolicy`；常见缩写可保留已有的 `OS` 写法。
+- 类、结构体和枚举类型使用大驼峰命名，例如 `ThreadPool`、`BasicMemory`、
+  `SchedPolicy`。
 - 函数和变量使用小写下划线命名，例如 `set_thread_name`、`cpu_count`。
   标准库要求的名称和第三方接口遵循其原有约定。
 - 枚举使用 `enum class`，枚举项使用大驼峰命名，禁止全大写加模块前缀的
-  枚举项，例如 `OSAdaptorShedPolicy::Other`、`Rr`、`Fifo`。
+  枚举项，例如 `SchedPolicy::Other`、`Rr`、`Fifo`。
 - 底层枚举类型仅在序列化、ABI 或明确的存储需求下指定；数值只有在接口
   语义需要时显式给出。最后一项保留逗号。
-- 常量遵循已有的 `kNamePrefix` 风格；宏使用大写下划线形式。
-- 单例优先继承 `kitzoo::core::Singleton<T>`，派生类构造函数设为私有，并
-  声明模板基类为 friend；不重复实现 `instance()` 或拷贝、移动禁用逻辑。
+- 常量遵循已有的 `kThreadNamePrefix` 风格；宏使用大写下划线形式。
+- 只有持有进程级共享状态的对象才使用单例；无状态的工具接口使用模块命名
+  空间下的自由函数。单例优先继承 `kitzoo::core::Singleton<T>`，派生类构造
+  函数设为私有，并声明模板基类为 friend；不重复实现 `instance()` 或拷贝、
+  移动禁用逻辑。
 
 ## README 编写规则
 

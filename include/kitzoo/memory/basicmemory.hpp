@@ -7,6 +7,7 @@
 #ifndef KITZOO_MEMORY_BASICMEMORY_HPP
 #define KITZOO_MEMORY_BASICMEMORY_HPP
 
+#include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/singleton.hpp>
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/memory/resource.hpp>
@@ -51,7 +52,7 @@ public:
   // Uses the shared mapping first, with the same fallback as allocate_shared().
   auto shared_resource() noexcept -> std::pmr::memory_resource*;
 
-  auto virtual_stats() const -> MemoryStats;
+  KZ_NODISCARD auto virtual_stats() const -> MemoryStats;
 
   // Zero or invalid alignment returns nullptr. Exhausted virtual budgets return
   // nullptr; before virtual initialization allocations use mimalloc directly.
@@ -66,11 +67,11 @@ public:
   // Pool frees require the original byte size; mismatches are ignored.
   auto deallocate(void* address, std::size_t size) -> void;
 
-  auto get_shared_memory_name() const -> std::string;
+  KZ_NODISCARD auto shared_memory_name() const -> std::string;
 
-  auto get_memory_size_bytes() const -> std::size_t;
+  KZ_NODISCARD auto shared_memory_size_bytes() const -> std::size_t;
 
-  auto get_shared_memory_start_address() const -> void*;
+  KZ_NODISCARD auto shared_memory_address() const -> void*;
 
 private:
   friend class core::Singleton<BasicMemory>;

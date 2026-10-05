@@ -11,6 +11,11 @@
 
 namespace kitzoo::time {
 
+namespace {
+thread_local Timer* active_timer = nullptr;
+thread_local bool stop_from_callback = false;
+} // namespace
+
 Timer::Timer(std::chrono::milliseconds interval) : interval_{interval} {
   if (interval_ <= std::chrono::milliseconds::zero())
     throw std::invalid_argument{"timer interval must be positive"};
@@ -27,6 +32,7 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
     worker_.join();
   callback_ = std::move(callback);
   worker_ = std::jthread{[this](std::stop_token token) -> void {
+    active_timer = this;
     std::unique_lock lock{mutex_};
     while (!token.stop_requested()) {
       cv_.wait_for(lock, token, interval_, []() -> bool { return false; });
@@ -37,13 +43,19 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
         callback_();
       } catch (...) {
       }
+      if (stop_from_callback)
+        break;
       lock.lock();
     }
-    running_.store(false, std::memory_order_release);
   }};
 }
 
 auto Timer::stop() noexcept -> void {
+  if (active_timer == this) {
+    stop_from_callback = true;
+    running_.store(false, std::memory_order_release);
+    return;
+  }
   if (worker_.joinable()) {
     worker_.request_stop();
     cv_.notify_all();

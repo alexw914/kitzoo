@@ -36,3 +36,14 @@ TEST(UuidTest, NilAndHashSupport) {
   values.insert(kitzoo::util::Uuid::random());
   EXPECT_EQ(values.size(), 1u);
 }
+
+TEST(UuidTest, RandomValuesAreUniqueAndVersioned) {
+  std::unordered_set<kitzoo::util::Uuid> values;
+  for (int i = 0; i < 1000; ++i) {
+    const auto uuid = kitzoo::util::Uuid::random();
+    EXPECT_EQ(uuid.bytes()[6] & 0xf0U, 0x40U);
+    EXPECT_EQ(uuid.bytes()[8] & 0xc0U, 0x80U);
+    values.insert(uuid);
+  }
+  EXPECT_EQ(values.size(), 1000u);
+}

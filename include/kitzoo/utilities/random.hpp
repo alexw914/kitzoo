@@ -14,6 +14,7 @@
 #include <concepts>
 #include <cstdint>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -26,12 +27,16 @@ KZ_NODISCARD inline auto thread_rng() -> std::mt19937_64& {
 
 template <std::integral T>
 KZ_NODISCARD auto random_int(T min, T max) -> T {
+  if (min > max)
+    throw std::invalid_argument{"random_int requires min <= max"};
   std::uniform_int_distribution<T> dist{min, max};
   return dist(thread_rng());
 }
 
 template <std::floating_point T>
 KZ_NODISCARD auto random_real(T min, T max) -> T {
+  if (!(min <= max))
+    throw std::invalid_argument{"random_real requires min <= max"};
   std::uniform_real_distribution<T> dist{min, max};
   return dist(thread_rng());
 }
@@ -40,6 +45,8 @@ KZ_NODISCARD inline auto
 random_string(std::size_t len,
               std::string_view charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
     -> std::string {
+  if (charset.empty())
+    throw std::invalid_argument{"random_string charset must not be empty"};
   std::string out;
   out.reserve(len);
   std::uniform_int_distribution<std::size_t> dist{0, charset.size() - 1};

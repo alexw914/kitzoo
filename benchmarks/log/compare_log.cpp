@@ -51,7 +51,7 @@ BENCHMARK(BM_Sync_Kitzoo);
 
 static void BM_Sync_Spdlog(benchmark::State& state) {
   auto logger = spdlog::logger{"bench", std::make_shared<NullSink>()};
-  logger.set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [tid=%t] [%n] %g:%# %v");
+  logger.set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [tid=%t] [%n] %s:%# %v");
   for (auto _ : state) {
     logger.info("the quick brown fox jumps over the lazy dog");
   }

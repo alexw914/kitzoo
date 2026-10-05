@@ -55,14 +55,14 @@ public:
   TimeWatcher();
 
   // Duplicate active begins throw logic_error; missing ends throw out_of_range.
-  auto begin(std::string name) -> void;
+  auto begin(std::string_view name) -> void;
 
   auto end(std::string_view name) -> TimeDuration;
 
   auto last_result(std::string_view name) const -> std::optional<TimeDuration>;
 
   // A scope owns shared state and can safely outlive its watcher object.
-  auto scope(std::string name, WatchCallback callback = {}) -> Scope;
+  auto scope(std::string_view name, WatchCallback callback = {}) -> Scope;
 
 private:
   memory::SharedPtr<State> state_;

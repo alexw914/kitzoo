@@ -9,6 +9,10 @@
 
 namespace kitzoo::thread {
 
+namespace {
+thread_local const ThreadPool* active_pool = nullptr;
+} // namespace
+
 ThreadPool::ThreadPool(std::size_t num_threads) {
   if (num_threads == 0) {
     num_threads = std::thread::hardware_concurrency();
@@ -46,6 +50,8 @@ auto ThreadPool::get_tasks_total() const noexcept -> std::size_t {
 }
 
 auto ThreadPool::wait() -> void {
+  if (active_pool == this)
+    throw std::logic_error{"ThreadPool: cannot wait from a worker thread"};
   std::unique_lock lock{mutex_};
   tasks_done_cv_.wait(lock, [this] { return tasks_.empty() && running_tasks_ == 0; });
 }
@@ -62,6 +68,8 @@ auto ThreadPool::enqueue_task(kitzoo::core::unique_function<void()> task) -> voi
 }
 
 auto ThreadPool::shutdown() -> void {
+  if (active_pool == this)
+    throw std::logic_error{"ThreadPool: cannot shut down from a worker thread"};
   {
     std::lock_guard lock{mutex_};
     accepting_.store(false, std::memory_order_release);
@@ -75,6 +83,7 @@ auto ThreadPool::shutdown() -> void {
 }
 
 auto ThreadPool::worker_loop() -> void {
+  active_pool = this;
   while (true) {
     kitzoo::core::unique_function<void()> task;
     {

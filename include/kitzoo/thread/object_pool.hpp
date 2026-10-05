@@ -12,6 +12,7 @@
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/queue/concurrent_queue.hpp>
 
+#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <memory>
@@ -24,6 +25,7 @@
 namespace kitzoo::thread {
 
 // Concurrent pool of existing objects; leases return objects without destroying them.
+// Leases must be released before the pool is destroyed.
 template <typename T>
 class ObjectPool {
 public:
@@ -98,6 +100,8 @@ public:
   };
 
   explicit LocalObjectPool(std::size_t chunk_size = 64) : chunk_size_{chunk_size == 0 ? 64 : chunk_size} {}
+
+  ~LocalObjectPool() { assert(live_ == 0 && "LocalObjectPool destroyed with live objects"); }
 
   LocalObjectPool(const LocalObjectPool&) = delete;
   auto operator=(const LocalObjectPool&) -> LocalObjectPool& = delete;

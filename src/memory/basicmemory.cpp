@@ -260,17 +260,17 @@ auto BasicMemory::virtual_stats() const -> MemoryStats {
   return impl_->virtual_budget ? impl_->virtual_budget->stats() : MemoryStats{};
 }
 
-auto BasicMemory::get_shared_memory_name() const -> std::string {
+auto BasicMemory::shared_memory_name() const -> std::string {
   std::lock_guard lock(impl_->mutex);
   return {impl_->shared_name.data(), impl_->shared_name.size()};
 }
 
-auto BasicMemory::get_memory_size_bytes() const -> std::size_t {
+auto BasicMemory::shared_memory_size_bytes() const -> std::size_t {
   std::lock_guard lock(impl_->mutex);
   return impl_->shared_pool ? impl_->shared_pool->bytes : 0;
 }
 
-auto BasicMemory::get_shared_memory_start_address() const -> void* {
+auto BasicMemory::shared_memory_address() const -> void* {
   std::lock_guard lock(impl_->mutex);
   return impl_->shared_pool ? impl_->shared_pool->storage : nullptr;
 }

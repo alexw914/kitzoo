@@ -49,7 +49,7 @@ struct ManagedFileSink::Impl {
   std::filesystem::path current;
   std::ofstream output;
   std::size_t size{0};
-  memory::String cleanup_error;
+  std::string cleanup_error;
   // Stop and join before closing the file or destroying the sink mutex.
   std::jthread cleaner;
 };
@@ -172,7 +172,7 @@ auto ManagedFileSink::cleanup() -> std::size_t {
   return cleanup_files();
 }
 
-auto ManagedFileSink::cleanup_error() -> memory::String {
+auto ManagedFileSink::cleanup_error() -> std::string {
   std::lock_guard lock(mutex_);
   return impl_->cleanup_error;
 }

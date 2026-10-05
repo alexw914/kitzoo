@@ -9,7 +9,9 @@
 #define KITZOO_KITZOO_HPP
 
 #include <kitzoo/core.hpp>
+#include <kitzoo/json.hpp>
 #include <kitzoo/log.hpp>
+#include <kitzoo/memory.hpp>
 #include <kitzoo/os.hpp>
 #include <kitzoo/queue.hpp>
 #include <kitzoo/thread.hpp>

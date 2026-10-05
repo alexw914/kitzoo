@@ -154,6 +154,15 @@ TEST(ThreadPoolTest, SubmitFromWorkerThread) {
   EXPECT_EQ(future.get(), 42);
 }
 
+TEST(ThreadPoolTest, WaitAndShutdownFromWorkerThrow) {
+  ThreadPool pool{1};
+  auto wait = pool.submit_task([&pool] { pool.wait(); });
+  EXPECT_THROW(wait.get(), std::logic_error);
+  auto shutdown = pool.submit_task([&pool] { pool.shutdown(); });
+  EXPECT_THROW(shutdown.get(), std::logic_error);
+  EXPECT_EQ(pool.submit_task([] { return 1; }).get(), 1);
+}
+
 TEST(ThreadPoolTest, DetachTaskRunsAndWaitWaitsForCompletion) {
   ThreadPool pool{2};
   std::atomic<int> counter{0};

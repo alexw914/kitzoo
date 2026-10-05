@@ -144,11 +144,12 @@ auto demonstrate_shared_storage() -> void {
   std::printf("\n[5] Native shared mapping for a value-only payload\n");
 
   auto& basic = memory::BasicMemory::instance();
-  const auto suffix = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+  const auto suffix = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count() % 1'000'000'000);
 #if defined(_WIN32)
   const auto name = "Local\\kitzoo_memory_example_" + suffix;
 #else
-  const auto name = "/kitzoo_memory_example_" + suffix;
+  // macOS limits POSIX shared memory names to 31 characters.
+  const auto name = "/kz_memory_example_" + suffix;
 #endif
   if (!basic.init_shared({name, kSharedBytes}))
     throw std::runtime_error("Could not create the shared mapping");
@@ -161,8 +162,8 @@ auto demonstrate_shared_storage() -> void {
     allocator.delete_object(record);
     throw std::runtime_error("The record unexpectedly used fallback storage");
   }
-  const auto offset = reinterpret_cast<std::uintptr_t>(record) -
-                      reinterpret_cast<std::uintptr_t>(basic.get_shared_memory_start_address());
+  const auto offset =
+      reinterpret_cast<std::uintptr_t>(record) - reinterpret_cast<std::uintptr_t>(basic.shared_memory_address());
   std::printf("mapping: %s, payload offset: %zu bytes\n", name.c_str(), static_cast<std::size_t>(offset));
   std::printf("frame %u: %u x %u, %u channels\n", record->frame_id, record->width, record->height, record->channels);
 

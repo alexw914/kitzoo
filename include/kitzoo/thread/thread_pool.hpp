@@ -46,6 +46,7 @@ public:
   template <typename F, typename... Args>
   auto submit_task(F&& f, Args&&... args) -> std::future<std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>>;
 
+  // wait() and shutdown() throw logic_error when called from a worker thread.
   auto wait() -> void;
 
   KZ_NODISCARD auto get_thread_count() const noexcept -> std::size_t;

@@ -8,8 +8,7 @@
 #define KITZOO_JSON_READER_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/memory/memory.hpp>
-#include <kitzoo/os/fsadaptor.hpp>
+#include <kitzoo/os/fs.hpp>
 
 #include <filesystem>
 #include <nlohmann/json.hpp>
@@ -43,9 +42,11 @@ public:
 
   // A failed load preserves the previous document and records the latest input error.
   auto parse(std::string_view text) -> bool {
-    auto next = Json::parse(text.begin(), text.end(), nullptr, false);
-    if (next.is_discarded()) {
-      error_info_ = "Invalid JSON text";
+    Json next;
+    try {
+      next = Json::parse(text.begin(), text.end());
+    } catch (const Json::exception& error) {
+      error_info_ = error.what();
       return false;
     }
     json_.swap(next);
@@ -55,7 +56,7 @@ public:
 
   auto load_file(const std::filesystem::path& path) -> bool {
     std::error_code ec;
-    auto text = os::FsAdaptor::instance().read_text(path, ec);
+    auto text = os::read_file(path, ec);
     if (ec) {
       error_info_.assign(ec.message());
       return false;
@@ -69,11 +70,11 @@ public:
 
   KZ_NODISCARD auto is_parse_success() const noexcept -> bool { return error_info_.empty(); }
 
-  KZ_NODISCARD auto error_info() const noexcept -> const memory::String& { return error_info_; }
+  KZ_NODISCARD auto error_info() const noexcept -> const std::string& { return error_info_; }
 
 private:
   Json json_ = Json::object();
-  memory::String error_info_;
+  std::string error_info_;
 };
 
 } // namespace kitzoo::json

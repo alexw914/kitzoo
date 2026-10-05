@@ -7,6 +7,7 @@
 #ifndef KITZOO_MEMORY_RESOURCE_HPP
 #define KITZOO_MEMORY_RESOURCE_HPP
 
+#include <kitzoo/core/macro.hpp>
 #include <kitzoo/memory/memory.hpp>
 
 #include <cstddef>
@@ -36,9 +37,9 @@ public:
   auto operator=(const LimitedResource&) -> LimitedResource& = delete;
   auto operator=(LimitedResource&&) -> LimitedResource& = delete;
 
-  auto capacity() const noexcept -> std::size_t;
+  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
 
-  auto stats() const -> MemoryStats;
+  KZ_NODISCARD auto stats() const -> MemoryStats;
 
   auto owns(const void* address) const -> bool;
 

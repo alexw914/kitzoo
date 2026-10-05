@@ -13,6 +13,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iterator>
@@ -102,7 +103,7 @@ public:
   auto cleanup() -> std::size_t;
 
   // Latest background cleanup failure; cleared after a successful cleanup.
-  auto cleanup_error() -> memory::String;
+  auto cleanup_error() -> std::string;
 
 private:
   auto sink_it_(const spdlog::details::log_msg& message) -> void override;
@@ -168,7 +169,7 @@ public:
 
   auto set_error_handler(ErrorHandler handler) -> void;
 
-  auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
+  KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
 
   auto flush() -> void;
 
@@ -183,7 +184,7 @@ private:
 
   memory::String name_;
   memory::SharedPtr<spdlog::logger> native_;
-  memory::String pattern_;
+  std::string pattern_;
   std::atomic<std::size_t> failed_{0};
   std::mutex error_mutex_;
   ErrorHandler error_handler_;
@@ -208,32 +209,14 @@ KZ_NODISCARD auto default_logger() -> Logger&;
 #define KZ_LOG_ERROR(...) KZ_LOG(Error, __VA_ARGS__)
 #define KZ_LOG_FATAL(...) KZ_LOG(Fatal, __VA_ARGS__)
 
-#if defined(NDEBUG)
-#define KZ_CHECK(expr)                                                                                                 \
-  do {                                                                                                                 \
-    if (!static_cast<bool>(expr))                                                                                      \
-      KZ_LOG_ERROR("Check failed: {}", #expr);                                                                         \
-  } while (false)
-#define KZ_CHECK_MSG(expr, ...)                                                                                        \
-  do {                                                                                                                 \
-    if (!static_cast<bool>(expr))                                                                                      \
-      KZ_LOG_ERROR(__VA_ARGS__);                                                                                       \
-  } while (false)
-#else
-#define KZ_CHECK(expr)                                                                                                 \
-  do {                                                                                                                 \
-    if (!static_cast<bool>(expr)) {                                                                                    \
-      KZ_LOG_ERROR("Check failed: {}", #expr);                                                                         \
-      std::abort();                                                                                                    \
-    }                                                                                                                  \
-  } while (false)
 #define KZ_CHECK_MSG(expr, ...)                                                                                        \
   do {                                                                                                                 \
     if (!static_cast<bool>(expr)) {                                                                                    \
       KZ_LOG_ERROR(__VA_ARGS__);                                                                                       \
+      ::kitzoo::log::default_logger().flush();                                                                         \
       std::abort();                                                                                                    \
     }                                                                                                                  \
   } while (false)
-#endif
+#define KZ_CHECK(expr) KZ_CHECK_MSG(expr, "Check failed: {}", #expr)
 
 #endif // KITZOO_LOG_LOGGER_HPP

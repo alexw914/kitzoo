@@ -7,6 +7,7 @@
 #ifndef KITZOO_TIME_TIMELINE_HPP
 #define KITZOO_TIME_TIMELINE_HPP
 
+#include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/singleton.hpp>
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/time/time.hpp>
@@ -34,11 +35,11 @@ class Timeline {
 public:
   virtual ~Timeline() = default;
 
-  virtual auto timestamp(std::string_view key = {}) const -> TimeDuration = 0;
+  KZ_NODISCARD virtual auto timestamp(std::string_view key = {}) const -> TimeDuration = 0;
 
-  virtual auto is_valid() const -> bool = 0;
+  KZ_NODISCARD virtual auto is_valid() const -> bool = 0;
 
-  virtual auto type() const noexcept -> TimelineType { return TimelineType::Custom; }
+  KZ_NODISCARD virtual auto type() const noexcept -> TimelineType { return TimelineType::Custom; }
 
   // Uses timeline progress, with a steady-clock timeout; zero timeout means unlimited.
   // Invalid timelines return false. Backward jumps postpone the target, not wrap time.
@@ -51,9 +52,9 @@ class SystemTimeline final : public Timeline {
 public:
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  auto is_valid() const -> bool override;
+  KZ_NODISCARD auto is_valid() const -> bool override;
 
-  auto type() const noexcept -> TimelineType override;
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 };
 
 class FeederTimeline final : public Timeline {
@@ -63,9 +64,9 @@ public:
 
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  auto is_valid() const -> bool override;
+  KZ_NODISCARD auto is_valid() const -> bool override;
 
-  auto type() const noexcept -> TimelineType override;
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
 private:
   mutable std::mutex mutex_;
@@ -81,9 +82,9 @@ public:
 
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  auto is_valid() const -> bool override;
+  KZ_NODISCARD auto is_valid() const -> bool override;
 
-  auto type() const noexcept -> TimelineType override;
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
 private:
   ClockCallback callback_;
@@ -98,9 +99,9 @@ public:
 
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  auto is_valid() const -> bool override;
+  KZ_NODISCARD auto is_valid() const -> bool override;
 
-  auto type() const noexcept -> TimelineType override;
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
 private:
   memory::SharedPtr<Timeline> source_;

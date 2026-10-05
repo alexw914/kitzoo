@@ -10,6 +10,7 @@
 
 #include <kitzoo/core/macro.hpp>
 
+#include <cassert>
 #include <cstddef>
 #include <functional>
 #include <new>
@@ -40,7 +41,7 @@ public:
     requires(!std::is_same_v<std::decay_t<F>, unique_function> && std::is_invocable_r_v<R, F, Args...>)
   unique_function(F&& f) {
     using T = std::decay_t<F>;
-    if constexpr (sizeof(T) <= kSboSize && alignof(T) <= alignof(void*)) {
+    if constexpr (sizeof(T) <= kSboSize && alignof(T) <= alignof(void*) && std::is_nothrow_move_constructible_v<T>) {
       obj_ = &storage_;
       new (obj_) T(std::forward<F>(f));
       vtable_ = &vtable_for<T, true>();
@@ -67,7 +68,10 @@ public:
 
   KZ_NODISCARD explicit operator bool() const noexcept { return vtable_ != nullptr; }
 
-  auto operator()(Args... args) -> R { return vtable_->invoke(obj_, std::forward<Args>(args)...); }
+  auto operator()(Args... args) -> R {
+    assert(vtable_ && "unique_function called while empty");
+    return vtable_->invoke(obj_, std::forward<Args>(args)...);
+  }
 
 private:
   auto reset() noexcept -> void {

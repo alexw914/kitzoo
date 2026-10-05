@@ -29,6 +29,7 @@ public:
   auto operator=(const Timer&) -> Timer& = delete;
 
   // Control start/stop from the owning thread; stop joins the worker.
+  // A callback may call stop(); the owner joins the worker later.
   // Callbacks run after each interval and exceptions are suppressed.
   auto start(kitzoo::core::unique_function<void()> callback) -> void;
 

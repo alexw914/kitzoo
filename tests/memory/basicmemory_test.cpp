@@ -98,11 +98,11 @@ TEST(BasicMemoryTest, PoolsMappingsAndConcurrentAllocation) {
 #endif
   ASSERT_TRUE(memory.init_shared({name, 128}));
   EXPECT_FALSE(memory.init_shared({name, 128}));
-  EXPECT_EQ(memory.get_shared_memory_name(), name);
-  EXPECT_EQ(memory.get_memory_size_bytes(), 128U);
+  EXPECT_EQ(memory.shared_memory_name(), name);
+  EXPECT_EQ(memory.shared_memory_size_bytes(), 128U);
   auto* shared = memory.allocate_shared(128);
   ASSERT_NE(shared, nullptr);
-  EXPECT_EQ(shared, memory.get_shared_memory_start_address());
+  EXPECT_EQ(shared, memory.shared_memory_address());
   EXPECT_EQ(memory.memory_type(shared), MemoryType::Shared);
   std::memset(shared, 0x5a, 128);
 #if defined(_WIN32)

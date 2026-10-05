@@ -8,6 +8,8 @@
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/utilities/aes.hpp>
 
+#include <algorithm>
+#include <limits>
 #include <memory>
 #include <openssl/evp.h>
 #include <stdexcept>
@@ -67,17 +69,24 @@ auto run(const bool encrypt, const std::span<const std::byte> input, const std::
   const auto* const in = reinterpret_cast<const unsigned char*>(input.data());
   auto* const dst = reinterpret_cast<unsigned char*>(out.data());
 
-  const int update_ok = encrypt ? EVP_EncryptUpdate(ctx.get(), dst, &out_len, in, static_cast<int>(input.size()))
-                                : EVP_DecryptUpdate(ctx.get(), dst, &out_len, in, static_cast<int>(input.size()));
-  if (update_ok != 1)
-    throw std::runtime_error{"AES cipher update failed"};
+  // OpenSSL lengths are int; chunks leave room for one block of buffered output.
+  constexpr auto kMaxChunk = static_cast<std::size_t>(std::numeric_limits<int>::max() - 64);
+  std::size_t written = 0;
+  for (std::size_t offset = 0; offset < input.size(); offset += kMaxChunk) {
+    const auto chunk = static_cast<int>(std::min(kMaxChunk, input.size() - offset));
+    const int update_ok = encrypt ? EVP_EncryptUpdate(ctx.get(), dst + written, &out_len, in + offset, chunk)
+                                  : EVP_DecryptUpdate(ctx.get(), dst + written, &out_len, in + offset, chunk);
+    if (update_ok != 1)
+      throw std::runtime_error{"AES cipher update failed"};
+    written += static_cast<std::size_t>(out_len);
+  }
 
-  const int final_ok = encrypt ? EVP_EncryptFinal_ex(ctx.get(), dst + out_len, &final_len)
-                               : EVP_DecryptFinal_ex(ctx.get(), dst + out_len, &final_len);
+  const int final_ok = encrypt ? EVP_EncryptFinal_ex(ctx.get(), dst + written, &final_len)
+                               : EVP_DecryptFinal_ex(ctx.get(), dst + written, &final_len);
   if (final_ok != 1)
     throw std::runtime_error{"AES cipher finalization failed"};
 
-  out.resize(static_cast<std::size_t>(out_len + final_len));
+  out.resize(written + static_cast<std::size_t>(final_len));
   return out;
 }
 

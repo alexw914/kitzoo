@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
-#include <kitzoo/os/fsadaptor.hpp>
+#include <kitzoo/os/fs.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <algorithm>
@@ -89,7 +89,7 @@ protected:
 
 class TemporaryDirectory {
 public:
-  TemporaryDirectory() : path(kitzoo::os::FsAdaptor::instance().temp_directory()) {}
+  TemporaryDirectory() : path(kitzoo::os::temp_directory()) {}
 
   ~TemporaryDirectory() {
     std::error_code error;
@@ -175,6 +175,12 @@ TEST(LogMacroTest, DisabledMacroDoesNotEvaluateArguments) {
   EXPECT_EQ(evaluations, 0);
 }
 
+TEST(LogMacroTest, CheckAbortsOnFailureInEveryBuildType) {
+  KZ_CHECK(1 + 1 == 2);
+  EXPECT_DEATH(KZ_CHECK(1 + 1 == 3), "");
+  EXPECT_DEATH(KZ_CHECK_MSG(false, "custom {}", 42), "");
+}
+
 TEST_F(LogTest, ExplicitTimestampIsPreservedWithoutTimezoneAssumptions) {
   const auto timestamp = std::chrono::system_clock::time_point{} + 48h + 123ms;
   logger_->log_at(timestamp, Level::Info, "replayed frame");
@@ -222,7 +228,7 @@ TEST(LogFileTest, BasicFileFlushMakesMessageReadable) {
     Logger logger("file", options);
     logger.log(Level::Info, "persisted record");
     logger.flush();
-    EXPECT_NE(kitzoo::os::FsAdaptor::instance().read_text(path).find("persisted record"), std::string::npos);
+    EXPECT_NE(kitzoo::os::read_file(path).find("persisted record"), std::string::npos);
   }
 }
 
@@ -244,7 +250,7 @@ TEST(LogFileTest, RotationRetainsBoundedFilesAndNewestRecord) {
       ++files;
   }
   EXPECT_EQ(files, 3u); // current file plus two retained files
-  EXPECT_NE(kitzoo::os::FsAdaptor::instance().read_text(path).find("record=29"), std::string::npos);
+  EXPECT_NE(kitzoo::os::read_file(path).find("record=29"), std::string::npos);
 }
 
 // Managed files: rollover, retention, idle cleanup and asynchronous delivery.
@@ -275,7 +281,7 @@ TEST(LogManagedFileTest, OptionsCreateDirectoriesAndRotateWithoutRenamingOldFile
   std::vector<std::string> records;
   for (const auto& entry : std::filesystem::directory_iterator(directory.path / "nested")) {
     EXPECT_LE(entry.file_size(), 8u);
-    records.push_back(kitzoo::os::FsAdaptor::instance().read_text(entry.path()));
+    records.push_back(kitzoo::os::read_file(entry.path()));
   }
   ASSERT_EQ(records.size(), 2u);
   EXPECT_TRUE(std::ranges::any_of(records, [](const std::string& text) -> bool { return text.starts_with("first"); }));
@@ -291,12 +297,12 @@ TEST(LogManagedFileTest, OversizedRecordStaysIntactAndNextRecordStartsNewFile) {
   logger.log(Level::Info, std::string(100, 'x'));
   logger.flush();
   EXPECT_EQ(sink->current_file(), first);
-  EXPECT_TRUE(kitzoo::os::FsAdaptor::instance().read_text(first).starts_with(std::string(100, 'x')));
+  EXPECT_TRUE(kitzoo::os::read_file(first).starts_with(std::string(100, 'x')));
   logger.log(Level::Info, "next");
   logger.flush();
   EXPECT_NE(sink->current_file(), first);
   EXPECT_TRUE(std::filesystem::exists(first));
-  EXPECT_TRUE(kitzoo::os::FsAdaptor::instance().read_text(sink->current_file()).starts_with("next"));
+  EXPECT_TRUE(kitzoo::os::read_file(sink->current_file()).starts_with("next"));
 }
 
 TEST(LogManagedFileTest, ExactSizeBoundaryDoesNotSplitTheRecord) {
@@ -338,7 +344,7 @@ TEST(LogManagedFileTest, CountLimitIncludesOnlyClosedFilesAndRestartRetainsHisto
     auto sink = logger.add_file_sink(options);
     logger.log(Level::Info, "newest");
     logger.flush();
-    EXPECT_TRUE(kitzoo::os::FsAdaptor::instance().read_text(sink->current_file()).starts_with("newest"));
+    EXPECT_TRUE(kitzoo::os::read_file(sink->current_file()).starts_with("newest"));
   }
   files = 0;
   for (const auto& entry : std::filesystem::directory_iterator(directory.path))
@@ -361,9 +367,8 @@ TEST(LogManagedFileTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
   const auto malformed = directory.path / "application.log.kzlog.1.2.3.extra";
   const auto subdirectory = directory.path / "application.log.kzlog.1.2.3";
   std::filesystem::create_directory(subdirectory);
-  auto& fs = kitzoo::os::FsAdaptor::instance();
-  fs.write_text(foreign, "unrelated");
-  fs.write_text(malformed, "unrelated");
+  kitzoo::os::write_file(foreign, "unrelated");
+  kitzoo::os::write_file(malformed, "unrelated");
   const auto old = std::filesystem::file_time_type::clock::now() - 2h;
   for (const auto& path : {closed, active, foreign, malformed})
     std::filesystem::last_write_time(path, old);
@@ -381,7 +386,7 @@ TEST(LogManagedFileTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
   Logger logger("links");
   auto sink = logger.add_file_sink({directory.path / "application.log", 64, 1, 1s, 0ms});
   const auto target = directory.path / "unrelated.log";
-  kitzoo::os::FsAdaptor::instance().write_text(target, "keep");
+  kitzoo::os::write_file(target, "keep");
   const auto link = directory.path / "application.log.kzlog.1.2.3";
   std::error_code error;
   std::filesystem::create_symlink(target, link, error);
@@ -390,7 +395,7 @@ TEST(LogManagedFileTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
   std::filesystem::last_write_time(target, std::filesystem::file_time_type::clock::now() - 1h);
   EXPECT_EQ(sink->cleanup(), 0u);
   EXPECT_TRUE(std::filesystem::is_symlink(std::filesystem::symlink_status(link)));
-  EXPECT_EQ(kitzoo::os::FsAdaptor::instance().read_text(target), "keep");
+  EXPECT_EQ(kitzoo::os::read_file(target), "keep");
 }
 
 TEST(LogManagedFileTest, BackgroundCleanupDeletesExpiredFilesWhileIdle) {
@@ -438,7 +443,7 @@ TEST(LogManagedFileTest, AsyncFlushPersistsEveryConcurrentProducerRecord) {
   std::set<std::string> records;
   for (const auto& entry : std::filesystem::directory_iterator(directory.path)) {
     EXPECT_LE(entry.file_size(), 64u);
-    std::istringstream text(kitzoo::os::FsAdaptor::instance().read_text(entry.path()));
+    std::istringstream text(kitzoo::os::read_file(entry.path()));
     for (std::string line; std::getline(text, line);) {
       if (!line.empty() && line.back() == '\r')
         line.pop_back();

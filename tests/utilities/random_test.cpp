@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <numeric>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -23,6 +24,12 @@ TEST(RandomTest, IntInRange) {
     EXPECT_GE(v, 1);
     EXPECT_LE(v, 6);
   }
+}
+
+TEST(RandomTest, RejectsReversedRange) {
+  EXPECT_THROW((void)random_int(6, 1), std::invalid_argument);
+  EXPECT_THROW((void)random_real(1.0, 0.0), std::invalid_argument);
+  EXPECT_EQ(random_int(3, 3), 3);
 }
 
 TEST(RandomTest, RealInRange) {
@@ -46,6 +53,10 @@ TEST(RandomTest, StringCustomCharset) {
   for (const char c : s) {
     EXPECT_TRUE(c == 'a' || c == 'b');
   }
+}
+
+TEST(RandomTest, StringRejectsEmptyCharset) {
+  EXPECT_THROW((void)random_string(5, ""), std::invalid_argument);
 }
 
 TEST(RandomTest, StringsAreDifferent) {

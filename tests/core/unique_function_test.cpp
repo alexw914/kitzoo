@@ -17,6 +17,13 @@ TEST(UniqueFunctionTest, Empty) {
   EXPECT_FALSE(static_cast<bool>(f));
 }
 
+#ifndef NDEBUG
+TEST(UniqueFunctionTest, EmptyCallAssertsInDebug) {
+  unique_function<void()> f;
+  EXPECT_DEATH(f(), "empty");
+}
+#endif
+
 TEST(UniqueFunctionTest, InvokeSmallLambda) {
   unique_function<int(int)> f = [](int x) { return x * 2; };
   EXPECT_EQ(f(21), 42);
@@ -90,4 +97,23 @@ TEST(UniqueFunctionTest, VoidAndNonVoid) {
   v(1);
   unique_function<std::string(std::string)> s = [](std::string in) { return in + "!"; };
   EXPECT_EQ(s("hi"), "hi!");
+}
+
+TEST(UniqueFunctionTest, ThrowingMoveCallableIsNotMovedWithWrapper) {
+  struct ThrowingMove {
+    int* moves;
+
+    explicit ThrowingMove(int* counter) : moves(counter) {}
+
+    ThrowingMove(ThrowingMove&& other) noexcept(false) : moves(other.moves) { ++*moves; }
+
+    auto operator()() const -> int { return 7; }
+  };
+
+  int moves = 0;
+  unique_function<int()> first{ThrowingMove{&moves}};
+  moves = 0;
+  auto second = std::move(first);
+  EXPECT_EQ(moves, 0);
+  EXPECT_EQ(second(), 7);
 }

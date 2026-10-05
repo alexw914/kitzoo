@@ -50,25 +50,4 @@
 #define KZ_CXX_STANDARD (__cplusplus)
 #endif
 
-#if KZ_CXX_STANDARD >= 201103L
-#define KZ_CPP11 1
-#else
-#define KZ_CPP11 0
-#endif
-#if KZ_CXX_STANDARD >= 201402L
-#define KZ_CPP14 1
-#else
-#define KZ_CPP14 0
-#endif
-#if KZ_CXX_STANDARD >= 201703L
-#define KZ_CPP17 1
-#else
-#define KZ_CPP17 0
-#endif
-#if KZ_CXX_STANDARD >= 202002L
-#define KZ_CPP20 1
-#else
-#define KZ_CPP20 0
-#endif
-
 #endif // KITZOO_CORE_DEFINE_H

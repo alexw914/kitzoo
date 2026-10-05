@@ -7,6 +7,8 @@
 #ifndef KITZOO_MEMORY_BYTEBUFFER_HPP
 #define KITZOO_MEMORY_BYTEBUFFER_HPP
 
+#include <kitzoo/core/macro.hpp>
+
 #include <cstddef>
 #include <limits>
 #include <span>
@@ -28,19 +30,19 @@ public:
   auto operator=(ByteBuffer&& other) noexcept -> ByteBuffer&;
 
   auto data() noexcept -> std::byte*;
-  auto data() const noexcept -> const std::byte*;
+  KZ_NODISCARD auto data() const noexcept -> const std::byte*;
 
   // Non-owning views cover size(), not capacity(), and follow data()'s lifetime.
   auto view() noexcept -> std::span<std::byte>;
-  auto view() const noexcept -> std::span<const std::byte>;
+  KZ_NODISCARD auto view() const noexcept -> std::span<const std::byte>;
 
-  auto size() const noexcept -> std::size_t;
+  KZ_NODISCARD auto size() const noexcept -> std::size_t;
 
-  auto capacity() const noexcept -> std::size_t;
+  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
 
-  auto alignment() const noexcept -> std::size_t;
+  KZ_NODISCARD auto alignment() const noexcept -> std::size_t;
 
-  auto empty() const noexcept -> bool;
+  KZ_NODISCARD auto empty() const noexcept -> bool;
 
   static constexpr auto max_size() noexcept -> std::size_t {
     return static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());

@@ -30,11 +30,14 @@ public:
   explicit constexpr Uuid(Bytes bytes) noexcept : bytes_{bytes} {}
 
   KZ_NODISCARD static auto random() -> Uuid {
+    static_assert(std::random_device::max() >= 0xffffffffU, "random_device must yield 32 bits");
     std::random_device source;
-    std::uniform_int_distribution<unsigned> byte{0, 255};
     Bytes data{};
-    for (auto& value : data)
-      value = static_cast<std::uint8_t>(byte(source));
+    for (std::size_t i = 0; i < data.size(); i += 4) {
+      const auto value = source();
+      for (std::size_t j = 0; j < 4; ++j)
+        data[i + j] = static_cast<std::uint8_t>(value >> (8 * j));
+    }
     data[6] = static_cast<std::uint8_t>((data[6] & 0x0fU) | 0x40U);
     data[8] = static_cast<std::uint8_t>((data[8] & 0x3fU) | 0x80U);
     return Uuid{data};

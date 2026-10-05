@@ -1,14 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/os/osadaptor.cpp
+// File: src/os/system.cpp
 // Description: Implements system queries, thread operations, and IPC path
 //              allocation with Linux, macOS, and Windows backends.
 // -----------------------------------------------------------------------------
 
-// Thread and IPC operations adapted from reconstructed imosadaptor OSAdaptor.
-// Platform backends preserve operation semantics, not the original binary ABI.
 #include <kitzoo/memory/memory.hpp>
-#include <kitzoo/os/osadaptor.hpp>
+#include <kitzoo/os/system.hpp>
 
 #include <cstdint>
 #include <cstdlib>
@@ -39,7 +37,7 @@
 
 namespace kitzoo::os {
 
-auto OSAdaptor::get_env(const std::string_view name) -> std::optional<std::string> {
+auto get_env(const std::string_view name) -> std::optional<std::string> {
   const memory::String key{name};
   if (const char* value = std::getenv(key.c_str())) {
     return std::string{value};
@@ -47,7 +45,7 @@ auto OSAdaptor::get_env(const std::string_view name) -> std::optional<std::strin
   return std::nullopt;
 }
 
-auto OSAdaptor::hostname() -> std::string {
+auto hostname() -> std::string {
 #if defined(_WIN32)
   char buf[MAX_COMPUTERNAME_LENGTH + 1] = {};
   DWORD size = sizeof(buf);
@@ -63,11 +61,11 @@ auto OSAdaptor::hostname() -> std::string {
 #endif
 }
 
-auto OSAdaptor::cpu_count() noexcept -> unsigned int {
+auto cpu_count() noexcept -> unsigned int {
   return std::thread::hardware_concurrency();
 }
 
-auto OSAdaptor::current_pid() noexcept -> long {
+auto current_pid() noexcept -> long {
 #if defined(_WIN32)
   return static_cast<long>(::_getpid());
 #else
@@ -75,7 +73,7 @@ auto OSAdaptor::current_pid() noexcept -> long {
 #endif
 }
 
-auto OSAdaptor::page_size() noexcept -> std::size_t {
+auto page_size() noexcept -> std::size_t {
 #if defined(_WIN32)
   SYSTEM_INFO info;
   ::GetSystemInfo(&info);
@@ -86,7 +84,7 @@ auto OSAdaptor::page_size() noexcept -> std::size_t {
 #endif
 }
 
-auto OSAdaptor::total_memory() noexcept -> std::uint64_t {
+auto total_memory() noexcept -> std::uint64_t {
 #if defined(_WIN32)
   MEMORYSTATUSEX status{};
   status.dwLength = sizeof(status);
@@ -107,7 +105,7 @@ auto OSAdaptor::total_memory() noexcept -> std::uint64_t {
 #endif
 }
 
-auto OSAdaptor::username() -> std::string {
+auto username() -> std::string {
   if (const auto env = get_env("USER"))
     return *env;
   if (const auto env = get_env("USERNAME"))
@@ -120,7 +118,7 @@ auto OSAdaptor::username() -> std::string {
   return {};
 }
 
-auto OSAdaptor::home_dir() -> std::string {
+auto home_dir() -> std::string {
   if (const auto env = get_env("HOME"))
     return *env;
   if (const auto env = get_env("USERPROFILE"))
@@ -128,7 +126,7 @@ auto OSAdaptor::home_dir() -> std::string {
   return {};
 }
 
-auto OSAdaptor::stacktrace(const int max_frames) -> std::vector<std::string> {
+auto stacktrace(const int max_frames) -> std::vector<std::string> {
   if (max_frames <= 0)
     return {};
 #if defined(_WIN32)
@@ -164,7 +162,7 @@ auto OSAdaptor::stacktrace(const int max_frames) -> std::vector<std::string> {
 #endif
 }
 
-auto OSAdaptor::get_cpu_timestamp_ns() -> std::uint64_t {
+auto get_cpu_timestamp_ns() -> std::uint64_t {
 #if defined(_WIN32)
   FILETIME created{}, exited{}, kernel{}, user{};
   if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user))
@@ -176,8 +174,6 @@ auto OSAdaptor::get_cpu_timestamp_ns() -> std::uint64_t {
 #else
   rusage usage{};
   if (getrusage(RUSAGE_SELF, &usage) != 0) {
-    // Original continues with potentially uninitialized data; not reproducible
-    // as defined C++. This reconstruction returns zero on this failure.
     return 0;
   }
   auto seconds = static_cast<std::uint64_t>(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
@@ -186,13 +182,13 @@ auto OSAdaptor::get_cpu_timestamp_ns() -> std::uint64_t {
 #endif
 }
 
-auto OSAdaptor::set_thread_name(std::thread::native_handle_type id, const std::string& name,
-                                const std::string& requested_prefix) -> bool {
+auto set_thread_name(std::thread::native_handle_type id, std::string_view name, std::string_view requested_prefix)
+    -> bool {
   if (name.empty())
     return false;
-  auto prefix = requested_prefix;
+  std::string prefix{requested_prefix};
   if (prefix.empty())
-    prefix = kNamePrefix;
+    prefix = kThreadNamePrefix;
   else if (prefix.back() != '/')
     prefix += '/';
   if (prefix.size() > 15)
@@ -201,14 +197,15 @@ auto OSAdaptor::set_thread_name(std::thread::native_handle_type id, const std::s
   const auto budget = 15 - prefix.size();
   if (trimmed.size() >= 16 - prefix.size()) {
     auto last = trimmed.rfind('/');
-    trimmed = trimmed.substr(last == std::string::npos ? 0 : last + 1, budget);
+    trimmed = trimmed.substr(last == std::string_view::npos ? 0 : last + 1, budget);
   } else {
     auto first = trimmed.find_first_not_of('/');
-    if (first == std::string::npos)
+    if (first == std::string_view::npos)
       return false;
-    trimmed.erase(0, first);
+    trimmed.remove_prefix(first);
   }
-  const auto final_name = prefix + trimmed;
+  prefix.append(trimmed);
+  const auto& final_name = prefix;
 #if defined(_WIN32)
   const auto size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, final_name.c_str(), -1, nullptr, 0);
   if (size == 0)
@@ -225,11 +222,11 @@ auto OSAdaptor::set_thread_name(std::thread::native_handle_type id, const std::s
 #endif
 }
 
-auto OSAdaptor::set_thread_name(std::thread& t, const std::string& n, const std::string& p) -> bool {
+auto set_thread_name(std::thread& t, std::string_view n, std::string_view p) -> bool {
   return t.joinable() && set_thread_name(t.native_handle(), n, p);
 }
 
-auto OSAdaptor::set_current_thread_name(const std::string& n, const std::string& p) -> bool {
+auto set_current_thread_name(std::string_view n, std::string_view p) -> bool {
 #if defined(_WIN32)
   return set_thread_name(GetCurrentThread(), n, p);
 #else
@@ -237,7 +234,7 @@ auto OSAdaptor::set_current_thread_name(const std::string& n, const std::string&
 #endif
 }
 
-auto OSAdaptor::get_thread_name(std::thread::native_handle_type id) -> std::string {
+auto get_thread_name(std::thread::native_handle_type id) -> std::string {
 #if defined(_WIN32)
   using GetName = HRESULT(WINAPI*)(HANDLE, PWSTR*);
   auto function = reinterpret_cast<GetName>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetThreadDescription"));
@@ -263,14 +260,13 @@ auto OSAdaptor::get_thread_name(std::thread::native_handle_type id) -> std::stri
 #endif
 }
 
-auto OSAdaptor::get_thread_name(std::thread& t) -> std::string {
+auto get_thread_name(std::thread& t) -> std::string {
   return t.joinable() ? get_thread_name(t.native_handle()) : std::string{};
 }
 
-auto OSAdaptor::set_thread_priority(std::thread::native_handle_type id, std::int32_t priority,
-                                    OSAdaptorShedPolicy requested) -> bool {
+auto set_thread_priority(std::thread::native_handle_type id, std::int32_t priority, SchedPolicy requested) -> bool {
 #if defined(_WIN32)
-  if (requested != OSAdaptorShedPolicy::Other)
+  if (requested != SchedPolicy::Other)
     return false;
   switch (priority) {
   case THREAD_PRIORITY_IDLE:
@@ -289,11 +285,11 @@ auto OSAdaptor::set_thread_priority(std::thread::native_handle_type id, std::int
   sched_param param{};
   if (pthread_getschedparam(id, &policy, &param) != 0)
     return false;
-  if (requested == OSAdaptorShedPolicy::Rr)
+  if (requested == SchedPolicy::Rr)
     policy = SCHED_RR;
-  else if (requested == OSAdaptorShedPolicy::Fifo)
+  else if (requested == SchedPolicy::Fifo)
     policy = SCHED_FIFO;
-  else if (requested == OSAdaptorShedPolicy::Other)
+  else if (requested == SchedPolicy::Other)
     policy = SCHED_OTHER;
   else
     return false;
@@ -308,11 +304,11 @@ auto OSAdaptor::set_thread_priority(std::thread::native_handle_type id, std::int
 #endif
 }
 
-auto OSAdaptor::set_thread_priority(std::thread& t, std::int32_t p, OSAdaptorShedPolicy s) -> bool {
+auto set_thread_priority(std::thread& t, std::int32_t p, SchedPolicy s) -> bool {
   return t.joinable() && set_thread_priority(t.native_handle(), p, s);
 }
 
-auto OSAdaptor::set_current_thread_priority(std::int32_t p, OSAdaptorShedPolicy s) -> bool {
+auto set_current_thread_priority(std::int32_t p, SchedPolicy s) -> bool {
 #if defined(_WIN32)
   return set_thread_priority(GetCurrentThread(), p, s);
 #else
@@ -320,7 +316,7 @@ auto OSAdaptor::set_current_thread_priority(std::int32_t p, OSAdaptorShedPolicy 
 #endif
 }
 
-auto OSAdaptor::set_thread_nice(std::thread::native_handle_type id, std::uint32_t tid, std::int32_t nice) -> bool {
+auto set_thread_nice(std::thread::native_handle_type id, std::uint32_t tid, std::int32_t nice) -> bool {
 #if defined(__linux__)
   int policy = SCHED_OTHER;
   sched_param param{};
@@ -343,7 +339,7 @@ auto OSAdaptor::set_thread_nice(std::thread::native_handle_type id, std::uint32_
 #endif
 }
 
-auto OSAdaptor::set_current_thread_nice(std::int32_t n) -> bool {
+auto set_current_thread_nice(std::int32_t n) -> bool {
 #if defined(__linux__)
   return set_thread_nice(pthread_self(), static_cast<std::uint32_t>(syscall(SYS_gettid)), n);
 #else
@@ -352,7 +348,7 @@ auto OSAdaptor::set_current_thread_nice(std::int32_t n) -> bool {
 #endif
 }
 
-auto OSAdaptor::bind_cpus(std::thread::native_handle_type id, const std::vector<std::uint32_t>& cores) -> bool {
+auto bind_cpus(std::thread::native_handle_type id, const std::vector<std::uint32_t>& cores) -> bool {
 #if defined(_WIN32)
   DWORD_PTR mask = 0;
   for (auto core : cores) {
@@ -386,11 +382,11 @@ auto OSAdaptor::bind_cpus(std::thread::native_handle_type id, const std::vector<
 #endif
 }
 
-auto OSAdaptor::bind_cpus(std::thread& t, const std::vector<std::uint32_t>& cores) -> bool {
+auto bind_cpus(std::thread& t, const std::vector<std::uint32_t>& cores) -> bool {
   return t.joinable() && bind_cpus(t.native_handle(), cores);
 }
 
-auto OSAdaptor::bind_current_cpus(const std::vector<std::uint32_t>& cores) -> bool {
+auto bind_current_cpus(const std::vector<std::uint32_t>& cores) -> bool {
 #if defined(_WIN32)
   return bind_cpus(GetCurrentThread(), cores);
 #else
@@ -398,7 +394,7 @@ auto OSAdaptor::bind_current_cpus(const std::vector<std::uint32_t>& cores) -> bo
 #endif
 }
 
-auto OSAdaptor::generate_unique_domain_socket_address() -> std::string {
+auto generate_unique_domain_socket_address() -> std::string {
 #if defined(_WIN32)
   char directory[MAX_PATH + 1]{};
   const auto length = GetTempPathA(MAX_PATH + 1, directory);
@@ -423,7 +419,7 @@ auto OSAdaptor::generate_unique_domain_socket_address() -> std::string {
 #endif
 }
 
-auto OSAdaptor::remove_unique_domain_socket_address(const std::string& p) -> bool {
+auto remove_unique_domain_socket_address(const std::string& p) -> bool {
 #if defined(_WIN32)
   return DeleteFileA(p.c_str()) != 0;
 #else
