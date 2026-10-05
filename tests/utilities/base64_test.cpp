@@ -61,6 +61,14 @@ TEST(Base64Test, DecodePaddingOnlyAtEnd) {
   EXPECT_FALSE(base64_decode("Zg==Zm9v").has_value()); // padding mid-input
 }
 
+TEST(Base64Test, DecodeRejectsNonCanonicalInput) {
+  EXPECT_EQ(base64_decode("QQ==")->size(), 1u);
+  EXPECT_EQ(base64_decode("QUI=")->size(), 2u);
+  EXPECT_FALSE(base64_decode("QR==").has_value()); // unused bits set
+  EXPECT_FALSE(base64_decode("QUJ=").has_value());
+  EXPECT_FALSE(base64_decode("QQ=A").has_value()); // data after padding
+}
+
 TEST(Base64Test, RoundTrip) {
   std::vector<std::byte> data;
   for (int i = 0; i < 256; ++i)

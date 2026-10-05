@@ -79,7 +79,8 @@ auto base64_decode(const std::string_view b64) -> std::optional<std::vector<std:
         v[j] = 0;
       } else {
         v[j] = b64_value(c);
-        if (v[j] < 0) {
+        // Padding may only end the input.
+        if (v[j] < 0 || pad > 0) {
           return std::nullopt;
         }
       }
@@ -90,6 +91,11 @@ auto base64_decode(const std::string_view b64) -> std::optional<std::vector<std:
 
     const auto n = (static_cast<std::uint32_t>(v[0]) << 18) | (static_cast<std::uint32_t>(v[1]) << 12) |
                    (static_cast<std::uint32_t>(v[2]) << 6) | static_cast<std::uint32_t>(v[3]);
+    // RFC 4648 requires the bits beyond the last encoded byte to be zero.
+    const std::uint32_t unused = pad == 2 ? 0xFFFFU : pad == 1 ? 0xFFU : 0U;
+    if ((n & unused) != 0) {
+      return std::nullopt;
+    }
     out.push_back(static_cast<std::byte>((n >> 16) & 0xFF));
     if (pad < 2)
       out.push_back(static_cast<std::byte>((n >> 8) & 0xFF));
