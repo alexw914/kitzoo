@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/os/fs.hpp
+// File: include/kitzoo/os/filesys.hpp
 // Description: Declares file, directory and path operations.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_OS_FS_HPP
-#define KITZOO_OS_FS_HPP
+#ifndef KITZOO_OS_FILESYS_HPP
+#define KITZOO_OS_FILESYS_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -70,4 +70,4 @@ auto copy_file_to(const std::filesystem::path& source, const std::filesystem::pa
 
 } // namespace kitzoo::os
 
-#endif // KITZOO_OS_FS_HPP
+#endif // KITZOO_OS_FILESYS_HPP

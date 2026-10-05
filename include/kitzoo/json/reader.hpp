@@ -8,7 +8,7 @@
 #define KITZOO_JSON_READER_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/os/fs.hpp>
+#include <kitzoo/os/filesys.hpp>
 
 #include <filesystem>
 #include <nlohmann/json.hpp>

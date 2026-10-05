@@ -1,10 +1,10 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: tests/os/system_test.cpp
+// File: tests/os/sys_test.cpp
 // Description: Verifies system queries, thread operations, and edge cases.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/os/system.hpp>
+#include <kitzoo/os/sys.hpp>
 
 #include <cstdlib>
 #include <filesystem>
@@ -17,7 +17,7 @@
 #include <pthread.h>
 #endif
 
-TEST(SystemPortableTest, CurrentThreadAndTemporaryPath) {
+TEST(SysPortableTest, CurrentThreadAndTemporaryPath) {
   namespace os = kitzoo::os;
   EXPECT_TRUE(os::set_current_thread_name("worker", "test"));
 #if defined(_WIN32)
@@ -38,7 +38,7 @@ TEST(SystemPortableTest, CurrentThreadAndTemporaryPath) {
   EXPECT_FALSE(os::bind_cpus(inactive, {0}));
 }
 
-TEST(SystemPortableTest, WorkerThreadOperations) {
+TEST(SysPortableTest, WorkerThreadOperations) {
   namespace os = kitzoo::os;
   std::promise<void> release;
   auto wait = release.get_future();
@@ -58,7 +58,7 @@ TEST(SystemPortableTest, WorkerThreadOperations) {
 }
 
 #if defined(_WIN32)
-TEST(SystemWindowsTest, PriorityAndAffinity) {
+TEST(SysWindowsTest, PriorityAndAffinity) {
   namespace os = kitzoo::os;
   auto thread = GetCurrentThread();
   auto priority = GetThreadPriority(thread);
@@ -90,7 +90,7 @@ TEST(SystemWindowsTest, PriorityAndAffinity) {
 #include <sys/resource.h>
 #include <unistd.h>
 
-TEST(SystemTest, LiveThreadSchedulingAndAffinity) {
+TEST(SysTest, LiveThreadSchedulingAndAffinity) {
   namespace os = kitzoo::os;
   std::promise<void> release;
   auto wait = release.get_future();
@@ -119,7 +119,7 @@ TEST(SystemTest, LiveThreadSchedulingAndAffinity) {
   worker.join();
 }
 
-TEST(SystemTest, CpuCountAndCpuTime) {
+TEST(SysTest, CpuCountAndCpuTime) {
   namespace os = kitzoo::os;
   EXPECT_GT(os::cpu_count(), 0U);
   rusage before{}, after{};
@@ -134,7 +134,7 @@ TEST(SystemTest, CpuCountAndCpuTime) {
   EXPECT_LE(value, ns(after));
 }
 
-TEST(SystemTest, ThreadNameRules) {
+TEST(SysTest, ThreadNameRules) {
   namespace os = kitzoo::os;
   auto old = os::get_thread_name(pthread_self());
   EXPECT_TRUE(os::set_current_thread_name("worker", "test"));
@@ -146,7 +146,7 @@ TEST(SystemTest, ThreadNameRules) {
   EXPECT_EQ(pthread_setname_np(pthread_self(), old.c_str()), 0);
 }
 
-TEST(SystemTest, RejectInvalidInputsAndInactiveThread) {
+TEST(SysTest, RejectInvalidInputsAndInactiveThread) {
   namespace os = kitzoo::os;
   std::thread inactive;
   EXPECT_FALSE(os::set_thread_name(inactive, "worker"));
@@ -159,7 +159,7 @@ TEST(SystemTest, RejectInvalidInputsAndInactiveThread) {
   EXPECT_FALSE(os::set_current_thread_nice(20));
 }
 
-TEST(SystemTest, UniqueSocketPathsAndNoFdLeak) {
+TEST(SysTest, UniqueSocketPathsAndNoFdLeak) {
   namespace os = kitzoo::os;
   auto fd_count = [] {
     return std::distance(std::filesystem::directory_iterator("/proc/self/fd"), std::filesystem::directory_iterator{});
@@ -178,43 +178,43 @@ TEST(SystemTest, UniqueSocketPathsAndNoFdLeak) {
 }
 #endif
 
-TEST(SystemQueryTest, GetEnvExisting) {
+TEST(SysQueryTest, GetEnvExisting) {
   // PATH exists on every supported platform
   const auto path = kitzoo::os::get_env("PATH");
   ASSERT_TRUE(path.has_value());
   EXPECT_FALSE(path->empty());
 }
 
-TEST(SystemQueryTest, GetEnvMissing) {
+TEST(SysQueryTest, GetEnvMissing) {
   EXPECT_FALSE(kitzoo::os::get_env("KITZOO_DEFINITELY_NOT_SET_12345").has_value());
 }
 
-TEST(SystemQueryTest, Hostname) {
+TEST(SysQueryTest, Hostname) {
   const auto hn = kitzoo::os::hostname();
   EXPECT_FALSE(hn.empty());
 }
 
-TEST(SystemQueryTest, CpuCount) {
+TEST(SysQueryTest, CpuCount) {
   EXPECT_GE(kitzoo::os::cpu_count(), 1u);
 }
 
-TEST(SystemQueryTest, Pid) {
+TEST(SysQueryTest, Pid) {
   EXPECT_GT(kitzoo::os::current_pid(), 0L);
   EXPECT_EQ(kitzoo::os::current_pid(),
             kitzoo::os::current_pid()); // stable within process
 }
 
-TEST(SystemQueryTest, PageSize) {
+TEST(SysQueryTest, PageSize) {
   const auto ps = kitzoo::os::page_size();
   EXPECT_GT(ps, 0u);
   EXPECT_EQ(ps & (ps - 1), 0u); // power of two
 }
 
-TEST(SystemQueryTest, TotalMemory) {
+TEST(SysQueryTest, TotalMemory) {
   EXPECT_GT(kitzoo::os::total_memory(), 0u);
 }
 
-TEST(SystemQueryTest, Username) {
+TEST(SysQueryTest, Username) {
   // Environment-dependent: containers often lack $USER AND a utmp entry for
   // getlogin_r. If both are unavailable, username() legitimately returns
   // "".
@@ -225,14 +225,14 @@ TEST(SystemQueryTest, Username) {
   EXPECT_FALSE(name.empty());
 }
 
-TEST(SystemQueryTest, HomeDir) {
+TEST(SysQueryTest, HomeDir) {
   if (!kitzoo::os::get_env("HOME").has_value() && !kitzoo::os::get_env("USERPROFILE").has_value()) {
     GTEST_SKIP() << "no HOME/USERPROFILE in this environment";
   }
   EXPECT_FALSE(kitzoo::os::home_dir().empty());
 }
 
-TEST(SystemQueryTest, StacktraceCapturesFrames) {
+TEST(SysQueryTest, StacktraceCapturesFrames) {
   const auto frames = kitzoo::os::stacktrace();
   // Symbol names are only resolvable when the binary exports them
   // (-rdynamic); without it we still get return addresses. Only assert
@@ -242,11 +242,11 @@ TEST(SystemQueryTest, StacktraceCapturesFrames) {
     EXPECT_FALSE(frame.empty());
 }
 
-TEST(SystemQueryTest, StacktraceRespectsFrameLimit) {
+TEST(SysQueryTest, StacktraceRespectsFrameLimit) {
   EXPECT_EQ(kitzoo::os::stacktrace(1).size(), 1u);
 }
 
-TEST(SystemQueryTest, StacktraceRejectsNonPositiveFrameLimit) {
+TEST(SysQueryTest, StacktraceRejectsNonPositiveFrameLimit) {
   EXPECT_TRUE(kitzoo::os::stacktrace(0).empty());
   EXPECT_TRUE(kitzoo::os::stacktrace(-1).empty());
 }

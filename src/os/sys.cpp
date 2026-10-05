@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/os/system.cpp
+// File: src/os/sys.cpp
 // Description: Implements system queries, thread operations, and IPC path
 //              allocation with Linux, macOS, and Windows backends.
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/memory/memory.hpp>
-#include <kitzoo/os/system.hpp>
+#include <kitzoo/os/sys.hpp>
 
 #include <cstdint>
 #include <cstdlib>

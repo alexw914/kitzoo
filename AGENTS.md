@@ -11,8 +11,8 @@
 - 使用英文描述，不加入作者、日期或修改历史；这些信息由 Git 记录。
 - 头文件使用 include guard，禁止使用 `#pragma once`。
 - 宏名由公开头文件路径生成：从 `kitzoo/` 开始，将路径分隔符、点替换为
-  下划线并全部大写。例如 `include/kitzoo/os/system.hpp` 对应
-  `KITZOO_OS_SYSTEM_HPP`。不得重复或使用保留的双下划线。
+  下划线并全部大写。例如 `include/kitzoo/os/sys.hpp` 对应
+  `KITZOO_OS_SYS_HPP`。不得重复或使用保留的双下划线。
 - `.hpp.in` 模板按生成的 `.hpp` 路径命名，不将 `_IN` 加入宏名。
 - 模板中的 `@变量@` 占位符必须保持完整；必要时对该段使用
   `// clang-format off` 和 `// clang-format on` 保护。
@@ -21,16 +21,16 @@
 ```cpp
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/os/system.hpp
+// File: include/kitzoo/os/sys.hpp
 // Description: Declares system queries and thread operations.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_OS_SYSTEM_HPP
-#define KITZOO_OS_SYSTEM_HPP
+#ifndef KITZOO_OS_SYS_HPP
+#define KITZOO_OS_SYS_HPP
 
 // Declarations.
 
-#endif // KITZOO_OS_SYSTEM_HPP
+#endif // KITZOO_OS_SYS_HPP
 ```
 
 ## 格式与函数

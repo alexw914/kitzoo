@@ -8,7 +8,7 @@
 #ifndef KITZOO_OS_HPP
 #define KITZOO_OS_HPP
 
-#include <kitzoo/os/fs.hpp>
-#include <kitzoo/os/system.hpp>
+#include <kitzoo/os/filesys.hpp>
+#include <kitzoo/os/sys.hpp>
 
 #endif // KITZOO_OS_HPP

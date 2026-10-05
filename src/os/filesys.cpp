@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/os/fs.cpp
+// File: src/os/filesys.cpp
 // Description: Implements filesystem reading, writing, atomic replacement,
 //              temporary directories, and path enumeration.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/os/fs.hpp>
+#include <kitzoo/os/filesys.hpp>
 
 #include <algorithm>
 #include <cerrno>

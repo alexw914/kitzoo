@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: tests/os/fs_test.cpp
+// File: tests/os/filesys_test.cpp
 // Description: Verifies filesystem operations and error handling.
 // -----------------------------------------------------------------------------
 
@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace {
-class FsTest : public ::testing::Test {
+class FilesysTest : public ::testing::Test {
 protected:
   auto SetUp() -> void override { root_ = kitzoo::os::temp_directory(); }
 
@@ -27,7 +27,7 @@ protected:
   std::filesystem::path root_;
 };
 
-TEST_F(FsTest, PreservesBinaryAndText) {
+TEST_F(FilesysTest, PreservesBinaryAndText) {
   const std::string bytes("a\0b", 3);
   kitzoo::os::write_file(path("binary"), bytes);
   EXPECT_EQ(kitzoo::os::read_file(path("binary")), bytes);
@@ -38,7 +38,7 @@ TEST_F(FsTest, PreservesBinaryAndText) {
   EXPECT_EQ(kitzoo::os::read_file(path("text")), updated);
 }
 
-TEST_F(FsTest, ReadsEmptyAndLargeFilesAndReportsMissingFiles) {
+TEST_F(FilesysTest, ReadsEmptyAndLargeFilesAndReportsMissingFiles) {
   kitzoo::os::write_file(path("empty"), std::string_view{});
   EXPECT_TRUE(kitzoo::os::read_file(path("empty")).empty());
   const std::string data(10'000, '\xAB');
@@ -51,7 +51,7 @@ TEST_F(FsTest, ReadsEmptyAndLargeFilesAndReportsMissingFiles) {
   EXPECT_THROW(static_cast<void>(kitzoo::os::read_file(path("missing"))), std::filesystem::filesystem_error);
 }
 
-TEST_F(FsTest, ReadReportsPermissionDenied) {
+TEST_F(FilesysTest, ReadReportsPermissionDenied) {
   kitzoo::os::write_file(path("locked"), "secret");
   std::filesystem::permissions(path("locked"), std::filesystem::perms::none);
   std::error_code ec;
@@ -63,7 +63,7 @@ TEST_F(FsTest, ReadReportsPermissionDenied) {
   EXPECT_EQ(ec, std::errc::permission_denied);
 }
 
-TEST_F(FsTest, AtomicWriteCreatesParentsAndPreservesFileOnFailure) {
+TEST_F(FilesysTest, AtomicWriteCreatesParentsAndPreservesFileOnFailure) {
   const std::string data = "content";
   kitzoo::os::atomic_write(path("nested/deep/file"), data);
   EXPECT_EQ(kitzoo::os::read_file(path("nested/deep/file")), data);
@@ -76,14 +76,14 @@ TEST_F(FsTest, AtomicWriteCreatesParentsAndPreservesFileOnFailure) {
   EXPECT_EQ(kitzoo::os::list_directory(root_).size(), 2u);
 }
 
-TEST_F(FsTest, TempDirectoriesAreUnique) {
+TEST_F(FilesysTest, TempDirectoriesAreUnique) {
   const auto directory = kitzoo::os::temp_directory();
   EXPECT_NE(directory, root_);
   EXPECT_TRUE(kitzoo::os::is_dir(directory));
   kitzoo::os::remove_path(directory);
 }
 
-TEST_F(FsTest, UnicodePathsSupportAtomicReplacement) {
+TEST_F(FilesysTest, UnicodePathsSupportAtomicReplacement) {
   const auto filename = root_ / std::filesystem::path(u8"\u6d4b\u8bd5/\u6570\u636e.txt");
   const std::string initial = "initial";
   kitzoo::os::atomic_write(filename, initial);
@@ -94,7 +94,7 @@ TEST_F(FsTest, UnicodePathsSupportAtomicReplacement) {
   EXPECT_EQ(kitzoo::os::list_directory(filename.parent_path()).size(), 1u);
 }
 
-TEST_F(FsTest, MakeDirectoryCreatesOnlyRequestedLevelUnlessParentsEnabled) {
+TEST_F(FilesysTest, MakeDirectoryCreatesOnlyRequestedLevelUnlessParentsEnabled) {
   std::error_code ec = std::make_error_code(std::errc::io_error);
   EXPECT_TRUE(kitzoo::os::make_directory(path("one"), ec));
   EXPECT_FALSE(ec);
@@ -107,7 +107,7 @@ TEST_F(FsTest, MakeDirectoryCreatesOnlyRequestedLevelUnlessParentsEnabled) {
   EXPECT_FALSE(kitzoo::os::make_directory(path("missing/deep"), true));
 }
 
-TEST_F(FsTest, MakeDirectoryRejectsExistingFile) {
+TEST_F(FilesysTest, MakeDirectoryRejectsExistingFile) {
   kitzoo::os::write_file(path("file"), "content");
   std::error_code ec;
   EXPECT_FALSE(kitzoo::os::make_directory(path("file"), ec));
@@ -115,7 +115,7 @@ TEST_F(FsTest, MakeDirectoryRejectsExistingFile) {
   EXPECT_THROW(kitzoo::os::make_directory(path("file")), std::filesystem::filesystem_error);
 }
 
-TEST_F(FsTest, PredicatesDistinguishFilesFoldersAndMissingPaths) {
+TEST_F(FilesysTest, PredicatesDistinguishFilesFoldersAndMissingPaths) {
   kitzoo::os::write_file(path("empty"), "");
   kitzoo::os::make_directory(path("folder"));
   EXPECT_TRUE(kitzoo::os::path_exists(path("empty")));
@@ -135,7 +135,7 @@ TEST_F(FsTest, PredicatesDistinguishFilesFoldersAndMissingPaths) {
   EXPECT_FALSE(ec);
 }
 
-TEST_F(FsTest, RemovePathDefaultsToNonRecursiveRemoval) {
+TEST_F(FilesysTest, RemovePathDefaultsToNonRecursiveRemoval) {
   kitzoo::os::make_directory(path("tree/sub"), true);
   kitzoo::os::write_file(path("tree/sub/data"), "kept");
   std::error_code ec;
@@ -150,14 +150,14 @@ TEST_F(FsTest, RemovePathDefaultsToNonRecursiveRemoval) {
   EXPECT_EQ(kitzoo::os::remove_path(path("tree"), true), 0u);
 }
 
-TEST_F(FsTest, RemovePathDeletesFilesAndEmptyDirectories) {
+TEST_F(FilesysTest, RemovePathDeletesFilesAndEmptyDirectories) {
   kitzoo::os::write_file(path("file"), "x");
   kitzoo::os::make_directory(path("empty"));
   EXPECT_EQ(kitzoo::os::remove_path(path("file")), 1u);
   EXPECT_EQ(kitzoo::os::remove_path(path("empty")), 1u);
 }
 
-TEST_F(FsTest, ListDirectoryReturnsSortedPathsWithOptionalRecursion) {
+TEST_F(FilesysTest, ListDirectoryReturnsSortedPathsWithOptionalRecursion) {
   kitzoo::os::make_directory(path("child"));
   kitzoo::os::write_file(path("z.txt"), "z");
   kitzoo::os::write_file(path("a.txt"), "a");
@@ -172,7 +172,7 @@ TEST_F(FsTest, ListDirectoryReturnsSortedPathsWithOptionalRecursion) {
   EXPECT_EQ(kitzoo::os::list_directory(root_), flat);
 }
 
-TEST_F(FsTest, ListingFailureReturnsEmptyAndErrorOrThrows) {
+TEST_F(FilesysTest, ListingFailureReturnsEmptyAndErrorOrThrows) {
   std::error_code ec;
   EXPECT_TRUE(kitzoo::os::list_directory(path("missing"), ec).empty());
   EXPECT_TRUE(ec);
@@ -184,7 +184,7 @@ TEST_F(FsTest, ListingFailureReturnsEmptyAndErrorOrThrows) {
   EXPECT_FALSE(ec);
 }
 
-TEST_F(FsTest, AppendCreatesFileAndPreservesExistingContent) {
+TEST_F(FilesysTest, AppendCreatesFileAndPreservesExistingContent) {
   kitzoo::os::append_file(path("file"), "first");
   kitzoo::os::append_file(path("file"), std::string_view("\0second", 7));
   kitzoo::os::append_file(path("file"), "");
@@ -195,7 +195,7 @@ TEST_F(FsTest, AppendCreatesFileAndPreservesExistingContent) {
   EXPECT_THROW(kitzoo::os::append_file(path("missing/child"), "x"), std::filesystem::filesystem_error);
 }
 
-TEST_F(FsTest, CopyRequiresExplicitOverwrite) {
+TEST_F(FilesysTest, CopyRequiresExplicitOverwrite) {
   kitzoo::os::write_file(path("source"), "original");
   EXPECT_TRUE(kitzoo::os::copy_file_to(path("source"), path("copy")));
   EXPECT_EQ(kitzoo::os::read_file(path("copy")), "original");
@@ -210,7 +210,7 @@ TEST_F(FsTest, CopyRequiresExplicitOverwrite) {
   EXPECT_THROW(kitzoo::os::copy_file_to(path("missing"), path("copy")), std::filesystem::filesystem_error);
 }
 
-TEST_F(FsTest, RecursiveListingAndRemovalDoNotFollowDirectorySymlinks) {
+TEST_F(FilesysTest, RecursiveListingAndRemovalDoNotFollowDirectorySymlinks) {
   kitzoo::os::make_directory(path("outside"));
   kitzoo::os::write_file(path("outside/kept"), "data");
   kitzoo::os::make_directory(path("tree"));
@@ -225,7 +225,7 @@ TEST_F(FsTest, RecursiveListingAndRemovalDoNotFollowDirectorySymlinks) {
   EXPECT_EQ(kitzoo::os::read_file(path("outside/kept")), "data");
 }
 
-TEST_F(FsTest, DanglingSymlinkExistsAsLinkButNotAsTarget) {
+TEST_F(FilesysTest, DanglingSymlinkExistsAsLinkButNotAsTarget) {
   std::error_code ec;
   std::filesystem::create_symlink(path("missing"), path("link"), ec);
   if (ec)

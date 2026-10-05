@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
-#include <kitzoo/os/fs.hpp>
+#include <kitzoo/os/filesys.hpp>
 
 #include <chrono>
 #include <iostream>

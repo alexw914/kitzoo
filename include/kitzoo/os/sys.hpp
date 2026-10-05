@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/os/system.hpp
+// File: include/kitzoo/os/sys.hpp
 // Description: Declares system queries, thread operations, process CPU time,
 //              and IPC path allocation.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_OS_SYSTEM_HPP
-#define KITZOO_OS_SYSTEM_HPP
+#ifndef KITZOO_OS_SYS_HPP
+#define KITZOO_OS_SYS_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -96,4 +96,4 @@ auto remove_unique_domain_socket_address(const std::string& address) -> bool;
 
 } // namespace kitzoo::os
 
-#endif // KITZOO_OS_SYSTEM_HPP
+#endif // KITZOO_OS_SYS_HPP
