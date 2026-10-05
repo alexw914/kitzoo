@@ -150,6 +150,8 @@ private:
   static auto to_spdlog(Level level) noexcept -> spdlog::level::level_enum;
 };
 
+// Destroyed during static destruction; do not log from destructors of static
+// objects that may run after it.
 KZ_NODISCARD auto default_logger() -> Logger&;
 
 } // namespace kitzoo::log

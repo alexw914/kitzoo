@@ -142,12 +142,12 @@ auto Logger::flush() -> void {
 }
 
 auto default_logger() -> Logger& {
-  static auto* instance = [] {
-    auto logger = memory::make_unique<Logger>("default");
-    logger->add_sink(memory::make_shared<ConsoleSink>());
-    return logger.release();
-  }();
-  return *instance;
+  static Logger instance{"default", [] {
+                           LoggerOptions options;
+                           options.sinks.push_back(memory::make_shared<ConsoleSink>());
+                           return options;
+                         }()};
+  return instance;
 }
 
 AsyncLogger::AsyncLogger(std::shared_ptr<Logger> logger, AsyncLoggerOptions options)
