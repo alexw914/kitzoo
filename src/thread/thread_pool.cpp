@@ -82,6 +82,24 @@ auto ThreadPool::shutdown() -> void {
   }
 }
 
+auto ThreadPool::set_exception_handler(ExceptionHandler handler) -> void {
+  std::lock_guard lock{mutex_};
+  exception_handler_ = std::move(handler);
+}
+
+auto ThreadPool::report_exception(std::exception_ptr error) noexcept -> void {
+  try {
+    ExceptionHandler handler;
+    {
+      std::lock_guard lock{mutex_};
+      handler = exception_handler_;
+    }
+    if (handler)
+      handler(std::move(error));
+  } catch (...) {
+  }
+}
+
 auto ThreadPool::worker_loop() -> void {
   active_pool = this;
   while (true) {
@@ -100,6 +118,7 @@ auto ThreadPool::worker_loop() -> void {
     try {
       task();
     } catch (...) {
+      report_exception(std::current_exception());
     }
     {
       std::lock_guard lock{mutex_};
