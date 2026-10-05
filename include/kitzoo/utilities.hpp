@@ -10,6 +10,7 @@
 
 #if defined(KZ_WITH_OPENSSL) && KZ_WITH_OPENSSL
 #include <kitzoo/utilities/aes.hpp>
+#include <kitzoo/utilities/digest.hpp>
 #endif
 
 #include <kitzoo/utilities/base64.hpp>

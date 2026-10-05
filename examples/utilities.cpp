@@ -63,6 +63,21 @@ auto main() -> int {
     const auto decrypted = kitzoo::util::aes_cbc_decrypt(encrypted, key, iv);
     std::printf("AES encrypted=%zu bytes decoded=%zu bytes\n", encrypted.size(), decrypted.size());
   }
+
+  // Authenticated encryption and message digests.
+  {
+    const std::array<std::byte, 32> key{};
+    const std::array<std::byte, 12> nonce{};
+    const std::string_view text = "sensor frame";
+    const auto bytes = std::as_bytes(std::span{text.data(), text.size()});
+    auto sealed = kitzoo::util::aes_gcm_encrypt(bytes, key, nonce);
+    std::printf("AES-GCM sealed=%zu bytes, authentic=%s\n", sealed.size(),
+                kitzoo::util::aes_gcm_decrypt(sealed, key, nonce) ? "yes" : "no");
+    sealed.front() ^= std::byte{0x01};
+    std::printf("tampered message rejected=%s\n", kitzoo::util::aes_gcm_decrypt(sealed, key, nonce) ? "no" : "yes");
+    std::printf("sha256=%s\n", kitzoo::util::hex_encode(kitzoo::util::sha256(bytes)).c_str());
+    std::printf("hmac=%s\n", kitzoo::util::hex_encode(kitzoo::util::hmac_sha256(key, bytes)).c_str());
+  }
 #endif
 
   return 0;

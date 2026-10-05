@@ -1,6 +1,6 @@
 if(KITZOO_WITH_OPENSSL)
     find_package(OpenSSL REQUIRED)
-    kitzoo_add_module(utilities SOURCES aes.cpp base64.cpp str.cpp DEPENDS memory)
+    kitzoo_add_module(utilities SOURCES aes.cpp base64.cpp digest.cpp str.cpp DEPENDS memory)
     target_compile_definitions(kitzoo_utilities PUBLIC KZ_WITH_OPENSSL=1)
     target_link_libraries(kitzoo_utilities PRIVATE OpenSSL::Crypto)
 else()

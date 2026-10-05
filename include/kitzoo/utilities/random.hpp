@@ -20,8 +20,13 @@
 
 namespace kitzoo::util {
 
+// Seeded from 256 bits of std::random_device output per thread.
 KZ_NODISCARD inline auto thread_rng() -> std::mt19937_64& {
-  thread_local std::mt19937_64 engine{std::random_device{}()};
+  thread_local std::mt19937_64 engine = [] {
+    std::random_device device;
+    std::seed_seq seed{device(), device(), device(), device(), device(), device(), device(), device()};
+    return std::mt19937_64{seed};
+  }();
   return engine;
 }
 
