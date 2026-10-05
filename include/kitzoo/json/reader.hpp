@@ -43,6 +43,7 @@ public:
   // A failed load preserves the previous document and records the latest input error.
   auto parse(std::string_view text) -> bool {
     Json next;
+    // nlohmann reports the error position only through its exceptions.
     try {
       next = Json::parse(text.begin(), text.end());
     } catch (const Json::exception& error) {
