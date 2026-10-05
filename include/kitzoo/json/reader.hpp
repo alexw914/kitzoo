@@ -42,12 +42,12 @@ public:
 
   // A failed load preserves the previous document and records the latest input error.
   auto parse(std::string_view text) -> bool {
-    Json next;
-    // nlohmann reports the error position only through its exceptions.
-    try {
-      next = Json::parse(text.begin(), text.end());
-    } catch (const Json::exception& error) {
-      error_info_ = error.what();
+    auto next = Json::parse(text.begin(), text.end(), nullptr, false);
+    if (next.is_discarded()) {
+      // A second, failure-only pass recovers the positioned error message.
+      ErrorCollector collector;
+      Json::sax_parse(text.begin(), text.end(), &collector);
+      error_info_ = collector.message.empty() ? "Invalid JSON text" : std::move(collector.message);
       return false;
     }
     json_.swap(next);
@@ -74,6 +74,40 @@ public:
   KZ_NODISCARD auto error_info() const noexcept -> const std::string& { return error_info_; }
 
 private:
+  // Receives the error nlohmann would otherwise throw; parse events are ignored.
+  struct ErrorCollector final : Json::json_sax_t {
+    std::string message;
+
+    auto null() -> bool override { return true; }
+
+    auto boolean(bool) -> bool override { return true; }
+
+    auto number_integer(Json::number_integer_t) -> bool override { return true; }
+
+    auto number_unsigned(Json::number_unsigned_t) -> bool override { return true; }
+
+    auto number_float(Json::number_float_t, const Json::string_t&) -> bool override { return true; }
+
+    auto string(Json::string_t&) -> bool override { return true; }
+
+    auto binary(Json::binary_t&) -> bool override { return true; }
+
+    auto start_object(std::size_t) -> bool override { return true; }
+
+    auto key(Json::string_t&) -> bool override { return true; }
+
+    auto end_object() -> bool override { return true; }
+
+    auto start_array(std::size_t) -> bool override { return true; }
+
+    auto end_array() -> bool override { return true; }
+
+    auto parse_error(std::size_t, const std::string&, const Json::exception& error) -> bool override {
+      message = error.what();
+      return false;
+    }
+  };
+
   Json json_ = Json::object();
   std::string error_info_;
 };
