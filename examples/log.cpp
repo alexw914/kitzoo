@@ -51,7 +51,7 @@ auto callback_and_historical_logging() -> void {
 }
 
 // File logging: switch to new files by size and periodically clean closed files.
-auto managed_file_logging() -> void {
+auto rolling_file_logging() -> void {
   const auto directory = kitzoo::os::temp_directory();
   std::filesystem::path latest;
   {
@@ -59,17 +59,16 @@ auto managed_file_logging() -> void {
     logger.set_pattern("%v");
     FileSinkOptions file;
     file.path = directory / "application.log";
-    file.max_size_bytes = 256;
-    file.max_files = 2; // Closed files; the active file is always retained.
-    file.max_age = std::chrono::hours{24};
-    file.cleanup_interval = std::chrono::minutes{1};
+    file.max_size_bytes = 256;                     // Start a new file beyond 256 bytes.
+    file.max_age = std::chrono::days{7};           // Delete files older than a week...
+    file.cleanup_interval = std::chrono::hours{1}; // ...checking every hour.
     auto sink = logger.add_file_sink(file);
     for (int frame = 0; frame < 20; ++frame)
       logger.logf(Level::Info, std::source_location::current(), "frame={} status=processed", frame);
     logger.flush(); // Flush is not an fsync durability guarantee.
     latest = sink->current_file();
     std::cout << "manual cleanup removed " << sink->cleanup() << " files\n";
-  } // Joins the cleaner and releases file handles before removing the directory.
+  } // Stops cleanup and releases file handles before removing the directory.
   std::cout << "latest log file: " << latest.filename().string() << '\n' << kitzoo::os::read_file(latest);
   kitzoo::os::remove_path(directory, true);
 }
@@ -101,6 +100,6 @@ auto asynchronous_logging() -> void {
 auto main() -> int {
   synchronous_logging();
   callback_and_historical_logging();
-  managed_file_logging();
+  rolling_file_logging();
   asynchronous_logging();
 }

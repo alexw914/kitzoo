@@ -65,17 +65,19 @@ using Sink = spdlog::sinks::sink;
 using SinkPtr = spdlog::sink_ptr;
 using ErrorHandler = std::function<void(std::string_view)>;
 
+// Files are named <stem>_<YYYYmmdd-HHMMSS>_<n><extension> from path, for example
+// logs/app.log -> logs/app_20261005-142530_0.log; existing files are never renamed.
 struct FileSinkOptions {
   std::filesystem::path path;
+  // A new file starts before a record would exceed this size.
   std::size_t max_size_bytes{10 * 1024 * 1024};
-  // Zero disables the corresponding retention limit. Counts exclude the active file.
-  std::size_t max_files{10};
-  std::chrono::seconds max_age{std::chrono::hours{24 * 7}};
-  // Zero disables background cleanup; cleanup() remains available.
+  // Files of this naming pattern last modified earlier are deleted; zero keeps all.
+  std::chrono::seconds max_age{std::chrono::days{7}};
+  // Background cleanup period, typically hours; zero cleans only at startup.
   std::chrono::milliseconds cleanup_interval{std::chrono::hours{1}};
 };
 
-class ManagedFileSink;
+class RollingFileSink;
 
 struct LoggerOptions {
   Level level{Level::Info};
@@ -99,7 +101,7 @@ public:
 
   auto add_sink(SinkPtr sink) -> void;
 
-  auto add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<ManagedFileSink>;
+  auto add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<RollingFileSink>;
 
   auto set_pattern(std::string pattern) -> void;
 

@@ -100,8 +100,8 @@ auto Logger::add_sink(SinkPtr sink) -> void {
   native_->sinks().push_back(std::move(sink));
 }
 
-auto Logger::add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<ManagedFileSink> {
-  auto sink = memory::make_shared<ManagedFileSink>(options);
+auto Logger::add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<RollingFileSink> {
+  auto sink = memory::make_shared<RollingFileSink>(options);
   add_sink(sink);
   return sink;
 }

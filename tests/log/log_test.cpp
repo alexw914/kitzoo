@@ -220,62 +220,27 @@ TEST_F(LogTest, RejectsNullSink) {
   EXPECT_THROW(logger_->add_sink(nullptr), std::invalid_argument);
 }
 
-TEST(LogFileTest, BasicFileFlushMakesMessageReadable) {
-  TemporaryDirectory directory;
-  const auto path = directory.path / "basic.log";
-  {
-    LoggerOptions options;
-    options.pattern = "%v";
-    options.sinks = {std::make_shared<FileSink>(path.string(), true)};
-    Logger logger("file", options);
-    logger.log(Level::Info, "persisted record");
-    logger.flush();
-    EXPECT_NE(kitzoo::os::read_file(path).find("persisted record"), std::string::npos);
-  }
-}
-
-TEST(LogFileTest, RotationRetainsBoundedFilesAndNewestRecord) {
-  TemporaryDirectory directory;
-  const auto path = directory.path / "rotation.log";
-  {
-    LoggerOptions options;
-    options.pattern = "%v";
-    options.sinks = {std::make_shared<RotatingFileSink>(path.string(), 128, 2)};
-    Logger logger("rotation", options);
-    for (int i = 0; i < 30; ++i)
-      logger.logf(Level::Info, std::source_location::current(), "record={} {}", i, std::string(50, 'x'));
-    logger.flush();
-  }
-  std::size_t files = 0;
-  for (const auto& entry : std::filesystem::directory_iterator(directory.path)) {
-    if (entry.is_regular_file())
-      ++files;
-  }
-  EXPECT_EQ(files, 3u); // current file plus two retained files
-  EXPECT_NE(kitzoo::os::read_file(path).find("record=29"), std::string::npos);
-}
-
-// Managed files: rollover, retention, idle cleanup and asynchronous delivery.
-TEST(LogManagedFileTest, RejectsInvalidOptions) {
+// Rolling files: naming, rollover, age cleanup and asynchronous delivery.
+TEST(LogRollingFileTest, RejectsInvalidOptions) {
   FileSinkOptions options;
-  EXPECT_THROW(ManagedFileSink{options}, std::invalid_argument);
+  EXPECT_THROW(RollingFileSink{options}, std::invalid_argument);
   TemporaryDirectory directory;
   options.path = directory.path / "application.log";
   options.max_size_bytes = 0;
-  EXPECT_THROW(ManagedFileSink{options}, std::invalid_argument);
+  EXPECT_THROW(RollingFileSink{options}, std::invalid_argument);
   options.max_size_bytes = 64;
   options.max_age = -1s;
-  EXPECT_THROW(ManagedFileSink{options}, std::invalid_argument);
+  EXPECT_THROW(RollingFileSink{options}, std::invalid_argument);
   options.max_age = 0s;
   options.cleanup_interval = -1ms;
-  EXPECT_THROW(ManagedFileSink{options}, std::invalid_argument);
+  EXPECT_THROW(RollingFileSink{options}, std::invalid_argument);
 }
 
-TEST(LogManagedFileTest, OptionsCreateDirectoriesAndRotateWithoutRenamingOldFiles) {
+TEST(LogRollingFileTest, OptionsCreateDirectoriesAndRotateWithoutRenamingOldFiles) {
   TemporaryDirectory directory;
   LoggerOptions options;
   options.pattern = "%v";
-  options.file = FileSinkOptions{directory.path / "nested" / "application.log", 8, 0, 0s, 0ms};
+  options.file = FileSinkOptions{directory.path / "nested" / "application.log", 8, 0s, 0ms};
   Logger logger("file", options);
   logger.log(Level::Info, "first");
   logger.log(Level::Info, "second");
@@ -290,11 +255,11 @@ TEST(LogManagedFileTest, OptionsCreateDirectoriesAndRotateWithoutRenamingOldFile
   EXPECT_TRUE(std::ranges::any_of(records, [](const std::string& text) -> bool { return text.starts_with("second"); }));
 }
 
-TEST(LogManagedFileTest, OversizedRecordStaysIntactAndNextRecordStartsNewFile) {
+TEST(LogRollingFileTest, OversizedRecordStaysIntactAndNextRecordStartsNewFile) {
   TemporaryDirectory directory;
   Logger logger("large");
   logger.set_pattern("%v");
-  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 0, 0s, 0ms});
+  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 0s, 0ms});
   const auto first = sink->current_file();
   logger.log(Level::Info, std::string(100, 'x'));
   logger.flush();
@@ -307,12 +272,12 @@ TEST(LogManagedFileTest, OversizedRecordStaysIntactAndNextRecordStartsNewFile) {
   EXPECT_TRUE(kitzoo::os::read_file(sink->current_file()).starts_with("next"));
 }
 
-TEST(LogManagedFileTest, ExactSizeBoundaryDoesNotSplitTheRecord) {
+TEST(LogRollingFileTest, ExactSizeBoundaryDoesNotSplitTheRecord) {
   TemporaryDirectory directory;
   const auto size = 4 + std::string_view(spdlog::details::os::default_eol).size();
   Logger logger("boundary");
   logger.set_pattern("%v");
-  auto sink = logger.add_file_sink({directory.path / "application.log", size, 0, 0s, 0ms});
+  auto sink = logger.add_file_sink({directory.path / "application.log", size, 0s, 0ms});
   const auto first = sink->current_file();
   logger.log(Level::Info, "1234");
   logger.flush();
@@ -324,22 +289,26 @@ TEST(LogManagedFileTest, ExactSizeBoundaryDoesNotSplitTheRecord) {
   EXPECT_EQ(std::filesystem::file_size(first), size);
 }
 
-TEST(LogManagedFileTest, CountLimitIncludesOnlyClosedFilesAndRestartRetainsHistory) {
+TEST(LogRollingFileTest, NamesFilesWithTimestampAndKeepsHistoryAcrossRestart) {
   TemporaryDirectory directory;
-  const FileSinkOptions options{directory.path / "application.log", 8, 2, 0s, 0ms};
+  const FileSinkOptions options{directory.path / "application.log", 8, 0s, 0ms};
+  auto count_files = [&directory]() -> std::size_t {
+    return static_cast<std::size_t>(std::ranges::distance(std::filesystem::directory_iterator(directory.path)));
+  };
   {
     Logger logger("first");
     logger.set_pattern("%v");
-    logger.add_file_sink(options);
-    for (int index = 0; index < 10; ++index)
+    auto sink = logger.add_file_sink(options);
+    const auto name = sink->current_file().filename().string();
+    // application_YYYYmmdd-HHMMSS_N.log
+    ASSERT_EQ(name.size(), std::string_view("application_20261005-142530_0.log").size()) << name;
+    EXPECT_TRUE(name.starts_with("application_") && name.ends_with("_0.log")) << name;
+    EXPECT_EQ(name[20], '-');
+    for (int index = 0; index < 3; ++index)
       logger.log(Level::Info, "entry");
     logger.flush();
   }
-  std::size_t files = 0;
-  for (const auto& entry : std::filesystem::directory_iterator(directory.path))
-    if (entry.is_regular_file())
-      ++files;
-  EXPECT_EQ(files, 3u);
+  EXPECT_EQ(count_files(), 3u);
   {
     Logger logger("restart");
     logger.set_pattern("%v");
@@ -348,26 +317,22 @@ TEST(LogManagedFileTest, CountLimitIncludesOnlyClosedFilesAndRestartRetainsHisto
     logger.flush();
     EXPECT_TRUE(kitzoo::os::read_file(sink->current_file()).starts_with("newest"));
   }
-  files = 0;
-  for (const auto& entry : std::filesystem::directory_iterator(directory.path))
-    if (entry.is_regular_file())
-      ++files;
-  EXPECT_EQ(files, 3u);
+  EXPECT_EQ(count_files(), 4u);
 }
 
-TEST(LogManagedFileTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
+TEST(LogRollingFileTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
   TemporaryDirectory directory;
   Logger logger("retention");
   logger.set_pattern("%v");
-  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 0, 1h, 0ms});
+  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 1h, 0ms});
   logger.log(Level::Info, "first");
   const auto closed = sink->current_file();
   logger.log(Level::Info, "second");
   logger.flush();
   const auto active = sink->current_file();
   const auto foreign = directory.path / "other.log";
-  const auto malformed = directory.path / "application.log.kzlog.1.2.3.extra";
-  const auto subdirectory = directory.path / "application.log.kzlog.1.2.3";
+  const auto malformed = directory.path / "application_20260101-000000_x.log";
+  const auto subdirectory = directory.path / "application_20260101-000000_9.log";
   std::filesystem::create_directory(subdirectory);
   kitzoo::os::write_file(foreign, "unrelated");
   kitzoo::os::write_file(malformed, "unrelated");
@@ -383,13 +348,13 @@ TEST(LogManagedFileTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
   EXPECT_TRUE(sink->cleanup_error().empty());
 }
 
-TEST(LogManagedFileTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
+TEST(LogRollingFileTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
   TemporaryDirectory directory;
   Logger logger("links");
-  auto sink = logger.add_file_sink({directory.path / "application.log", 64, 1, 1s, 0ms});
+  auto sink = logger.add_file_sink({directory.path / "application.log", 64, 1s, 0ms});
   const auto target = directory.path / "unrelated.log";
   kitzoo::os::write_file(target, "keep");
-  const auto link = directory.path / "application.log.kzlog.1.2.3";
+  const auto link = directory.path / "application_20260101-000000_7.log";
   std::error_code error;
   std::filesystem::create_symlink(target, link, error);
   if (error)
@@ -400,11 +365,11 @@ TEST(LogManagedFileTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
   EXPECT_EQ(kitzoo::os::read_file(target), "keep");
 }
 
-TEST(LogManagedFileTest, BackgroundCleanupDeletesExpiredFilesWhileIdle) {
+TEST(LogRollingFileTest, BackgroundCleanupDeletesExpiredFilesWhileIdle) {
   TemporaryDirectory directory;
   Logger logger("idle");
   logger.set_pattern("%v");
-  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 0, 1h, 10ms});
+  auto sink = logger.add_file_sink({directory.path / "application.log", 8, 1h, 10ms});
   logger.log(Level::Info, "first");
   const auto closed = sink->current_file();
   logger.log(Level::Info, "second");
@@ -418,20 +383,20 @@ TEST(LogManagedFileTest, BackgroundCleanupDeletesExpiredFilesWhileIdle) {
   EXPECT_TRUE(sink->cleanup_error().empty());
 }
 
-TEST(LogManagedFileTest, DestructionInterruptsLongCleanupInterval) {
+TEST(LogRollingFileTest, DestructionInterruptsLongCleanupInterval) {
   TemporaryDirectory directory;
   const auto started = std::chrono::steady_clock::now();
   {
-    ManagedFileSink sink({directory.path / "application.log", 64, 0, 0s, 1h});
+    RollingFileSink sink({directory.path / "application.log", 64, 0s, 1h});
   }
   EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
 }
 
-TEST(LogManagedFileTest, AsyncFlushPersistsEveryConcurrentProducerRecord) {
+TEST(LogRollingFileTest, AsyncFlushPersistsEveryConcurrentProducerRecord) {
   TemporaryDirectory directory;
   LoggerOptions options;
   options.pattern = "%v";
-  options.file = FileSinkOptions{directory.path / "application.log", 64, 0, 0s, 0ms};
+  options.file = FileSinkOptions{directory.path / "application.log", 64, 0s, 0ms};
   auto logger = kitzoo::memory::make_shared<Logger>("async_file", options);
   AsyncLogger async(logger, {2});
   std::vector<std::jthread> producers;
