@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <gtest/gtest.h>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -169,4 +170,54 @@ TEST(BlockingQueueTest, MultipleConsumersOnClose) {
     q.close(); // must wake ALL consumers
   }
   EXPECT_EQ(wakeups.load(), 3);
+}
+
+TEST(BlockingQueueTest, BoundedPushBlocksUntilSpace) {
+  BlockingQueue<int> q{1};
+  EXPECT_EQ(q.capacity(), 1u);
+  ASSERT_TRUE(q.push(1));
+  std::atomic<bool> pushed{false};
+  std::jthread producer{[&] {
+    EXPECT_TRUE(q.push(2));
+    pushed = true;
+  }};
+  std::this_thread::sleep_for(std::chrono::milliseconds{50});
+  EXPECT_FALSE(pushed.load());
+  EXPECT_EQ(q.wait_and_pop().value(), 1);
+  producer.join();
+  EXPECT_TRUE(pushed.load());
+  EXPECT_EQ(q.try_pop().value(), 2);
+}
+
+TEST(BlockingQueueTest, CloseWakesBlockedProducer) {
+  BlockingQueue<int> q{1};
+  ASSERT_TRUE(q.push(1));
+  std::jthread producer{[&] { EXPECT_FALSE(q.push(2)); }};
+  std::this_thread::sleep_for(std::chrono::milliseconds{20});
+  q.close();
+  producer.join();
+  EXPECT_EQ(q.size(), 1u);
+}
+
+TEST(BlockingQueueTest, TryPushKeepsValueWhenFull) {
+  BlockingQueue<std::unique_ptr<int>> q{1};
+  EXPECT_TRUE(q.try_push(std::make_unique<int>(1)));
+  auto value = std::make_unique<int>(2);
+  EXPECT_FALSE(q.try_push(std::move(value)));
+  ASSERT_NE(value, nullptr);
+  EXPECT_EQ(*value, 2);
+  q.close();
+  EXPECT_FALSE(q.try_push(std::make_unique<int>(3)));
+}
+
+TEST(BlockingQueueTest, PopForTimesOutAndReturnsItems) {
+  BlockingQueue<int> q;
+  const auto start = std::chrono::steady_clock::now();
+  EXPECT_EQ(q.pop_for(std::chrono::milliseconds{30}), std::nullopt);
+  EXPECT_GE(std::chrono::steady_clock::now() - start, std::chrono::milliseconds{30});
+  std::jthread producer{[&] {
+    std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    q.push(7);
+  }};
+  EXPECT_EQ(q.pop_for(std::chrono::seconds{5}), 7);
 }

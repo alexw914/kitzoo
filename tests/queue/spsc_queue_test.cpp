@@ -56,6 +56,16 @@ TEST(SPSCQueueTest, PushFull) {
   EXPECT_FALSE(q.push(99)); // full
 }
 
+TEST(SPSCQueueTest, SizeTracksPushAndPop) {
+  SPSCQueue<int, 4> q;
+  EXPECT_EQ(q.size(), 0u);
+  ASSERT_TRUE(q.push(1));
+  ASSERT_TRUE(q.push(2));
+  EXPECT_EQ(q.size(), 2u);
+  (void)q.pop();
+  EXPECT_EQ(q.size(), 1u);
+}
+
 TEST(SPSCQueueTest, Capacity) {
   SPSCQueue<int, 4> q;
   EXPECT_EQ(q.capacity(), 4u);

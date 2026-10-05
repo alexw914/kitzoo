@@ -6,6 +6,7 @@
 
 #include <kitzoo/queue.hpp>
 
+#include <chrono>
 #include <cstdio>
 #include <thread>
 
@@ -14,8 +15,9 @@ using namespace kitzoo::queue;
 
 auto main() -> int {
   // BlockingQueue: two producers feed one consumer; close() ends the stream.
+  // The capacity bounds memory: producers block while 16 items are pending.
   {
-    BlockingQueue<int> queue;
+    BlockingQueue<int> queue{16};
 
     std::jthread consumer([&queue] {
       int sum = 0;
@@ -36,6 +38,13 @@ auto main() -> int {
     p1.join();
     p2.join();
     queue.close(); // consumer drains, then sees std::nullopt and exits
+  }
+
+  // pop_for waits with a timeout instead of blocking indefinitely.
+  {
+    BlockingQueue<int> queue;
+    const auto item = queue.pop_for(std::chrono::milliseconds{10});
+    std::printf("pop_for on an empty queue: %s\n", item ? "item" : "timed out");
   }
 
   // SPSCQueue: one producer thread, one consumer thread, no locks.

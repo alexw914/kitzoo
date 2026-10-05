@@ -80,6 +80,11 @@ public:
 
   KZ_NODISCARD static consteval auto capacity() noexcept -> std::size_t { return Capacity; }
 
+  // A snapshot; the other thread may change it immediately.
+  KZ_NODISCARD auto size() const noexcept -> std::size_t {
+    return write_idx_.load(std::memory_order_acquire) - read_idx_.load(std::memory_order_acquire);
+  }
+
   KZ_NODISCARD auto empty() const noexcept -> bool {
     return read_idx_.load(std::memory_order_relaxed) == write_idx_.load(std::memory_order_relaxed);
   }
