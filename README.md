@@ -8,7 +8,7 @@ Applications can link the modules they need.
 
 | Module | Functionality |
 | --- | --- |
-| `core` | Version information, command-line parsing, singletons, move-only callables, scope guards, and result types. |
+| `core` | Version information, command-line parsing, singletons, move-only callables, and scope guards. |
 | `utilities` | String processing, encoding, random values, UUIDs, and optional AES, SHA-256, and HMAC. |
 | `time` | Clocks, calendar conversion, elapsed measurements, timelines, and periodic callbacks. |
 | `os` | System queries, thread configuration, file/directory operations, and graceful shutdown. |
