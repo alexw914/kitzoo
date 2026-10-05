@@ -9,6 +9,7 @@
 #include <kitzoo/log/logger.hpp>
 
 #include <benchmark/benchmark.h>
+#include <spdlog/sinks/base_sink.h>
 
 using namespace kitzoo::log;
 

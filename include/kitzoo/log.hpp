@@ -10,5 +10,6 @@
 
 #include <kitzoo/log/async_logger.hpp>
 #include <kitzoo/log/logger.hpp>
+#include <kitzoo/log/sinks.hpp>
 
 #endif // KITZOO_LOG_HPP

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log/logger.hpp>
+#include <kitzoo/log/sinks.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <algorithm>

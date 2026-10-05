@@ -23,14 +23,7 @@
 #include <source_location>
 #include <spdlog/fmt/fmt.h>
 #include <spdlog/logger.h>
-#include <spdlog/sinks/base_sink.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/callback_sink.h>
-#include <spdlog/sinks/daily_file_sink.h>
-#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <stop_token>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -70,13 +63,6 @@ KZ_NODISCARD constexpr auto to_string(Level level) noexcept -> std::string_view 
 
 using Sink = spdlog::sinks::sink;
 using SinkPtr = spdlog::sink_ptr;
-using ConsoleSink = spdlog::sinks::stdout_color_sink_mt;
-using FileSink = spdlog::sinks::basic_file_sink_mt;
-
-using StderrSink = spdlog::sinks::stderr_color_sink_mt;
-using RotatingFileSink = spdlog::sinks::rotating_file_sink_mt;
-using DailyFileSink = spdlog::sinks::daily_file_sink_mt;
-using CallbackSink = spdlog::sinks::callback_sink_mt;
 using ErrorHandler = std::function<void(std::string_view)>;
 
 struct FileSinkOptions {
@@ -89,36 +75,7 @@ struct FileSinkOptions {
   std::chrono::milliseconds cleanup_interval{std::chrono::hours{1}};
 };
 
-// One sink owns a base path; share that sink when several loggers write to it.
-// Generated files use <filename>.kzlog.<session>.<sink>.<sequence> names.
-class ManagedFileSink final : public spdlog::sinks::base_sink<std::mutex> {
-public:
-  explicit ManagedFileSink(const FileSinkOptions& options);
-
-  ~ManagedFileSink() override;
-
-  auto current_file() -> std::filesystem::path;
-
-  // Removes only closed regular files in this sink's naming namespace.
-  auto cleanup() -> std::size_t;
-
-  // Latest background cleanup failure; cleared after a successful cleanup.
-  auto cleanup_error() -> std::string;
-
-private:
-  auto sink_it_(const spdlog::details::log_msg& message) -> void override;
-
-  auto flush_() -> void override;
-
-  auto open_file() -> void;
-
-  auto cleanup_files() -> std::size_t;
-
-  auto cleanup_loop(std::stop_token stop) -> void;
-
-  struct Impl;
-  memory::UniquePtr<Impl> impl_;
-};
+class ManagedFileSink;
 
 struct LoggerOptions {
   Level level{Level::Info};
