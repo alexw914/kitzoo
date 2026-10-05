@@ -11,4 +11,4 @@
 #include <kitzoo/log/async_logger.hpp>
 #include <kitzoo/log/logger.hpp>
 
-#endif  // KITZOO_LOG_HPP
+#endif // KITZOO_LOG_HPP

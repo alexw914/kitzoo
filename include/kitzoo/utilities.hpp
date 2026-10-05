@@ -14,4 +14,4 @@
 #include <kitzoo/utilities/unique_function.hpp>
 #include <kitzoo/utilities/uuid.hpp>
 
-#endif  // KITZOO_UTILITIES_HPP
+#endif // KITZOO_UTILITIES_HPP

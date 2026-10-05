@@ -17,66 +17,66 @@ namespace kitzoo::memory {
 // Growth may invalidate pointers; failed allocation preserves pointer and contents.
 class ByteBuffer {
 public:
-    explicit ByteBuffer(std::size_t size = 0, std::size_t alignment = alignof(std::max_align_t));
+  explicit ByteBuffer(std::size_t size = 0, std::size_t alignment = alignof(std::max_align_t));
 
-    ~ByteBuffer();
+  ~ByteBuffer();
 
-    ByteBuffer(ByteBuffer const&) = delete;
-    auto operator=(ByteBuffer const&) -> ByteBuffer& = delete;
+  ByteBuffer(ByteBuffer const&) = delete;
+  auto operator=(ByteBuffer const&) -> ByteBuffer& = delete;
 
-    ByteBuffer(ByteBuffer&& other) noexcept;
-    auto operator=(ByteBuffer&& other) noexcept -> ByteBuffer&;
+  ByteBuffer(ByteBuffer&& other) noexcept;
+  auto operator=(ByteBuffer&& other) noexcept -> ByteBuffer&;
 
-    auto data() noexcept -> std::byte*;
-    auto data() const noexcept -> std::byte const*;
+  auto data() noexcept -> std::byte*;
+  auto data() const noexcept -> std::byte const*;
 
-    // Non-owning views cover size(), not capacity(), and follow data()'s lifetime.
-    auto view() noexcept -> std::span<std::byte>;
-    auto view() const noexcept -> std::span<std::byte const>;
+  // Non-owning views cover size(), not capacity(), and follow data()'s lifetime.
+  auto view() noexcept -> std::span<std::byte>;
+  auto view() const noexcept -> std::span<std::byte const>;
 
-    auto size() const noexcept -> std::size_t;
+  auto size() const noexcept -> std::size_t;
 
-    auto capacity() const noexcept -> std::size_t;
+  auto capacity() const noexcept -> std::size_t;
 
-    auto alignment() const noexcept -> std::size_t;
+  auto alignment() const noexcept -> std::size_t;
 
-    auto empty() const noexcept -> bool;
+  auto empty() const noexcept -> bool;
 
-    static constexpr auto max_size() noexcept -> std::size_t {
-        return static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
-    }
+  static constexpr auto max_size() noexcept -> std::size_t {
+    return static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+  }
 
-    // reserve() leaves size unchanged. resize() grows capacity geometrically.
-    auto reserve(std::size_t capacity) -> void;
+  // reserve() leaves size unchanged. resize() grows capacity geometrically.
+  auto reserve(std::size_t capacity) -> void;
 
-    auto resize(std::size_t size) -> void;
+  auto resize(std::size_t size) -> void;
 
-    // Self/subrange append is supported. Internal sources must lie within size().
-    // Empty input is a no-op; nonempty input must point to readable bytes.
-    auto append(std::span<std::byte const> bytes) -> void;
+  // Self/subrange append is supported. Internal sources must lie within size().
+  // Empty input is a no-op; nonempty input must point to readable bytes.
+  auto append(std::span<std::byte const> bytes) -> void;
 
-    auto append(void const* data, std::size_t size) -> void;
+  auto append(void const* data, std::size_t size) -> void;
 
-    // Retains capacity for reuse. reset() releases storage instead.
-    auto clear() noexcept -> void;
+  // Retains capacity for reuse. reset() releases storage instead.
+  auto clear() noexcept -> void;
 
-    auto reset() noexcept -> void;
+  auto reset() noexcept -> void;
 
-    auto shrink_to_fit() -> void;
+  auto shrink_to_fit() -> void;
 
-    auto swap(ByteBuffer& other) noexcept -> void;
+  auto swap(ByteBuffer& other) noexcept -> void;
 
 private:
-    auto reallocate(std::size_t capacity) -> void;
+  auto reallocate(std::size_t capacity) -> void;
 
-    std::byte* data_ = nullptr;
-    std::size_t size_ = 0;
-    std::size_t capacity_ = 0;
-    std::size_t alignment_;
+  std::byte* data_ = nullptr;
+  std::size_t size_ = 0;
+  std::size_t capacity_ = 0;
+  std::size_t alignment_;
 };
 
 auto swap(ByteBuffer& left, ByteBuffer& right) noexcept -> void;
 
-}  // namespace kitzoo::memory
+} // namespace kitzoo::memory
 
-#endif  // KITZOO_MEMORY_BYTE_BUFFER_HPP
+#endif // KITZOO_MEMORY_BYTE_BUFFER_HPP

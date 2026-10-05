@@ -12,4 +12,4 @@
 #include <kitzoo/string/convert_extra.hpp>
 #include <kitzoo/string/string_utils.hpp>
 
-#endif  // KITZOO_STRING_HPP
+#endif // KITZOO_STRING_HPP

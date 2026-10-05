@@ -12,4 +12,4 @@
 #include <kitzoo/crypto/aes.hpp>
 #endif
 
-#endif  // KITZOO_CRYPTO_HPP
+#endif // KITZOO_CRYPTO_HPP

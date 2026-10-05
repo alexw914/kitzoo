@@ -15,51 +15,51 @@ namespace kitzoo::util {
 template <typename T>
 class Singleton {
 public:
-    Singleton(const Singleton&) = delete;
-    Singleton(Singleton&&) = delete;
-    auto operator=(const Singleton&) -> Singleton& = delete;
-    auto operator=(Singleton&&) -> Singleton& = delete;
+  Singleton(const Singleton&) = delete;
+  Singleton(Singleton&&) = delete;
+  auto operator=(const Singleton&) -> Singleton& = delete;
+  auto operator=(Singleton&&) -> Singleton& = delete;
 
-    KZ_NODISCARD static auto instance() -> T& {
-        // C++ guarantees serialized initialization and retries after a constructor throws.
-        static T value;
-        return value;
-    }
+  KZ_NODISCARD static auto instance() -> T& {
+    // C++ guarantees serialized initialization and retries after a constructor throws.
+    static T value;
+    return value;
+  }
 
 protected:
-    Singleton() = default;
-    ~Singleton() = default;
+  Singleton() = default;
+  ~Singleton() = default;
 };
 
 template <typename T>
 class EagerSingleton {
 public:
-    EagerSingleton(const EagerSingleton&) = delete;
-    EagerSingleton(EagerSingleton&&) = delete;
-    auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
-    auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
+  EagerSingleton(const EagerSingleton&) = delete;
+  EagerSingleton(EagerSingleton&&) = delete;
+  auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
+  auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
 
-    KZ_NODISCARD static auto instance() -> T& {
-        // ODR-use the startup anchor without reading it during dynamic initialization.
-        static_cast<void>(&value_);
-        return storage();
-    }
+  KZ_NODISCARD static auto instance() -> T& {
+    // ODR-use the startup anchor without reading it during dynamic initialization.
+    static_cast<void>(&value_);
+    return storage();
+  }
 
 protected:
-    EagerSingleton() = default;
-    ~EagerSingleton() = default;
+  EagerSingleton() = default;
+  ~EagerSingleton() = default;
 
 private:
-    static auto storage() -> T& {
-        // Startup initialization and concurrent callers share the same guarded object.
-        static T value;
-        return value;
-    }
+  static auto storage() -> T& {
+    // Startup initialization and concurrent callers share the same guarded object.
+    static T value;
+    return value;
+  }
 
-    // Request eager initialization; instance() is also safe if initialization is deferred.
-    inline static T* value_ = &storage();
+  // Request eager initialization; instance() is also safe if initialization is deferred.
+  inline static T* value_ = &storage();
 };
 
-}  // namespace kitzoo::util
+} // namespace kitzoo::util
 
-#endif  // KITZOO_UTILITIES_SINGLETON_HPP
+#endif // KITZOO_UTILITIES_SINGLETON_HPP

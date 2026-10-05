@@ -16,6 +16,6 @@ using Options = cxxopts::Options;
 using ParseResult = cxxopts::ParseResult;
 using cxxopts::value;
 
-}  // namespace kitzoo::cli
+} // namespace kitzoo::cli
 
-#endif  // KITZOO_CLI_CLI_HPP
+#endif // KITZOO_CLI_CLI_HPP

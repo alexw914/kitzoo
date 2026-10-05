@@ -10,4 +10,4 @@
 
 #include <kitzoo/cli/cli.hpp>
 
-#endif  // KITZOO_CLI_HPP
+#endif // KITZOO_CLI_HPP

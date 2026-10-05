@@ -12,4 +12,4 @@
 #include <kitzoo/time/timeline.hpp>
 #include <kitzoo/time/timer.hpp>
 
-#endif  // KITZOO_TIME_HPP
+#endif // KITZOO_TIME_HPP

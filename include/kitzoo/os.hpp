@@ -11,4 +11,4 @@
 #include <kitzoo/os/fsadaptor.hpp>
 #include <kitzoo/os/osadaptor.hpp>
 
-#endif  // KITZOO_OS_HPP
+#endif // KITZOO_OS_HPP

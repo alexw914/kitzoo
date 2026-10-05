@@ -21,94 +21,99 @@ using namespace kitzoo::thread;
 // -- Submission latency ---------------------------------------------------------
 
 static void BM_Latency_Kitzoo(benchmark::State& state) {
-    ThreadPool pool{2};
-    for (auto _ : state) {
-        auto f = pool.submit_task([] { return 1; });
-        benchmark::DoNotOptimize(f.get());
-    }
+  ThreadPool pool{2};
+  for (auto _ : state) {
+    auto f = pool.submit_task([] { return 1; });
+    benchmark::DoNotOptimize(f.get());
+  }
 }
+
 BENCHMARK(BM_Latency_Kitzoo);
 
 static void BM_Latency_BS(benchmark::State& state) {
-    BS::thread_pool<> pool{2};
-    for (auto _ : state) {
-        auto f = pool.submit_task([] { return 1; });
-        benchmark::DoNotOptimize(f.get());
-    }
+  BS::thread_pool<> pool{2};
+  for (auto _ : state) {
+    auto f = pool.submit_task([] { return 1; });
+    benchmark::DoNotOptimize(f.get());
+  }
 }
+
 BENCHMARK(BM_Latency_BS);
 
 // -- Tiny-task throughput -------------------------------------------------------
 
 template <typename Submit>
 static void tiny_task_throughput(benchmark::State& state, Submit&& submit) {
-    constexpr int kTasks = 10000;
-    for (auto _ : state) {
-        std::atomic<int> counter{0};
-        std::vector<std::future<void>> futures;
-        futures.reserve(kTasks);
-        for (int i = 0; i < kTasks; ++i) {
-            futures.push_back(
-                submit([&counter] { counter.fetch_add(1, std::memory_order_relaxed); }));
-        }
-        for (auto& f : futures)
-            f.get();
-        benchmark::DoNotOptimize(counter.load());
+  constexpr int kTasks = 10000;
+  for (auto _ : state) {
+    std::atomic<int> counter{0};
+    std::vector<std::future<void>> futures;
+    futures.reserve(kTasks);
+    for (int i = 0; i < kTasks; ++i) {
+      futures.push_back(submit([&counter] { counter.fetch_add(1, std::memory_order_relaxed); }));
     }
-    state.SetItemsProcessed(state.iterations() * kTasks);
+    for (auto& f : futures)
+      f.get();
+    benchmark::DoNotOptimize(counter.load());
+  }
+  state.SetItemsProcessed(state.iterations() * kTasks);
 }
 
 static void BM_TinyTasks_Kitzoo(benchmark::State& state) {
-    ThreadPool pool{static_cast<std::size_t>(state.range(0))};
-    tiny_task_throughput(state, [&pool](auto&& fn) { return pool.submit_task(fn); });
+  ThreadPool pool{static_cast<std::size_t>(state.range(0))};
+  tiny_task_throughput(state, [&pool](auto&& fn) { return pool.submit_task(fn); });
 }
+
 BENCHMARK(BM_TinyTasks_Kitzoo)->Arg(1)->Arg(4)->Arg(8);
 
 static void BM_TinyTasks_BS(benchmark::State& state) {
-    BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
-    tiny_task_throughput(state, [&pool](auto&& fn) { return pool.submit_task(fn); });
+  BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
+  tiny_task_throughput(state, [&pool](auto&& fn) { return pool.submit_task(fn); });
 }
+
 BENCHMARK(BM_TinyTasks_BS)->Arg(1)->Arg(4)->Arg(8);
 
 // -- CPU-bound scaling ----------------------------------------------------------
 
 static std::int64_t cpu_work(std::int64_t n) {
-    std::int64_t acc = 0;
-    for (std::int64_t i = 0; i < n; ++i)
-        acc += (i * i) % 7;
-    return acc;
+  std::int64_t acc = 0;
+  for (std::int64_t i = 0; i < n; ++i)
+    acc += (i * i) % 7;
+  return acc;
 }
 
 static void BM_CpuBound_Kitzoo(benchmark::State& state) {
-    ThreadPool pool{static_cast<std::size_t>(state.range(0))};
-    constexpr std::int64_t kWork = 200'000;
-    constexpr int kTasks = 16;
-    for (auto _ : state) {
-        std::vector<std::future<std::int64_t>> futures;
-        futures.reserve(kTasks);
-        for (int i = 0; i < kTasks; ++i)
-            futures.push_back(pool.submit_task(cpu_work, kWork));
-        std::int64_t total = 0;
-        for (auto& f : futures)
-            total += f.get();
-        benchmark::DoNotOptimize(total);
-    }
+  ThreadPool pool{static_cast<std::size_t>(state.range(0))};
+  constexpr std::int64_t kWork = 200'000;
+  constexpr int kTasks = 16;
+  for (auto _ : state) {
+    std::vector<std::future<std::int64_t>> futures;
+    futures.reserve(kTasks);
+    for (int i = 0; i < kTasks; ++i)
+      futures.push_back(pool.submit_task(cpu_work, kWork));
+    std::int64_t total = 0;
+    for (auto& f : futures)
+      total += f.get();
+    benchmark::DoNotOptimize(total);
+  }
 }
+
 BENCHMARK(BM_CpuBound_Kitzoo)->Arg(1)->Arg(2)->Arg(4)->Arg(8)->UseRealTime();
 
 static void BM_CpuBound_BS(benchmark::State& state) {
-    BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
-    constexpr std::int64_t kWork = 200'000;
-    constexpr int kTasks = 16;
-    for (auto _ : state) {
-        std::vector<std::future<std::int64_t>> futures;
-        futures.reserve(kTasks);
-        for (int i = 0; i < kTasks; ++i)
-            futures.push_back(pool.submit_task([] { return cpu_work(kWork); }));
-        std::int64_t total = 0;
-        for (auto& f : futures)
-            total += f.get();
-        benchmark::DoNotOptimize(total);
-    }
+  BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
+  constexpr std::int64_t kWork = 200'000;
+  constexpr int kTasks = 16;
+  for (auto _ : state) {
+    std::vector<std::future<std::int64_t>> futures;
+    futures.reserve(kTasks);
+    for (int i = 0; i < kTasks; ++i)
+      futures.push_back(pool.submit_task([] { return cpu_work(kWork); }));
+    std::int64_t total = 0;
+    for (auto& f : futures)
+      total += f.get();
+    benchmark::DoNotOptimize(total);
+  }
 }
+
 BENCHMARK(BM_CpuBound_BS)->Arg(1)->Arg(2)->Arg(4)->Arg(8)->UseRealTime();

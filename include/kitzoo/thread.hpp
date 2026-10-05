@@ -13,4 +13,4 @@
 #include <kitzoo/thread/synchronized.hpp>
 #include <kitzoo/thread/thread_pool.hpp>
 
-#endif  // KITZOO_THREAD_HPP
+#endif // KITZOO_THREAD_HPP

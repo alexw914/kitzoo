@@ -12,4 +12,4 @@
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/version.hpp>
 
-#endif  // KITZOO_CORE_HPP
+#endif // KITZOO_CORE_HPP

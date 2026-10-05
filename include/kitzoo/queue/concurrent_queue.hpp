@@ -19,6 +19,6 @@ using ConcurrentQueue = moodycamel::ConcurrentQueue<T, Traits>;
 template <typename T, typename Traits = moodycamel::ConcurrentQueueDefaultTraits>
 using BlockingConcurrentQueue = moodycamel::BlockingConcurrentQueue<T, Traits>;
 
-}  // namespace kitzoo::queue
+} // namespace kitzoo::queue
 
-#endif  // KITZOO_QUEUE_CONCURRENT_QUEUE_HPP
+#endif // KITZOO_QUEUE_CONCURRENT_QUEUE_HPP

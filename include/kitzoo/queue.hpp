@@ -12,4 +12,4 @@
 #include <kitzoo/queue/concurrent_queue.hpp>
 #include <kitzoo/queue/spsc_queue.hpp>
 
-#endif  // KITZOO_QUEUE_HPP
+#endif // KITZOO_QUEUE_HPP

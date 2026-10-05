@@ -11,18 +11,18 @@
 namespace kitzoo {
 
 build_info const& current_build_info() noexcept {
-    static const build_info info{
-        .lib_version = library_version,
-        .version_str = version_string,
-        .compiler = KITZOO_COMPILER_INFO,
+  static const build_info info{
+      .lib_version = library_version,
+      .version_str = version_string,
+      .compiler = KITZOO_COMPILER_INFO,
 #ifndef NDEBUG
-        .is_debug = true,
+      .is_debug = true,
 #else
-        .is_debug = false,
+      .is_debug = false,
 #endif
-        .sanitizers = KITZOO_ENABLED_SANITIZERS,
-    };
-    return info;
+      .sanitizers = KITZOO_ENABLED_SANITIZERS,
+  };
+  return info;
 }
 
-}  // namespace kitzoo
+} // namespace kitzoo

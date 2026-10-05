@@ -12,4 +12,4 @@
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/memory/mi_allocator.hpp>
 
-#endif  // KITZOO_MEMORY_HPP
+#endif // KITZOO_MEMORY_HPP

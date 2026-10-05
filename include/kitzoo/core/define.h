@@ -71,4 +71,4 @@
 #define KZ_CPP20 0
 #endif
 
-#endif  // KITZOO_CORE_DEFINE_H
+#endif // KITZOO_CORE_DEFINE_H

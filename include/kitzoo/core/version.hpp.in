@@ -16,11 +16,11 @@
 namespace kitzoo {
 
 struct version {
-    std::uint16_t major;
-    std::uint16_t minor;
-    std::uint16_t patch;
+  std::uint16_t major;
+  std::uint16_t minor;
+  std::uint16_t patch;
 
-    constexpr auto operator<=>(version const&) const = default;
+  constexpr auto operator<=>(version const&) const = default;
 };
 
 // clang-format off: preserve CMake substitution tokens.
@@ -32,15 +32,15 @@ inline constexpr version library_version {
 inline constexpr std::string_view version_string = "@PROJECT_VERSION@";
 
 struct build_info {
-    version lib_version;
-    std::string_view version_str;
-    std::string_view compiler;
-    bool is_debug;
-    std::string_view sanitizers;
+  version lib_version;
+  std::string_view version_str;
+  std::string_view compiler;
+  bool is_debug;
+  std::string_view sanitizers;
 };
 
 KZ_NODISCARD KZ_EXPORT build_info const& current_build_info() noexcept;
 
-}  // namespace kitzoo
+} // namespace kitzoo
 
-#endif  // KITZOO_CORE_VERSION_HPP
+#endif // KITZOO_CORE_VERSION_HPP

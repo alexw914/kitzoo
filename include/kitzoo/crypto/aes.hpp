@@ -21,18 +21,18 @@
 namespace kitzoo::crypto {
 
 enum class Padding {
-    Pkcs7,
-    None,
+  Pkcs7,
+  None,
 };
 
 KZ_NODISCARD auto aes_cbc_encrypt(std::span<std::byte const> data, std::span<std::byte const> key,
                                   std::span<std::byte const> iv,
                                   Padding padding = Padding::Pkcs7) -> std::vector<std::byte>;
 
-KZ_NODISCARD auto aes_cbc_decrypt(std::span<std::byte const> ciphertext,
-                                  std::span<std::byte const> key, std::span<std::byte const> iv,
+KZ_NODISCARD auto aes_cbc_decrypt(std::span<std::byte const> ciphertext, std::span<std::byte const> key,
+                                  std::span<std::byte const> iv,
                                   Padding padding = Padding::Pkcs7) -> std::vector<std::byte>;
 
-}  // namespace kitzoo::crypto
+} // namespace kitzoo::crypto
 
-#endif  // KITZOO_CRYPTO_AES_HPP
+#endif // KITZOO_CRYPTO_AES_HPP

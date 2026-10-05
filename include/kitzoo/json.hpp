@@ -10,4 +10,4 @@
 
 #include <kitzoo/json/reader.hpp>
 
-#endif  // KITZOO_JSON_HPP
+#endif // KITZOO_JSON_HPP

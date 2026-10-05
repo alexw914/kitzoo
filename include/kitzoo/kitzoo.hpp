@@ -18,4 +18,4 @@
 #include <kitzoo/time.hpp>
 #include <kitzoo/utilities.hpp>
 
-#endif  // KITZOO_KITZOO_HPP
+#endif // KITZOO_KITZOO_HPP
