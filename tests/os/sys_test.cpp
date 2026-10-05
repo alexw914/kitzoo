@@ -27,8 +27,8 @@ TEST(SysPortableTest, CurrentThreadAndTemporaryPath) {
 #else
   EXPECT_EQ(os::get_thread_name(pthread_self()), "test/worker");
 #endif
-  auto before = os::get_cpu_timestamp_ns();
-  EXPECT_GE(os::get_cpu_timestamp_ns(), before);
+  const auto before = os::process_cpu_time();
+  EXPECT_GE(os::process_cpu_time(), before);
   auto path = os::generate_unique_domain_socket_address();
   EXPECT_FALSE(path.empty());
   EXPECT_TRUE(std::filesystem::exists(path));
@@ -126,11 +126,11 @@ TEST(SysTest, CpuCountAndCpuTime) {
   EXPECT_GT(os::cpu_count(), 0U);
   rusage before{}, after{};
   ASSERT_EQ(getrusage(RUSAGE_SELF, &before), 0);
-  auto value = os::get_cpu_timestamp_ns();
+  const auto value = os::process_cpu_time();
   ASSERT_EQ(getrusage(RUSAGE_SELF, &after), 0);
-  auto ns = [](const rusage& r) {
-    return static_cast<std::uint64_t>(r.ru_utime.tv_sec + r.ru_stime.tv_sec) * 1000000000ULL +
-           static_cast<std::uint64_t>(r.ru_utime.tv_usec + r.ru_stime.tv_usec) * 1000ULL;
+  auto ns = [](const rusage& r) -> std::chrono::nanoseconds {
+    return std::chrono::seconds{r.ru_utime.tv_sec + r.ru_stime.tv_sec} +
+           std::chrono::microseconds{r.ru_utime.tv_usec + r.ru_stime.tv_usec};
   };
   EXPECT_GE(value, ns(before));
   EXPECT_LE(value, ns(after));

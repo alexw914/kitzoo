@@ -10,6 +10,7 @@
 
 #include <kitzoo/core/macro.hpp>
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -57,8 +58,8 @@ KZ_NODISCARD auto home_dir() -> std::string;
 // addresses, without symbol-name resolution.
 KZ_NODISCARD auto stacktrace(int max_frames = 64) -> std::vector<std::string>;
 
-// Process user + system CPU time, in nanoseconds; zero on failure.
-KZ_NODISCARD auto get_cpu_timestamp_ns() -> std::uint64_t;
+// Process user + system CPU time; zero on failure.
+KZ_NODISCARD auto process_cpu_time() -> std::chrono::nanoseconds;
 
 auto set_thread_name(std::thread& thread, std::string_view thread_name,
                      std::string_view name_prefix = kThreadNamePrefix) -> bool;

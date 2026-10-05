@@ -182,23 +182,23 @@ auto stacktrace(const int max_frames) -> std::vector<std::string> {
 #endif
 }
 
-auto get_cpu_timestamp_ns() -> std::uint64_t {
+auto process_cpu_time() -> std::chrono::nanoseconds {
 #if defined(_WIN32)
   FILETIME created{}, exited{}, kernel{}, user{};
   if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user))
-    return 0;
-  auto ticks = [](const FILETIME& time) -> std::uint64_t {
-    return (static_cast<std::uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime;
+    return std::chrono::nanoseconds::zero();
+  using FileTimeTicks = std::chrono::duration<std::int64_t, std::ratio<1, 10'000'000>>;
+  auto ticks = [](const FILETIME& time) -> FileTimeTicks {
+    return FileTimeTicks{
+        static_cast<std::int64_t>((static_cast<std::uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime)};
   };
-  return (ticks(kernel) + ticks(user)) * 100ULL;
+  return ticks(kernel) + ticks(user);
 #else
   rusage usage{};
-  if (getrusage(RUSAGE_SELF, &usage) != 0) {
-    return 0;
-  }
-  auto seconds = static_cast<std::uint64_t>(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec);
-  auto micros = static_cast<std::uint64_t>(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec);
-  return seconds * 1000000000ULL + micros * 1000ULL;
+  if (getrusage(RUSAGE_SELF, &usage) != 0)
+    return std::chrono::nanoseconds::zero();
+  return std::chrono::seconds{usage.ru_utime.tv_sec + usage.ru_stime.tv_sec} +
+         std::chrono::microseconds{usage.ru_utime.tv_usec + usage.ru_stime.tv_usec};
 #endif
 }
 

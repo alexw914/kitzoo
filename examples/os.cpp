@@ -23,7 +23,7 @@ auto main() -> int {
     std::printf("PATH contains %zu bytes\n", path->size());
   }
   std::printf("thread named: %s\n", os::set_current_thread_name("main", "example") ? "yes" : "no");
-  std::printf("process CPU time: %llu ns\n", static_cast<unsigned long long>(os::get_cpu_timestamp_ns()));
+  std::printf("process CPU time: %lld ns\n", static_cast<long long>(os::process_cpu_time().count()));
 
   // Filesystem paths, file updates, and directory cleanup.
   const auto original_dir = std::filesystem::current_path();
