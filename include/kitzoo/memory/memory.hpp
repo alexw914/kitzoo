@@ -7,6 +7,7 @@
 #ifndef KITZOO_MEMORY_MEMORY_HPP
 #define KITZOO_MEMORY_MEMORY_HPP
 
+#include <kitzoo/core/scope_guard.hpp>
 #include <kitzoo/memory/miallocator.hpp>
 
 #include <deque>
@@ -103,12 +104,9 @@ auto make_unique_with_deleter(Deleter deleter, Args&&... args) -> UniquePtr<T, D
   // The deleter must reclaim mimalloc storage or transfer its ownership.
   MiAllocator<T> allocator;
   auto* address = allocator.allocate(1);
-  try {
-    std::construct_at(address, std::forward<Args>(args)...);
-  } catch (...) {
-    allocator.deallocate(address, 1);
-    throw;
-  }
+  core::ScopeGuard release{[&] { allocator.deallocate(address, 1); }};
+  std::construct_at(address, std::forward<Args>(args)...);
+  release.dismiss();
   return UniquePtr<T, Deleter>{address, std::move(deleter)};
 }
 
@@ -125,16 +123,9 @@ auto make_shared_with_deleter(Deleter deleter, Args&&... args) -> SharedPtr<T> {
     return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
   } else {
     // Custom deleters require separate object and control-block allocations.
-    MiAllocator<T> allocator;
-    auto* address = allocator.allocate(1);
-    try {
-      std::construct_at(address, std::forward<Args>(args)...);
-    } catch (...) {
-      allocator.deallocate(address, 1);
-      throw;
-    }
+    auto object = make_unique_with_deleter<T>(MiDeleter<T>{}, std::forward<Args>(args)...);
     // The shared constructor invokes the deleter if control-block allocation fails.
-    return SharedPtr<T>{address, std::move(deleter), MiAllocator<T>{}};
+    return SharedPtr<T>{object.release(), std::move(deleter), MiAllocator<T>{}};
   }
 }
 
@@ -186,14 +177,13 @@ private:
     using Traits = std::allocator_traits<Allocator>;
     auto* address = allocator.allocate(count);
     std::size_t constructed = 0;
-    try {
-      for (; constructed < count; ++constructed)
-        Traits::construct(allocator, address + constructed);
-    } catch (...) {
+    core::ScopeGuard release{[&] {
       std::destroy_n(address, constructed);
       allocator.deallocate(address, count);
-      throw;
-    }
+    }};
+    for (; constructed < count; ++constructed)
+      Traits::construct(allocator, address + constructed);
+    release.dismiss();
     // shared_ptr invokes the deleter if allocating its control block fails.
     return SharedPtr<T[]>(
         address,

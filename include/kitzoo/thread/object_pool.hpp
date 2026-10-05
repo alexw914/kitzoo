@@ -9,6 +9,7 @@
 #define KITZOO_THREAD_OBJECT_POOL_HPP
 
 #include <kitzoo/core/macro.hpp>
+#include <kitzoo/core/scope_guard.hpp>
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/queue/concurrent_queue.hpp>
 
@@ -126,13 +127,12 @@ public:
     Slot* slot = free_;
     free_ = slot->next;
     auto* object = std::launder(reinterpret_cast<T*>(slot->storage));
-    try {
-      std::construct_at(object, std::forward<Args>(args)...);
-    } catch (...) {
+    core::ScopeGuard restore{[&] {
       slot->next = free_;
       free_ = slot;
-      throw;
-    }
+    }};
+    std::construct_at(object, std::forward<Args>(args)...);
+    restore.dismiss();
     ++live_;
     return object;
   }

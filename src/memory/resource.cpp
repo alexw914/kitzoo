@@ -4,6 +4,7 @@
 // Description: Implements aligned mimalloc allocation and synchronized allocation budgets.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/core/scope_guard.hpp>
 #include <kitzoo/memory/resource.hpp>
 
 #include <mimalloc.h>
@@ -91,12 +92,9 @@ auto LimitedResource::do_allocate(std::size_t bytes, std::size_t alignment) -> v
   if (bytes > impl_->capacity - impl_->stats.used_bytes)
     throw std::bad_alloc{};
   auto* address = impl_->upstream->allocate(bytes, alignment);
-  try {
-    impl_->allocations.emplace(address, Impl::Allocation{bytes, alignment});
-  } catch (...) {
-    impl_->upstream->deallocate(address, bytes, alignment);
-    throw;
-  }
+  core::ScopeGuard release{[&] { impl_->upstream->deallocate(address, bytes, alignment); }};
+  impl_->allocations.emplace(address, Impl::Allocation{bytes, alignment});
+  release.dismiss();
   impl_->stats.used_bytes += bytes;
   if (impl_->stats.used_bytes > impl_->stats.peak_bytes)
     impl_->stats.peak_bytes = impl_->stats.used_bytes;
