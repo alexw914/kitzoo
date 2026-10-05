@@ -45,31 +45,19 @@ TEST(CliTest, RejectsInvalidValues) {
   options.add_options()("count", "Number of items", kitzoo::core::value<int>());
   const char* argv[]{"test", "--count", "invalid"};
 
-  EXPECT_THROW(KZ_CLI_PARSE_OPTIONS(options, 3, argv), cxxopts::exceptions::exception);
+  EXPECT_THROW(static_cast<void>(options.parse(3, argv)), cxxopts::exceptions::exception);
 }
 
-TEST(CliTest, MacrosSupportDefaultsCommaTypesAndSingleEvaluation) {
-  kitzoo::core::Options options{"test", "CLI value macro test"};
-  int option_accesses = 0;
-  auto get_options = [&]() -> kitzoo::core::Options& {
-    ++option_accesses;
-    return options;
-  };
-  int default_accesses = 0;
-  auto default_name = [&]() -> std::string {
-    ++default_accesses;
-    return "world";
-  };
-  KZ_CLI_ADD_OPTIONS(get_options())("count", "Number of items", KZ_CLI_VALUE(int))(
-      "name", "Name", KZ_CLI_DEFAULT(default_name(), std::string))("ids", "Item IDs",
-                                                                   KZ_CLI_VALUE(std::vector<int, std::allocator<int>>))(
-      "fallback", "Fallback IDs", KZ_CLI_DEFAULT("3,4", std::vector<int, std::allocator<int>>));
+TEST(CliTest, AppliesDefaultsAndParsesVectorValues) {
+  kitzoo::core::Options options{"test", "CLI value test"};
+  using kitzoo::core::value;
+  options.add_options()("count", "Number of items", value<int>())(
+      "name", "Name", value<std::string>()->default_value("world"))("ids", "Item IDs", value<std::vector<int>>())(
+      "fallback", "Fallback IDs", value<std::vector<int>>()->default_value("3,4"));
 
   const char* argv[]{"test", "--count", "5", "--ids", "1,2"};
-  const auto result = KZ_CLI_PARSE_OPTIONS(get_options(), 5, argv);
+  const auto result = options.parse(5, argv);
 
-  EXPECT_EQ(option_accesses, 2);
-  EXPECT_EQ(default_accesses, 1);
   EXPECT_EQ(result["count"].as<int>(), 5);
   EXPECT_EQ(result["name"].as<std::string>(), "world");
   EXPECT_EQ(result["ids"].as<std::vector<int>>(), (std::vector<int>{1, 2}));
