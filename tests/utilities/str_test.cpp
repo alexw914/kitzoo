@@ -7,7 +7,9 @@
 #include <kitzoo/utilities/str.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <gtest/gtest.h>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -298,6 +300,13 @@ TEST(StrToNumberTest, DoubleGarbage) {
 }
 
 // -- from_number ------------------------------------------------------------------
+
+TEST(StrFromNumberTest, FitsBaseTwoExtremes) {
+  EXPECT_EQ(from_number(std::numeric_limits<std::int64_t>::min(), 2), "-1" + std::string(63, '0'));
+  EXPECT_EQ(from_number(std::numeric_limits<std::uint64_t>::max(), 2), std::string(64, '1'));
+  EXPECT_EQ(to_number<std::int64_t>(from_number(std::numeric_limits<std::int64_t>::min(), 2), 2),
+            std::numeric_limits<std::int64_t>::min());
+}
 
 TEST(StrFromNumberTest, Int) {
   EXPECT_EQ(from_number(42), "42");
