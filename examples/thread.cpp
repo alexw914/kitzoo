@@ -24,7 +24,7 @@ auto main() -> int {
   if (queue.try_dequeue(value))
     std::printf("queued value: %d\n", value);
 
-  kitzoo::thread::ObjectPool<int> objects{1};
+  kitzoo::thread::LocalObjectPool<int> objects{1};
   auto lease = objects.acquire_shared(7);
   kitzoo::memory::WeakPtr<int> weak = lease;
   std::printf("pooled value: %d, live objects: %zu\n", *lease, objects.allocated_count());
@@ -33,7 +33,7 @@ auto main() -> int {
   std::printf("reused value: %d, previous weak reference expired: %s\n", *reused, weak.expired() ? "yes" : "no");
   weak.reset();
 
-  kitzoo::thread::ConcurrentObjectPool<int> concurrent;
+  kitzoo::thread::ObjectPool<int> concurrent;
   concurrent.add(kitzoo::memory::make_unique<int>(99));
   auto shared = concurrent.acquire_shared();
   std::printf("concurrent pooled value: %d\n", *shared);

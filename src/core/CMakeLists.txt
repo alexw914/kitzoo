@@ -6,3 +6,5 @@ configure_file(
 kitzoo_add_module(
     core
     SOURCES version.cpp)
+
+target_link_libraries(kitzoo_core PUBLIC cxxopts::cxxopts)

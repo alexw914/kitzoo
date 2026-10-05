@@ -1,16 +1,24 @@
-#include <kitzoo/cli.hpp>
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: examples/cli.cpp
+// Description: Demonstrates CLI macros for option definitions, parsing, and help.
+// -----------------------------------------------------------------------------
+
+#include <kitzoo/core.hpp>
 
 #include <cstdio>
 #include <exception>
 #include <string>
 
-int main(int argc, char const* const* argv) {
-  kitzoo::cli::Options options{argv[0], "CLI module example"};
-  options.add_options()("n,name", "Name to greet", kitzoo::cli::value<std::string>()->default_value("world"))(
-      "v,verbose", "Enable verbose output")("h,help", "Show help");
+auto main(int argc, char const* const* argv) -> int {
+  kitzoo::core::Options options{argv[0], "CLI module example"};
+  options.set_tab_expansion(true);
+  KZ_CLI_ADD_OPTIONS(options)("h,help", "Show help", KZ_CLI_VALUE(bool))(
+      "n,name", "Name to greet", KZ_CLI_DEFAULT("world", std::string))("v,verbose", "Enable verbose output",
+                                                                       KZ_CLI_VALUE(bool));
 
   try {
-    auto const result = options.parse(argc, argv);
+    auto const result = KZ_CLI_PARSE_OPTIONS(options, argc, argv);
     if (result["help"].as<bool>()) {
       std::puts(options.help().c_str());
       return 0;

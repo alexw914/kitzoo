@@ -80,16 +80,6 @@ using WeakPtr = std::weak_ptr<T>;
 template <typename T>
 using SharedPtr = std::shared_ptr<T>;
 
-template <typename T, typename... Args>
-auto make_shared(Args&&... args) -> SharedPtr<T> {
-  return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
-}
-
-template <typename T, typename... Args>
-auto make_shared_with_resource(std::pmr::memory_resource* resource, Args&&... args) -> SharedPtr<T> {
-  return std::allocate_shared<T>(std::pmr::polymorphic_allocator<T>{resource}, std::forward<Args>(args)...);
-}
-
 template <typename T>
 struct MiDeleter {
   static_assert(!std::is_array_v<T>);
@@ -102,12 +92,13 @@ struct MiDeleter {
   }
 };
 
-template <typename T>
-using UniquePtr = std::unique_ptr<T, MiDeleter<T>>;
+template <typename T, typename Deleter = MiDeleter<T>>
+using UniquePtr = std::unique_ptr<T, Deleter>;
 
-template <typename T, typename... Args>
-  requires(!std::is_array_v<T>)
-auto make_unique(Args&&... args) -> UniquePtr<T> {
+template <typename T, typename Deleter, typename... Args>
+  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
+auto make_unique_with_deleter(Deleter deleter, Args&&... args) -> UniquePtr<T, Deleter> {
+  // The deleter must reclaim mimalloc storage or transfer its ownership.
   MiAllocator<T> allocator;
   auto* address = allocator.allocate(1);
   try {
@@ -116,7 +107,47 @@ auto make_unique(Args&&... args) -> UniquePtr<T> {
     allocator.deallocate(address, 1);
     throw;
   }
-  return UniquePtr<T>{address};
+  return UniquePtr<T, Deleter>{address, std::move(deleter)};
+}
+
+template <typename T, typename Deleter = MiDeleter<T>, typename... Args>
+  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
+auto make_unique(Args&&... args) -> UniquePtr<T, Deleter> {
+  return make_unique_with_deleter<T>(Deleter{}, std::forward<Args>(args)...);
+}
+
+template <typename T, typename Deleter, typename... Args>
+  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
+auto make_shared_with_deleter(Deleter deleter, Args&&... args) -> SharedPtr<T> {
+  if constexpr (std::is_same_v<Deleter, MiDeleter<T>>) {
+    return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
+  } else {
+    // Custom deleters require separate object and control-block allocations.
+    MiAllocator<T> allocator;
+    auto* address = allocator.allocate(1);
+    try {
+      std::construct_at(address, std::forward<Args>(args)...);
+    } catch (...) {
+      allocator.deallocate(address, 1);
+      throw;
+    }
+    // The shared constructor invokes the deleter if control-block allocation fails.
+    return SharedPtr<T>{address, std::move(deleter), MiAllocator<T>{}};
+  }
+}
+
+template <typename T, typename Deleter = MiDeleter<T>, typename... Args>
+auto make_shared(Args&&... args) -> SharedPtr<T> {
+  if constexpr (std::is_array_v<T> && std::is_same_v<Deleter, MiDeleter<T>>) {
+    return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
+  } else {
+    return make_shared_with_deleter<T>(Deleter{}, std::forward<Args>(args)...);
+  }
+}
+
+template <typename T, typename... Args>
+auto make_shared_with_resource(std::pmr::memory_resource* resource, Args&&... args) -> SharedPtr<T> {
+  return std::allocate_shared<T>(std::pmr::polymorphic_allocator<T>{resource}, std::forward<Args>(args)...);
 }
 
 template <typename A, typename B>

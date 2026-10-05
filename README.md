@@ -8,7 +8,7 @@ Applications can link the modules they need.
 
 | Module | Functionality |
 | --- | --- |
-| `core` | Version information and platform helpers. |
+| `core` | Version information, platform helpers, and command-line parsing. |
 | `utilities` | Random values, UUIDs, singletons, and optional AES encryption/decryption. |
 | `string` | String processing, number conversion, and encoding. |
 | `time` | Time queries, calendar conversion, timers, and measurements. |
@@ -17,7 +17,6 @@ Applications can link the modules they need.
 | `queue` | Blocking and concurrent queues. |
 | `thread` | Thread pools, object pools, and synchronization. |
 | `log` | Synchronous and asynchronous logging. |
-| `cli` | Command-line argument parsing. |
 | `json` | JSON parsing, file loading, and serialization. |
 
 CMake targets use the `kitzoo::<module>` naming convention.

@@ -5,7 +5,6 @@ add_subdirectory(string)
 add_subdirectory(time)
 add_subdirectory(queue)
 add_subdirectory(thread)
-add_subdirectory(cli)
 add_subdirectory(log)
 add_subdirectory(os)
 

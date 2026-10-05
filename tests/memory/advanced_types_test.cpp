@@ -6,8 +6,10 @@
 
 #include <kitzoo/memory/advanced_types.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
 
@@ -65,6 +67,51 @@ TEST(UniquePtrTest, ConstructorExceptionPropagates) {
   kitzoo::memory::MiDeleter<int>{}(nullptr);
 }
 
+TEST(UniquePtrTest, FactorySupportsCustomDefaultDeleter) {
+  struct Deleter : kitzoo::memory::MiDeleter<Tracked> {};
+
+  auto object = kitzoo::memory::make_unique<Tracked, Deleter>(42);
+  static_assert(std::is_same_v<decltype(object), kitzoo::memory::UniquePtr<Tracked, Deleter>>);
+  EXPECT_EQ(object->value, 42);
+  EXPECT_EQ(Tracked::live, 1);
+  object.reset();
+  EXPECT_EQ(Tracked::live, 0);
+}
+
+TEST(UniquePtrTest, StatefulDeleterSurvivesMoveAndRunsOnce) {
+  struct Deleter {
+    int* calls;
+    kitzoo::memory::UniquePtr<int> state;
+
+    auto operator()(Tracked* object) const noexcept -> void {
+      ++*calls;
+      kitzoo::memory::MiDeleter<Tracked>{}(object);
+    }
+  };
+
+  int calls = 0;
+  static_assert(!std::is_copy_constructible_v<Deleter>);
+  auto object =
+      kitzoo::memory::make_unique_with_deleter<Tracked>(Deleter{&calls, kitzoo::memory::make_unique<int>(7)}, 42);
+  EXPECT_EQ(object.get_deleter().calls, &calls);
+  auto moved = std::move(object);
+  EXPECT_FALSE(object);
+  EXPECT_EQ(moved->value, 42);
+  EXPECT_EQ(*moved.get_deleter().state, 7);
+  moved.reset();
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(Tracked::live, 0);
+  moved.reset();
+  EXPECT_EQ(calls, 1);
+
+  auto destroy_throwing = [&calls](Throwing* value) noexcept -> void {
+    ++calls;
+    kitzoo::memory::MiDeleter<Throwing>{}(value);
+  };
+  EXPECT_THROW(kitzoo::memory::make_unique_with_deleter<Throwing>(destroy_throwing, 1), std::runtime_error);
+  EXPECT_EQ(calls, 1);
+}
+
 TEST(AdvancedTypesTest, ContainerAliases) {
   using namespace kitzoo::memory;
   Vector<int> values{1, 2, 3};
@@ -119,4 +166,74 @@ TEST(AdvancedTypesTest, SharedFactorySupportsWeakReferencesAndAlignedObjects) {
   EXPECT_TRUE(weak.expired());
   EXPECT_FALSE(weak.lock());
   EXPECT_THROW(memory::make_shared<Throwing>(1), std::runtime_error);
+}
+
+TEST(SharedPtrTest, StatefulDeleterRunsAfterLastOwner) {
+  namespace memory = kitzoo::memory;
+
+  struct Deleter {
+    int* calls;
+    memory::UniquePtr<int> state;
+
+    auto operator()(Tracked* object) const noexcept -> void {
+      ++*calls;
+      memory::MiDeleter<Tracked>{}(object);
+    }
+  };
+
+  static_assert(!std::is_copy_constructible_v<Deleter>);
+  int calls = 0;
+  auto first = memory::make_shared_with_deleter<Tracked>(Deleter{&calls, memory::make_unique<int>(7)}, 42);
+  static_assert(std::is_same_v<decltype(first), memory::SharedPtr<Tracked>>);
+  ASSERT_EQ(Tracked::live, 1);
+  EXPECT_EQ(first->value, 42);
+  EXPECT_EQ(reinterpret_cast<std::uintptr_t>(first.get()) % alignof(Tracked), 0U);
+  auto* stored = std::get_deleter<Deleter>(first);
+  ASSERT_NE(stored, nullptr);
+  EXPECT_EQ(*stored->state, 7);
+
+  auto second = first;
+  memory::WeakPtr<Tracked> weak = first;
+  first.reset();
+  EXPECT_EQ(calls, 0);
+  EXPECT_EQ(Tracked::live, 1);
+  second.reset();
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(Tracked::live, 0);
+  EXPECT_TRUE(weak.expired());
+  weak.reset();
+  EXPECT_EQ(calls, 1);
+}
+
+TEST(SharedPtrTest, ConstructorFailureDoesNotInvokeDeleter) {
+  int calls = 0;
+  auto deleter = [&calls](Throwing* object) noexcept -> void {
+    ++calls;
+    kitzoo::memory::MiDeleter<Throwing>{}(object);
+  };
+
+  EXPECT_THROW(kitzoo::memory::make_shared_with_deleter<Throwing>(deleter, 1), std::runtime_error);
+  EXPECT_EQ(calls, 0);
+}
+
+TEST(SharedPtrTest, FactorySupportsCustomDefaultDeleter) {
+  namespace memory = kitzoo::memory;
+
+  struct Deleter : memory::MiDeleter<Tracked> {};
+
+  auto object = memory::make_shared<Tracked, Deleter>(42);
+  EXPECT_EQ(object->value, 42);
+  EXPECT_EQ(Tracked::live, 1);
+  EXPECT_NE(std::get_deleter<Deleter>(object), nullptr);
+  object.reset();
+  EXPECT_EQ(Tracked::live, 0);
+}
+
+TEST(SharedPtrTest, DefaultFactorySupportsArrays) {
+  auto values = kitzoo::memory::make_shared<int[]>(std::size_t{3});
+  EXPECT_EQ(values[0], 0);
+  values[2] = 42;
+  auto copied = values;
+  values.reset();
+  EXPECT_EQ(copied[2], 42);
 }
