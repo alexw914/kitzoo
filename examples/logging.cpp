@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
-#include <kitzoo/os/filesystem.hpp>
+#include <kitzoo/os/fsadaptor.hpp>
 
 #include <chrono>
 #include <iostream>
@@ -52,8 +52,8 @@ auto callback_and_historical_logging() -> void {
 }
 
 auto rotating_file_logging() -> void {
-    // os::temp_directory creates a unique directory owned by this example.
-    const auto directory = kitzoo::os::temp_directory();
+    // FsAdaptor creates a unique directory owned by this example.
+    const auto directory = kitzoo::os::FsAdaptor::instance().temp_directory();
     const auto path = directory / "application.log";
     {
         LoggerOptions options;
@@ -65,8 +65,8 @@ auto rotating_file_logging() -> void {
                         frame);
         logger.flush();  // sink flush is not an fsync durability guarantee
     }  // release the file handle before reading or removing files on Windows
-    std::cout << "latest rotated file:\n" << kitzoo::os::read_text(path);
-    kitzoo::os::remove_all(directory);
+    std::cout << "latest rotated file:\n" << kitzoo::os::FsAdaptor::instance().read_text(path);
+    kitzoo::os::FsAdaptor::instance().remove_all(directory);
 }
 
 auto asynchronous_logging() -> void {

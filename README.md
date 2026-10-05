@@ -17,17 +17,15 @@ kitzoo/
 |   |-- os.hpp              Unified OS module entry point
 |   |-- os/
 |   |   |-- osadaptor.hpp   Singleton system and thread operations
-|   |   |-- fsadaptor.hpp   Singleton file, directory, and path operations
-|   |   `-- filesystem.hpp Compatibility filesystem functions
+|   |   `-- fsadaptor.hpp   Singleton file, directory, and path operations
 |   `-- utilities/         Random, UUID, singleton, and utility headers
 |-- src/                    Implementations and module CMake targets
 |   `-- os/
 |       |-- CMakeLists.txt  Defines kitzoo::os
 |       |-- osadaptor.cpp   Linux, macOS, and Windows backends
-|       |-- fsadaptor.cpp   Filesystem adaptor implementation
-|       `-- filesystem.cpp Compatibility forwarding functions
+|       `-- fsadaptor.cpp   Filesystem adaptor implementation
 |-- tests/                  Unit tests grouped by module
-|   `-- os/                 OSAdaptor, FsAdaptor, and compatibility tests
+|   `-- os/                 OSAdaptor and FsAdaptor tests
 |-- examples/               Executable module usage examples
 |   |-- os.cpp              System queries and filesystem operations
 |   `-- utilities.cpp       Random, UUID, and singleton inheritance
@@ -49,12 +47,11 @@ header-only modules keep their implementation in `include/kitzoo/`.
 |---|---|
 | `kitzoo::core` | Version and build information, compiler/platform macros |
 | `kitzoo::utilities` | Random helpers, UUID, singleton, `ScopeGuard`, `unique_function` |
-| `kitzoo::lock` | Spin locks, `Synchronized<T>` |
 | `kitzoo::string` | String helpers, number conversion, hex and Base64 |
 | `kitzoo::time` | Clocks, calendar conversion, injectable timelines, named measurements, Stopwatch, Deadline and Timer |
 | `kitzoo::os` | FsAdaptor file, directory and path operations; OSAdaptor system and thread operations |
 | `kitzoo::queue` | `BlockingQueue<T>`, `SPSCQueue<T>` |
-| `kitzoo::thread` | Built-in and BS thread pools, reusable and concurrent object pools |
+| `kitzoo::thread` | Built-in and BS thread pools, object pools, spin locks, `Synchronized<T>` |
 | `kitzoo::log` | Synchronous and asynchronous logging backed by spdlog |
 | `kitzoo::cli` | cxxopts command-line parsing |
 | `kitzoo::json` | JSON input loading backed by nlohmann/json |
@@ -70,8 +67,20 @@ CLI, JSON, crypto, mimalloc, and the additional integrations have separate
 headers and targets.
 
 Link `kitzoo::os` and include `<kitzoo/os.hpp>` for `FsAdaptor` and `OSAdaptor`.
-Filesystem operations use `FsAdaptor::instance()`; existing free functions such
-as `kitzoo::os::read_file()` remain compatibility entry points to the same implementation.
+Filesystem operations use `FsAdaptor::instance()`. The former filesystem free
+functions and `<kitzoo/os/filesystem.hpp>` have been removed; migrate calls to
+the corresponding adaptor methods.
+
+Lock utilities now belong to `kitzoo::thread`: include `<kitzoo/thread.hpp>` or
+`<kitzoo/thread/spinlock.hpp>` / `<kitzoo/thread/synchronized.hpp>` and link
+`kitzoo::thread`. The former lock headers, namespace, and CMake target are removed.
+
+`Singleton<T>` initializes on first access using a function-local static object.
+`EagerSingleton<T>` requests startup initialization and uses the same guarded
+storage for early or concurrent access. Both initialize each object once; mutable
+singleton state needs its own synchronization. Eager construction should not throw
+during startup, and neither wrapper supports cyclic constructor dependencies or
+access after the singleton has been destroyed.
 
 ```cpp
 auto& fs = kitzoo::os::FsAdaptor::instance();

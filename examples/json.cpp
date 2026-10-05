@@ -78,7 +78,7 @@ auto main(int argc, char** argv) -> int {
         std::cout << "Updated JSON:\n" << text << '\n';
         if (argc > 2) {
             std::error_code ec;
-            kitzoo::os::write_text(argv[2], text, ec);
+            kitzoo::os::FsAdaptor::instance().write_text(argv[2], text, ec);
             if (ec) {
                 std::cerr << "JSON save failed: " << ec.message() << '\n';
                 return 1;

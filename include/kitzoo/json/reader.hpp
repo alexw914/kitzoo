@@ -8,7 +8,7 @@
 #define KITZOO_JSON_READER_HPP
 
 #include <kitzoo/core/macro.hpp>
-#include <kitzoo/os/filesystem.hpp>
+#include <kitzoo/os/fsadaptor.hpp>
 
 #include <filesystem>
 #include <nlohmann/json.hpp>
@@ -54,7 +54,7 @@ public:
 
     auto load_file(std::filesystem::path const& path) -> bool {
         std::error_code ec;
-        auto text = os::read_text(path, ec);
+        auto text = os::FsAdaptor::instance().read_text(path, ec);
         if (ec) {
             error_info_ = ec.message();
             return false;

@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/lock/spinlock.hpp
+// File: include/kitzoo/thread/spinlock.hpp
 // Description: Declares SpinLock and RWSpinLock for lightweight exclusive and
 //              reader-writer synchronization.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_LOCK_SPINLOCK_HPP
-#define KITZOO_LOCK_SPINLOCK_HPP
+#ifndef KITZOO_THREAD_SPINLOCK_HPP
+#define KITZOO_THREAD_SPINLOCK_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <thread>
 
-namespace kitzoo::lock {
+namespace kitzoo::thread {
 
 class SpinLock {
 public:
@@ -95,6 +95,6 @@ private:
     std::atomic_flag writer_gate_ = ATOMIC_FLAG_INIT;
 };
 
-}  // namespace kitzoo::lock
+}  // namespace kitzoo::thread
 
-#endif  // KITZOO_LOCK_SPINLOCK_HPP
+#endif  // KITZOO_THREAD_SPINLOCK_HPP

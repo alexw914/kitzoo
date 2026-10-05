@@ -56,7 +56,6 @@ endfunction()
 # -- Test subdirectories ------------------------------------------------------
 add_subdirectory(core)
 add_subdirectory(utilities)
-add_subdirectory(lock)
 add_subdirectory(string)
 add_subdirectory(time)
 add_subdirectory(thread)

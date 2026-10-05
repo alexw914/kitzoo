@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
-#include <kitzoo/os/filesystem.hpp>
+#include <kitzoo/os/fsadaptor.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -86,7 +86,7 @@ protected:
 
 class TemporaryDirectory {
 public:
-    TemporaryDirectory() : path(kitzoo::os::temp_directory()) {}
+    TemporaryDirectory() : path(kitzoo::os::FsAdaptor::instance().temp_directory()) {}
 
     ~TemporaryDirectory() {
         std::error_code error;
@@ -222,7 +222,8 @@ TEST(LogFileTest, BasicFileFlushMakesMessageReadable) {
         Logger logger("file", options);
         logger.log(Level::Info, "persisted record");
         logger.flush();
-        EXPECT_NE(kitzoo::os::read_text(path).find("persisted record"), std::string::npos);
+        EXPECT_NE(kitzoo::os::FsAdaptor::instance().read_text(path).find("persisted record"),
+                  std::string::npos);
     }
 }
 
@@ -245,7 +246,8 @@ TEST(LogFileTest, RotationRetainsBoundedFilesAndNewestRecord) {
             ++files;
     }
     EXPECT_EQ(files, 3u);  // current file plus two retained files
-    EXPECT_NE(kitzoo::os::read_text(path).find("record=29"), std::string::npos);
+    EXPECT_NE(kitzoo::os::FsAdaptor::instance().read_text(path).find("record=29"),
+              std::string::npos);
 }
 
 TEST(LogCallbackTest, CopiesPayloadBeforeCallbackReturns) {

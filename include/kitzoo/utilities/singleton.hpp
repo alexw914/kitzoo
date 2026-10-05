@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/utilities/singleton.hpp
-// Description: Declares lazy and eager singleton wrappers with one instance per
-//              singleton type.
+// Description: Declares lazy and eager singleton wrappers with thread-safe
+//              initialization of one instance per singleton type.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_UTILITIES_SINGLETON_HPP
@@ -21,6 +21,7 @@ public:
     auto operator=(Singleton&&) -> Singleton& = delete;
 
     KZ_NODISCARD static auto instance() -> T& {
+        // C++ guarantees serialized initialization and retries after a constructor throws.
         static T value;
         return value;
     }
@@ -38,14 +39,25 @@ public:
     auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
     auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
 
-    KZ_NODISCARD static auto instance() noexcept -> T& { return value_; }
+    KZ_NODISCARD static auto instance() -> T& {
+        // ODR-use the startup anchor without reading it during dynamic initialization.
+        static_cast<void>(&value_);
+        return storage();
+    }
 
 protected:
     EagerSingleton() = default;
     ~EagerSingleton() = default;
 
 private:
-    inline static T value_{};
+    static auto storage() -> T& {
+        // Startup initialization and concurrent callers share the same guarded object.
+        static T value;
+        return value;
+    }
+
+    // Request eager initialization; instance() is also safe if initialization is deferred.
+    inline static T* value_ = &storage();
 };
 
 }  // namespace kitzoo::util

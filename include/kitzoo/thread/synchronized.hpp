@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: include/kitzoo/lock/synchronized.hpp
+// File: include/kitzoo/thread/synchronized.hpp
 // Description: Declares Synchronized<T, Mutex>, which guards a value and
 //              provides scoped access under its mutex.
 // -----------------------------------------------------------------------------
 
-#ifndef KITZOO_LOCK_SYNCHRONIZED_HPP
-#define KITZOO_LOCK_SYNCHRONIZED_HPP
+#ifndef KITZOO_THREAD_SYNCHRONIZED_HPP
+#define KITZOO_THREAD_SYNCHRONIZED_HPP
 
 #include <kitzoo/core/macro.hpp>
 
@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace kitzoo::lock {
+namespace kitzoo::thread {
 
 template <typename T, typename Mutex = std::mutex>
 class Synchronized {
@@ -52,6 +52,6 @@ private:
     T value_;
 };
 
-}  // namespace kitzoo::lock
+}  // namespace kitzoo::thread
 
-#endif  // KITZOO_LOCK_SYNCHRONIZED_HPP
+#endif  // KITZOO_THREAD_SYNCHRONIZED_HPP

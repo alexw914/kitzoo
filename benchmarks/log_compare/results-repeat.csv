@@ -1,9 +1,0 @@
-case,library,submit_ns_per_call,complete_ns_per_call,delivered
-filtered,mlog,3.18973,3.18973,0
-filtered,spdlog,1.26383,1.26383,0
-sync1,mlog,1009.48,1048.78,20000
-sync1,spdlog,294.796,294.83,20000
-async1,mlog,770.266,2767.46,20000
-async1,spdlog,309.686,328.655,20000
-async4,mlog,416.91,1790.84,80000
-async4,spdlog,261.671,341.735,80000

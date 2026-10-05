@@ -1,7 +1,7 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: tests/os/fsadaptor_test.cpp
-// Description: Verifies filesystem adaptor operations and compatibility entry points.
+// Description: Verifies filesystem adaptor operations and error handling.
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/os.hpp>
@@ -30,17 +30,52 @@ protected:
     std::filesystem::path root_;
 };
 
-TEST_F(FsAdaptorTest, PreservesBinaryTextAndLegacyEntryPoints) {
+TEST_F(FsAdaptorTest, PreservesBinaryAndText) {
     const std::string bytes("a\0b", 3);
     fs_.write_file(path("binary"), std::span(bytes.data(), bytes.size()));
     EXPECT_EQ(fs_.read_file(path("binary")), bytes);
-    EXPECT_EQ(kitzoo::os::read_file(path("binary")), bytes);
-    kitzoo::os::write_text(path("text"), "old");
+    fs_.write_text(path("text"), "old");
     EXPECT_EQ(fs_.read_text(path("text")), "old");
     const std::string updated = "new";
     fs_.atomic_write(path("text"), std::span(updated.data(), updated.size()));
-    EXPECT_EQ(kitzoo::os::read_text(path("text")), updated);
+    EXPECT_EQ(fs_.read_text(path("text")), updated);
     EXPECT_EQ(fs_.file_size(path("text")), 3u);
+}
+
+TEST_F(FsAdaptorTest, ReadsEmptyAndLargeFilesAndReportsMissingFiles) {
+    fs_.write_file(path("empty"), std::span<char const>{});
+    EXPECT_TRUE(fs_.read_file(path("empty")).empty());
+    const std::string data(10'000, '\xAB');
+    fs_.write_file(path("large"), std::span(data.data(), data.size()));
+    EXPECT_EQ(fs_.read_file(path("large")), data);
+
+    std::error_code ec;
+    EXPECT_TRUE(fs_.read_file(path("missing"), ec).empty());
+    EXPECT_TRUE(ec);
+    EXPECT_THROW(static_cast<void>(fs_.read_file(path("missing"))),
+                 std::filesystem::filesystem_error);
+    EXPECT_THROW(static_cast<void>(fs_.file_size(path("missing"))),
+                 std::filesystem::filesystem_error);
+}
+
+TEST_F(FsAdaptorTest, AtomicWriteCreatesParentsAndPreservesFileOnFailure) {
+    const std::string data = "content";
+    fs_.atomic_write(path("nested/deep/file"), std::span(data.data(), data.size()));
+    EXPECT_EQ(fs_.read_file(path("nested/deep/file")), data);
+    fs_.write_text(path("parent"), "existing file");
+
+    std::error_code ec;
+    fs_.atomic_write(path("parent/file"), std::span<char const>{}, ec);
+    EXPECT_TRUE(ec);
+    EXPECT_EQ(fs_.read_text(path("parent")), "existing file");
+    EXPECT_EQ(fs_.listdir(root_).size(), 2u);
+}
+
+TEST_F(FsAdaptorTest, TempDirectoriesAreUnique) {
+    auto const directory = fs_.temp_directory();
+    EXPECT_NE(directory, root_);
+    EXPECT_TRUE(fs_.is_folder(directory));
+    fs_.rm(directory);
 }
 
 TEST_F(FsAdaptorTest, UnicodePathsSupportAtomicReplacement) {
@@ -134,7 +169,7 @@ TEST_F(FsAdaptorTest, ListdirReturnsSortedPathsWithOptionalRecursion) {
     EXPECT_NE(std::find(recursive.begin(), recursive.end(), path("child/nested.txt")),
               recursive.end());
     EXPECT_EQ(fs_.list_directory(root_), flat);
-    EXPECT_EQ(kitzoo::os::list_directory(root_), flat);
+    EXPECT_EQ(fs_.list_directory(root_), flat);
 }
 
 TEST_F(FsAdaptorTest, ListingFailureReturnsEmptyAndErrorOrThrows) {

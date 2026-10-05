@@ -9,7 +9,6 @@
 #define KITZOO_KITZOO_HPP
 
 #include <kitzoo/core.hpp>
-#include <kitzoo/lock.hpp>
 #include <kitzoo/log.hpp>
 #include <kitzoo/os.hpp>
 #include <kitzoo/queue/blocking_queue.hpp>

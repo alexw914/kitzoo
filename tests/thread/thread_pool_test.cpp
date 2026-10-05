@@ -1,6 +1,8 @@
-// ---------------------------------------------------------------------------
-// kitzoo/thread/thread_pool tests
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// kitzoo | C++20 Foundation Library
+// File: tests/thread/thread_pool_test.cpp
+// Description: Verifies the built-in thread pool and public BS thread pool aliases.
+// -----------------------------------------------------------------------------
 
 #include <kitzoo/thread/thread_pool.hpp>
 
@@ -167,4 +169,39 @@ TEST(ThreadPoolTest, DetachedExceptionDoesNotStopWorker) {
     ThreadPool pool{1};
     pool.detach_task([] { throw std::runtime_error{"detached"}; });
     EXPECT_EQ(pool.submit_task([] { return 42; }).get(), 42);
+}
+
+template <typename Pool>
+class BSThreadPoolTest : public ::testing::Test {};
+
+using BSThreadPoolTypes =
+    ::testing::Types<BSLightThreadPool, BSPriorityThreadPool, BSPauseThreadPool, BSWdcThreadPool>;
+TYPED_TEST_SUITE(BSThreadPoolTest, BSThreadPoolTypes);
+
+TYPED_TEST(BSThreadPoolTest, SubmitsTasksAndReturnsResults) {
+    TypeParam pool{2};
+
+    EXPECT_EQ(pool.get_thread_count(), 2u);
+    EXPECT_EQ(pool.submit_task([]() -> int { return 42; }).get(), 42);
+}
+
+TYPED_TEST(BSThreadPoolTest, PropagatesTaskExceptions) {
+    TypeParam pool{1};
+    auto future = pool.submit_task([]() -> int { throw std::runtime_error{"bad"}; });
+
+    EXPECT_THROW(static_cast<void>(future.get()), std::runtime_error);
+    EXPECT_EQ(pool.submit_task([]() -> int { return 42; }).get(), 42);
+}
+
+TYPED_TEST(BSThreadPoolTest, WaitDrainsDetachedTasks) {
+    std::atomic<int> counter{0};
+    TypeParam pool{2};
+
+    for (int i = 0; i < 100; ++i) {
+        pool.detach_task([&counter]() -> void { counter.fetch_add(1, std::memory_order_relaxed); });
+    }
+    pool.wait();
+
+    EXPECT_EQ(counter.load(), 100);
+    EXPECT_EQ(pool.get_tasks_total(), 0u);
 }

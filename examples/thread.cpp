@@ -1,16 +1,19 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: examples/thread.cpp
-// Description: Demonstrates queue integration, task execution and object pool leases.
+// Description: Demonstrates task execution, object pool leases and synchronized values.
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/queue/concurrent_queue.hpp>
-#include <kitzoo/thread/object_pool.hpp>
-#include <kitzoo/thread/thread_pool.hpp>
+#include <kitzoo/thread.hpp>
 
 #include <cstdio>
 
 auto main() -> int {
+    kitzoo::thread::Synchronized<int, kitzoo::thread::SpinLock> counter{0};
+    counter.with_lock([](int& value) -> void { ++value; });
+    std::printf("synchronized value: %d\n", counter.copy());
+
     kitzoo::queue::ConcurrentQueue<int> queue;
     kitzoo::thread::BSLightThreadPool pool{2};
 
