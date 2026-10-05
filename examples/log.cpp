@@ -93,7 +93,7 @@ auto asynchronous_logging() -> void {
   async.log(Level::Info, "all frames processed");
   async.close(); // stop acceptance, drain, join and flush; safe to repeat
   std::cout << "dropped=" << async.dropped_count() << " rejected=" << async.rejected_count()
-            << " failed=" << async.failed_count() << '\n';
+            << " failed=" << logger->failed_count() << '\n';
 }
 } // namespace
 

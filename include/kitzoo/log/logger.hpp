@@ -136,7 +136,7 @@ public:
 private:
   friend class AsyncLogger;
 
-  auto write_record(const LogRecord& record) -> bool;
+  auto write_record(const LogRecord& record) -> void;
 
   auto report_error(std::string_view message) noexcept -> void;
 

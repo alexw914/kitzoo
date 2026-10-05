@@ -70,11 +70,11 @@ public:
 
   auto close() -> void;
 
+  // Records submitted after close(). Sink failures are counted by Logger::failed_count().
   KZ_NODISCARD auto rejected_count() const noexcept -> std::size_t { return rejected_.load(); }
 
-  KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
-
-  KZ_NODISCARD auto dropped_count() const noexcept -> std::size_t { return dropped_.load(std::memory_order_relaxed); }
+  // Records discarded because the queue was full.
+  KZ_NODISCARD auto dropped_count() const noexcept -> std::size_t { return dropped_.load(); }
 
 private:
   auto worker_loop() -> void;
@@ -96,7 +96,6 @@ private:
   memory::Deque<Work> queue_;
   bool closed_{false};
   std::atomic<std::size_t> rejected_{0};
-  std::atomic<std::size_t> failed_{0};
   std::atomic<std::size_t> dropped_{0};
   // Construct the worker after every object it accesses.
   std::jthread worker_;

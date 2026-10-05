@@ -21,8 +21,6 @@ namespace kitzoo::log {
 namespace {
 thread_local AsyncLogger* active_worker = nullptr;
 thread_local Logger* active_error_handler = nullptr;
-// Errors are reported synchronously, so a per-thread count detects failed writes.
-thread_local std::size_t reported_errors = 0;
 
 // Exposes spdlog's sink dispatch, which reports per-sink exceptions to the error
 // handler, for records that keep their original timestamp and thread.
@@ -76,7 +74,6 @@ auto Logger::set_error_handler(ErrorHandler handler) -> void {
 
 auto Logger::report_error(std::string_view message) noexcept -> void {
   failed_.fetch_add(1, std::memory_order_relaxed);
-  ++reported_errors;
   if (active_error_handler == this)
     return;
   auto* previous = active_error_handler;
@@ -115,15 +112,13 @@ auto Logger::set_level(const Level level) noexcept -> void {
   native_->set_level(to_spdlog(level));
 }
 
-auto Logger::write_record(const LogRecord& record) -> bool {
+auto Logger::write_record(const LogRecord& record) -> void {
   const auto loc = spdlog::source_loc{record.location.file_name(), static_cast<int>(record.location.line()),
                                       record.location.function_name()};
   const auto message = spdlog::string_view_t{record.message.data(), record.message.size()};
   spdlog::details::log_msg msg{record.timestamp, loc, record.logger_name, to_spdlog(record.level), message};
   msg.thread_id = std::hash<std::thread::id>{}(record.thread_id);
-  const auto errors_before = reported_errors;
   static_cast<NativeLogger&>(*native_).write(msg);
-  return reported_errors == errors_before;
 }
 
 auto Logger::log(const Level level, const std::string_view message, const std::source_location& loc) -> void {
@@ -175,7 +170,6 @@ auto AsyncLogger::log_owned(Level level, memory::String message, const std::sour
   std::unique_lock lock(mutex_);
   if (closed_) {
     ++rejected_;
-    ++dropped_;
     return;
   }
   if (queue_.size() >= options_.capacity) {
@@ -187,7 +181,6 @@ auto AsyncLogger::log_owned(Level level, memory::String message, const std::sour
     space_.wait(lock, [this] { return closed_ || queue_.size() < options_.capacity; });
     if (closed_) {
       ++rejected_;
-      ++dropped_;
       return;
     }
   }
@@ -230,8 +223,8 @@ auto AsyncLogger::worker_loop() -> void {
     if (work.barrier) {
       logger_->flush();
       work.barrier->set_value();
-    } else if (!logger_->write_record(work.record)) {
-      ++failed_;
+    } else {
+      logger_->write_record(work.record);
     }
   }
   active_worker = nullptr;
