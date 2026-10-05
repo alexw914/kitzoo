@@ -156,6 +156,30 @@ TEST(TimelineTest, StopTokenCancelsUnlimitedWait) {
   EXPECT_FALSE(feeder.sleep_for(1s, {}, stopped.get_token()));
 }
 
+// Reports itself as the system clock and counts how often sleeping checks it.
+class CountingSystemTimeline final : public Timeline {
+public:
+  auto timestamp(std::string_view) const -> TimeDuration override {
+    ++checks;
+    return utc_timestamp().time_since_epoch();
+  }
+
+  auto is_valid() const -> bool override { return true; }
+
+  auto type() const noexcept -> TimelineType override { return TimelineType::System; }
+
+  mutable std::atomic<int> checks{0};
+};
+
+TEST(TimelineTest, SystemSleepWaitsForRemainingGapInsteadOfPolling) {
+  CountingSystemTimeline timeline;
+  const auto started = std::chrono::steady_clock::now();
+  EXPECT_TRUE(timeline.sleep_for(200ms));
+  EXPECT_GE(std::chrono::steady_clock::now() - started, 200ms);
+  // Millisecond polling would check about 200 times; gap sleeps need a handful.
+  EXPECT_LE(timeline.checks.load(), 10);
+}
+
 TEST(TimelineTest, RejectsNegativeTimeoutAndRelativeTargetOverflow) {
   FeederTimeline feeder;
   feeder.feed(TimeDuration::max());

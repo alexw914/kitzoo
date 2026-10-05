@@ -25,9 +25,13 @@ auto Timeline::sleep_until(TimeDuration target, TimeDuration timeout, std::stop_
   while (!stop.stop_requested()) {
     if (!is_valid())
       return false;
-    if (timestamp() >= target)
+    const auto now = timestamp();
+    if (now >= target)
       return true;
-    auto delay = std::chrono::duration_cast<TimeDuration>(std::chrono::milliseconds{1});
+    // The system clock advances in real time, so it sleeps for the remaining gap,
+    // capped to notice clock adjustments; other timelines may move at any rate.
+    auto delay = type() == TimelineType::System ? std::min<TimeDuration>(target - now, std::chrono::milliseconds{100})
+                                                : TimeDuration{std::chrono::milliseconds{1}};
     if (timeout != TimeDuration::zero()) {
       const auto elapsed = watch.elapsed();
       if (elapsed >= timeout)
