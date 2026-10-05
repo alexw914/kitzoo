@@ -51,13 +51,13 @@ for module usage and platform-specific build commands.
 
 ### FetchContent
 
-Replace `<release-or-commit>` with the revision you want to use:
+Pin a release tag or commit:
 
 ```cmake
 include(FetchContent)
 FetchContent_Declare(kitzoo
     GIT_REPOSITORY https://github.com/alexw914/kitzoo.git
-    GIT_TAG <release-or-commit>)
+    GIT_TAG v0.3.0)
 FetchContent_MakeAvailable(kitzoo)
 
 target_link_libraries(app PRIVATE kitzoo::core kitzoo::utilities)
