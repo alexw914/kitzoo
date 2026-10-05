@@ -10,8 +10,10 @@
 #include <future>
 #include <gtest/gtest.h>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <vector>
 
 namespace {
 using kitzoo::time::Timer;
@@ -133,6 +135,29 @@ TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {
   EXPECT_EQ(again.wait_for(5s), std::future_status::ready);
   EXPECT_TRUE(timer.running());
   timer.stop();
+}
+
+TEST(TimerTest, CallbackDurationDoesNotAccumulateDrift) {
+  constexpr auto kInterval = 100ms;
+  constexpr int kTicks = 5;
+  Timer timer(kInterval);
+  std::vector<std::chrono::steady_clock::time_point> ticks;
+  std::mutex mutex;
+  std::promise<void> done;
+  auto finished = done.get_future();
+  timer.start([&] {
+    std::lock_guard lock{mutex};
+    ticks.push_back(std::chrono::steady_clock::now());
+    if (ticks.size() == kTicks)
+      done.set_value();
+    std::this_thread::sleep_for(40ms);
+  });
+  ASSERT_EQ(finished.wait_for(10s), std::future_status::ready);
+  timer.stop();
+  std::lock_guard lock{mutex};
+  // A fixed-delay timer would average at least 140ms per tick here.
+  const auto average = (ticks[kTicks - 1] - ticks[0]) / (kTicks - 1);
+  EXPECT_LT(average, 130ms);
 }
 
 TEST(TimerTest, AcceptsMoveOnlyCallbackAndDestructorStopsWorker) {

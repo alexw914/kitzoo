@@ -34,8 +34,9 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
   worker_ = std::jthread{[this](std::stop_token token) -> void {
     active_timer = this;
     std::unique_lock lock{mutex_};
+    auto next = std::chrono::steady_clock::now() + interval_;
     while (!token.stop_requested()) {
-      cv_.wait_for(lock, token, interval_, []() -> bool { return false; });
+      cv_.wait_until(lock, token, next, []() -> bool { return false; });
       if (token.stop_requested())
         break;
       lock.unlock();
@@ -45,6 +46,10 @@ auto Timer::start(kitzoo::core::unique_function<void()> callback) -> void {
       }
       if (stop_from_callback)
         break;
+      const auto now = std::chrono::steady_clock::now();
+      do
+        next += interval_;
+      while (next <= now);
       lock.lock();
     }
   }};
