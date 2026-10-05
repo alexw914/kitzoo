@@ -37,8 +37,8 @@ set_property(CACHE KITZOO_SANITIZERS PROPERTY STRINGS "address" "undefined" "thr
 option(KITZOO_SANITIZE_RECOVER_ALL "Allow sanitizers to continue after first error" OFF)
 
 # -- Third-party integrations --------------------------------------------------
-# Crypto is opt-in. Other module dependencies are always fetched.
-option(KITZOO_WITH_OPENSSL "Enable crypto module (requires OpenSSL)" OFF)
+# AES utilities are opt-in. Other module dependencies are always fetched.
+option(KITZOO_WITH_OPENSSL "Enable OpenSSL AES utilities" OFF)
 
 # -- Dependency provider options -----------------------------------------------
 option(KITZOO_USE_SYSTEM_GOOGLETEST "Use system-installed GoogleTest" OFF)

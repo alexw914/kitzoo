@@ -62,6 +62,18 @@
 - 单例优先继承 `kitzoo::util::Singleton<T>`，派生类构造函数设为私有，并
   声明模板基类为 friend；不重复实现 `instance()` 或拷贝、移动禁用逻辑。
 
+## README 编写规则
+
+- README 使用英文，保持简略，只保留项目介绍、`Modules`、`Build and test`、
+  `Use in another CMake project` 和 `Reference`。
+- 项目介绍简要说明项目定位和支持平台；模块表只列现有模块，每个模块用一句
+  简短描述概括功能。模块合并或删除时同步更新，不保留过时模块说明。
+- 不在 README 展开实现细节、内部架构、接口语义、生命周期或迁移历史；详细
+  说明放在 `docs/`，使用示例放在 `examples/`。
+- `Build and test` 只保留必要的环境要求、构建和测试命令，以及相关可选功能开关。
+- `Use in another CMake project` 保留 FetchContent 和安装包两种接入方式，示例简短。
+- `Reference` 简要列出参考项目或依赖的名称、链接和用途。
+
 ## 修改验证
 
 - 同步更新受影响的 CMake 依赖、调用方、示例和文档。

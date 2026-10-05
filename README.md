@@ -8,18 +8,17 @@ Applications can link the modules they need.
 
 | Module | Functionality |
 | --- | --- |
-| `core` | Version information and compiler/platform utilities. |
-| `utilities` | Random values, UUIDs, singletons, and general-purpose helpers. |
-| `string` | String processing, numeric conversion, and encoding. |
-| `time` | Clocks, calendar conversion, timers, and duration measurement. |
-| `os` | System information, thread operations, and filesystem utilities. |
-| `memory` | Allocation, byte buffers, containers, and shared memory. |
-| `queue` | Blocking, concurrent, and single-producer/single-consumer queues. |
-| `thread` | Thread pools, object pools, locks, and synchronized values. |
+| `core` | Version information and platform helpers. |
+| `utilities` | Random values, UUIDs, singletons, and optional AES encryption/decryption. |
+| `string` | String processing, number conversion, and encoding. |
+| `time` | Time queries, calendar conversion, timers, and measurements. |
+| `os` | System queries, thread configuration, and file/directory operations. |
+| `memory` | Memory allocation, buffers, containers, and shared memory. |
+| `queue` | Blocking and concurrent queues. |
+| `thread` | Thread pools, object pools, and synchronization. |
 | `log` | Synchronous and asynchronous logging. |
 | `cli` | Command-line argument parsing. |
-| `json` | JSON loading, access, and serialization. |
-| `crypto` | AES encryption and decryption; requires OpenSSL. |
+| `json` | JSON parsing, file loading, and serialization. |
 
 CMake targets use the `kitzoo::<module>` naming convention.
 
@@ -37,7 +36,7 @@ ctest --test-dir build/debug --output-on-failure
 
 Tests and examples are enabled by default in standalone builds. Add
 `-DKITZOO_BUILD_BENCHMARKS=ON` to build benchmarks, or `-DKITZOO_WITH_OPENSSL=ON`
-to enable crypto with an installed OpenSSL development package.
+to enable AES utilities with an installed OpenSSL development package.
 
 Clang and Ninja users can also use the Debug preset:
 

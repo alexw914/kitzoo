@@ -32,7 +32,7 @@ struct LogRecord {
   std::thread::id thread_id;
   std::source_location location;
   std::string_view logger_name;
-  detail::Message message;
+  memory::String message;
 };
 
 enum class OverflowPolicy {
@@ -60,7 +60,7 @@ public:
   auto logf(Level level, const std::source_location& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
     if (!logger_->enabled(level))
       return;
-    detail::Message message;
+    memory::String message;
     fmt::format_to(std::back_inserter(message), format, std::forward<Args>(args)...);
     log_owned(level, std::move(message), loc);
   }
@@ -79,7 +79,7 @@ public:
 private:
   auto worker_loop() -> void;
 
-  auto log_owned(Level level, detail::Message message, const std::source_location& loc) -> void;
+  auto log_owned(Level level, memory::String message, const std::source_location& loc) -> void;
 
   std::shared_ptr<Logger> logger_;
 

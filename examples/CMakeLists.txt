@@ -36,7 +36,3 @@ kitzoo_add_example(utilities SOURCES utilities.cpp DEPENDS utilities)
 kitzoo_add_example(memory SOURCES memory.cpp DEPENDS memory)
 
 kitzoo_add_example(thread SOURCES thread.cpp DEPENDS thread)
-
-if(KITZOO_WITH_OPENSSL)
-    kitzoo_add_example(crypto SOURCES crypto.cpp DEPENDS crypto)
-endif()

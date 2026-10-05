@@ -1,17 +1,17 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
-// File: src/crypto/aes.cpp
+// File: src/utilities/aes.cpp
 // Description: Implements AES-CBC encryption and decryption through OpenSSL
 //              EVP, including padding validation and error handling.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/crypto/aes.hpp>
+#include <kitzoo/utilities/aes.hpp>
 
 #include <memory>
 #include <openssl/evp.h>
 #include <stdexcept>
 
-namespace kitzoo::crypto {
+namespace kitzoo::util {
 
 namespace {
 
@@ -92,4 +92,4 @@ auto aes_cbc_decrypt(std::span<std::byte const> const ciphertext, std::span<std:
   return run(false, ciphertext, key, iv, padding);
 }
 
-} // namespace kitzoo::crypto
+} // namespace kitzoo::util

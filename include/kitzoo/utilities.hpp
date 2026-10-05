@@ -2,11 +2,15 @@
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/utilities.hpp
 // Description: Provides the public utilities module entry point for random,
-//              UUID, singleton, and callable helpers.
+//              UUID, singleton, callable helpers, and optional AES operations.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_UTILITIES_HPP
 #define KITZOO_UTILITIES_HPP
+
+#if defined(KZ_WITH_OPENSSL) && KZ_WITH_OPENSSL
+#include <kitzoo/utilities/aes.hpp>
+#endif
 
 #include <kitzoo/utilities/random.hpp>
 #include <kitzoo/utilities/scope_guard.hpp>

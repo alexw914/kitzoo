@@ -33,10 +33,6 @@
 
 namespace kitzoo::log {
 
-namespace detail {
-using Message = memory::String;
-} // namespace detail
-
 enum class Level : int {
   Trace = 0,
   Debug = 1,
@@ -111,7 +107,7 @@ public:
   auto logf(Level level, std::source_location const& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
     if (!enabled(level))
       return;
-    detail::Message message;
+    memory::String message;
     fmt::format_to(std::back_inserter(message), format, std::forward<Args>(args)...);
     log(level, {message.data(), message.size()}, loc);
   }
@@ -136,9 +132,9 @@ private:
 
   KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 
-  detail::Message name_;
+  memory::String name_;
   std::shared_ptr<spdlog::logger> native_;
-  detail::Message pattern_;
+  memory::String pattern_;
   std::atomic<std::size_t> failed_{0};
   std::mutex error_mutex_;
   ErrorHandler error_handler_;

@@ -161,10 +161,10 @@ AsyncLogger::~AsyncLogger() {
 auto AsyncLogger::log(Level level, std::string_view message, const std::source_location& loc) -> void {
   if (!logger_->enabled(level))
     return;
-  log_owned(level, detail::Message(message.data(), message.size()), loc);
+  log_owned(level, memory::String(message.data(), message.size()), loc);
 }
 
-auto AsyncLogger::log_owned(Level level, detail::Message message, const std::source_location& loc) -> void {
+auto AsyncLogger::log_owned(Level level, memory::String message, const std::source_location& loc) -> void {
   LogRecord record{
       level, std::chrono::system_clock::now(), std::this_thread::get_id(), loc, logger_->name(), std::move(message)};
   std::unique_lock lock(mutex_);

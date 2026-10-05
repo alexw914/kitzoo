@@ -65,7 +65,4 @@ add_subdirectory(memory)
 add_subdirectory(log)
 add_subdirectory(os)
 
-if(KITZOO_WITH_OPENSSL)
-    add_subdirectory(crypto)
-endif()
 add_subdirectory(json)
