@@ -8,12 +8,12 @@ Applications can link the modules they need.
 
 | Module | Functionality |
 | --- | --- |
-| `core` | Version information, platform helpers, command-line parsing, singletons, and move-only callables. |
-| `utilities` | String processing, encoding, random values, UUIDs, and optional AES encryption. |
+| `core` | Version information, command-line parsing, singletons, move-only callables, scope guards, and result types. |
+| `utilities` | String processing, encoding, random values, UUIDs, and optional AES, SHA-256, and HMAC. |
 | `time` | Clocks, calendar conversion, elapsed measurements, timelines, and periodic callbacks. |
-| `os` | System queries, thread configuration, and file/directory operations. |
+| `os` | System queries, thread configuration, file/directory operations, and graceful shutdown. |
 | `memory` | Memory allocation, buffers, containers, and shared memory. |
-| `queue` | Blocking and concurrent queues. |
+| `queue` | Blocking (optionally bounded) and concurrent queues. |
 | `thread` | Thread pools, object pools, and synchronization. |
 | `log` | Synchronous/asynchronous logging, file rollover, and retention. |
 | `json` | JSON parsing, file loading, and serialization. |
@@ -34,7 +34,7 @@ ctest --test-dir build/debug --output-on-failure
 
 Tests and examples are enabled by default in standalone builds. Add
 `-DKITZOO_BUILD_BENCHMARKS=ON` to build benchmarks, or `-DKITZOO_WITH_OPENSSL=ON`
-to enable AES utilities with an installed OpenSSL development package.
+to enable AES, SHA-256, and HMAC utilities with an installed OpenSSL development package.
 
 Clang and Ninja users can also use the Debug preset:
 
