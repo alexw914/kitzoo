@@ -9,6 +9,7 @@
 #define KITZOO_OS_HPP
 
 #include <kitzoo/os/filesys.hpp>
+#include <kitzoo/os/shutdown.hpp>
 #include <kitzoo/os/sys.hpp>
 
 #endif // KITZOO_OS_HPP

@@ -6,8 +6,10 @@
 
 #include <kitzoo/os.hpp>
 
+#include <chrono>
 #include <cstdio>
 #include <string>
+#include <thread>
 
 using namespace kitzoo;
 
@@ -55,5 +57,13 @@ auto main() -> int {
 
   std::filesystem::current_path(original_dir);
   os::remove_path(dir, true);
+
+  // Graceful shutdown: Ctrl+C or SIGTERM, or a request from the program itself.
+  os::install_shutdown_handler();
+  std::jthread stopper{[] {
+    std::this_thread::sleep_for(std::chrono::milliseconds{10});
+    os::request_shutdown();
+  }};
+  std::printf("shutdown requested: %s\n", os::wait_for_shutdown(std::chrono::seconds{5}) ? "yes" : "no");
   return 0;
 }
