@@ -27,28 +27,28 @@ inline constexpr std::string_view kAsciiWhitespace = " \t\n\r\f\v";
 }
 
 KZ_NODISCARD constexpr auto trim(std::string_view s) noexcept -> std::string_view {
-  auto const start = s.find_first_not_of(detail::kAsciiWhitespace);
+  const auto start = s.find_first_not_of(detail::kAsciiWhitespace);
   if (start == std::string_view::npos)
     return {};
-  auto const end = s.find_last_not_of(detail::kAsciiWhitespace);
+  const auto end = s.find_last_not_of(detail::kAsciiWhitespace);
   return s.substr(start, end - start + 1);
 }
 
 KZ_NODISCARD constexpr auto trim_left(std::string_view s) noexcept -> std::string_view {
-  auto const start = s.find_first_not_of(detail::kAsciiWhitespace);
+  const auto start = s.find_first_not_of(detail::kAsciiWhitespace);
   if (start == std::string_view::npos)
     return {};
   return s.substr(start);
 }
 
 KZ_NODISCARD constexpr auto trim_right(std::string_view s) noexcept -> std::string_view {
-  auto const end = s.find_last_not_of(detail::kAsciiWhitespace);
+  const auto end = s.find_last_not_of(detail::kAsciiWhitespace);
   if (end == std::string_view::npos)
     return {};
   return s.substr(0, end + 1);
 }
 
-KZ_NODISCARD auto join(std::span<std::string_view const> parts, std::string_view separator) -> std::string;
+KZ_NODISCARD auto join(std::span<const std::string_view> parts, std::string_view separator) -> std::string;
 
 KZ_NODISCARD auto join(std::initializer_list<std::string_view> parts, std::string_view separator) -> std::string;
 
@@ -58,7 +58,7 @@ KZ_NODISCARD auto to_lower(std::string_view s) -> std::string;
 
 KZ_NODISCARD auto to_upper(std::string_view s) -> std::string;
 
-KZ_NODISCARD auto hex_encode(std::span<std::byte const> data) -> std::string;
+KZ_NODISCARD auto hex_encode(std::span<const std::byte> data) -> std::string;
 
 KZ_NODISCARD auto hex_decode(std::string_view hex) -> std::optional<std::vector<std::byte>>;
 
@@ -71,9 +71,9 @@ KZ_NODISCARD auto to_number(std::string_view s, int base = 10) noexcept -> std::
     return std::nullopt;
 
   T value{};
-  auto const* const first = s.data();
-  auto const* const last = s.data() + s.size();
-  auto const [ptr, ec] = std::from_chars(first, last, value, base);
+  const auto* const first = s.data();
+  const auto* const last = s.data() + s.size();
+  const auto [ptr, ec] = std::from_chars(first, last, value, base);
 
   if (ec == std::errc::invalid_argument) {
     return std::nullopt;
@@ -94,9 +94,9 @@ KZ_NODISCARD auto to_number(std::string_view s) noexcept -> std::optional<T> {
     return std::nullopt;
 
   T value{};
-  auto const* const first = s.data();
-  auto const* const last = s.data() + s.size();
-  auto const [ptr, ec] = std::from_chars(first, last, value);
+  const auto* const first = s.data();
+  const auto* const last = s.data() + s.size();
+  const auto [ptr, ec] = std::from_chars(first, last, value);
 
   if (ec == std::errc::invalid_argument) {
     return std::nullopt;
@@ -113,7 +113,7 @@ KZ_NODISCARD auto to_number(std::string_view s) noexcept -> std::optional<T> {
 template <std::integral T>
 KZ_NODISCARD auto from_number(T value, int base = 10) -> std::string {
   char buf[std::numeric_limits<T>::digits10 + 4];
-  auto const [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value, base);
+  const auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value, base);
 
   if (ec != std::errc{})
     return {};
@@ -123,7 +123,7 @@ KZ_NODISCARD auto from_number(T value, int base = 10) -> std::string {
 template <std::floating_point T>
 KZ_NODISCARD auto from_number(T value) -> std::string {
   char buf[64];
-  auto const [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
+  const auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
   if (ec != std::errc{})
     return {};
   return {buf, static_cast<std::size_t>(ptr - buf)};

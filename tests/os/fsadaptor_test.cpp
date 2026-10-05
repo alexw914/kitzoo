@@ -43,7 +43,7 @@ TEST_F(FsAdaptorTest, PreservesBinaryAndText) {
 }
 
 TEST_F(FsAdaptorTest, ReadsEmptyAndLargeFilesAndReportsMissingFiles) {
-  fs_.write_file(path("empty"), std::span<char const>{});
+  fs_.write_file(path("empty"), std::span<const char>{});
   EXPECT_TRUE(fs_.read_file(path("empty")).empty());
   const std::string data(10'000, '\xAB');
   fs_.write_file(path("large"), std::span(data.data(), data.size()));
@@ -63,14 +63,14 @@ TEST_F(FsAdaptorTest, AtomicWriteCreatesParentsAndPreservesFileOnFailure) {
   fs_.write_text(path("parent"), "existing file");
 
   std::error_code ec;
-  fs_.atomic_write(path("parent/file"), std::span<char const>{}, ec);
+  fs_.atomic_write(path("parent/file"), std::span<const char>{}, ec);
   EXPECT_TRUE(ec);
   EXPECT_EQ(fs_.read_text(path("parent")), "existing file");
   EXPECT_EQ(fs_.listdir(root_).size(), 2u);
 }
 
 TEST_F(FsAdaptorTest, TempDirectoriesAreUnique) {
-  auto const directory = fs_.temp_directory();
+  const auto directory = fs_.temp_directory();
   EXPECT_NE(directory, root_);
   EXPECT_TRUE(fs_.is_folder(directory));
   fs_.rm(directory);

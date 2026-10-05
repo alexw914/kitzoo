@@ -14,6 +14,7 @@ AlwaysBreakTemplateDeclarations: Yes
 BreakBeforeBraces: Attach
 PointerAlignment: Left
 ReferenceAlignment: Left
+QualifierAlignment: Left
 DerivePointerAlignment: false
 SortIncludes: true
 IncludeBlocks: Regroup

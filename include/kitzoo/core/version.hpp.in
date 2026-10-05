@@ -20,7 +20,7 @@ struct version {
   std::uint16_t minor;
   std::uint16_t patch;
 
-  constexpr auto operator<=>(version const&) const = default;
+  constexpr auto operator<=>(const version&) const = default;
 };
 
 // clang-format off: preserve CMake substitution tokens.
@@ -39,7 +39,7 @@ struct build_info {
   std::string_view sanitizers;
 };
 
-KZ_NODISCARD KZ_EXPORT auto current_build_info() noexcept -> build_info const&;
+KZ_NODISCARD KZ_EXPORT auto current_build_info() noexcept -> const build_info&;
 
 } // namespace kitzoo::core
 

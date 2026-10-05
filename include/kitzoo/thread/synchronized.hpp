@@ -23,8 +23,8 @@ public:
   template <typename... Args>
   explicit Synchronized(Args&&... args) : value_(std::forward<Args>(args)...) {}
 
-  Synchronized(Synchronized const&) = delete;
-  auto operator=(Synchronized const&) -> Synchronized& = delete;
+  Synchronized(const Synchronized&) = delete;
+  auto operator=(const Synchronized&) -> Synchronized& = delete;
 
   template <typename F>
   auto with_lock(F&& f) -> decltype(auto) {
@@ -34,7 +34,7 @@ public:
 
   template <typename F>
   auto read(F&& f) const -> decltype(auto)
-    requires requires(Mutex const& m) { std::shared_lock{m}; }
+    requires requires(const Mutex& m) { std::shared_lock{m}; }
   {
     std::shared_lock lock{mutex_};
     return std::forward<F>(f)(value_);

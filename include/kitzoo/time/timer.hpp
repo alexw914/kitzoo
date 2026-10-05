@@ -25,8 +25,8 @@ public:
 
   ~Timer();
 
-  Timer(Timer const&) = delete;
-  auto operator=(Timer const&) -> Timer& = delete;
+  Timer(const Timer&) = delete;
+  auto operator=(const Timer&) -> Timer& = delete;
 
   // Control start/stop from the owning thread; stop joins the worker.
   // Callbacks run after each interval and exceptions are suppressed.

@@ -86,10 +86,10 @@ auto demonstrate_byte_buffer() -> void {
   std::memset(buffer.data() + 256, 0, 256);
   std::printf("buffer: %zu bytes, capacity: %zu, alignment: %zu, first byte: %u\n", buffer.size(), buffer.capacity(),
               buffer.alignment(), std::to_integer<unsigned>(buffer.data()[0]));
-  std::byte const trailer[]{std::byte{0x01}, std::byte{0x02}};
+  const std::byte trailer[]{std::byte{0x01}, std::byte{0x02}};
   buffer.append(std::span{trailer});
   buffer.append(buffer.view().first(4)); // Self-append remains safe across growth.
-  auto const& read_only = buffer;
+  const auto& read_only = buffer;
   std::printf("after append: %zu bytes, read-only view: %zu bytes\n", buffer.size(), read_only.view().size());
   // Views do not own storage; reacquire them after buffer growth or reset.
   auto owned = std::move(buffer); // Transfers ownership without copying bytes.
@@ -122,7 +122,7 @@ auto demonstrate_bounded_allocation() -> void {
     try {
       std::pmr::vector<std::byte> oversized{&budget};
       oversized.resize(kBudgetBytes + 1);
-    } catch (std::bad_alloc const&) {
+    } catch (const std::bad_alloc&) {
       rejected = true;
       std::printf("request exceeding the budget: rejected with std::bad_alloc\n");
     }
@@ -134,7 +134,7 @@ auto demonstrate_bounded_allocation() -> void {
   std::printf("after object destruction: weak expired: %s, %zu bytes still charged\n", weak.expired() ? "yes" : "no",
               budget.stats().used_bytes);
   weak.reset(); // Release the control block before destroying its resource.
-  auto const stats = budget.stats();
+  const auto stats = budget.stats();
   std::printf("after destruction: %zu live bytes, %zu live allocations\n", stats.used_bytes, stats.allocation_count);
   if (stats.used_bytes != 0 || stats.allocation_count != 0)
     throw std::runtime_error("Budget allocations were not fully released");
@@ -144,11 +144,11 @@ auto demonstrate_shared_storage() -> void {
   std::printf("\n[5] Native shared mapping for a value-only payload\n");
 
   auto& basic = memory::BasicMemory::instance();
-  auto const suffix = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+  const auto suffix = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 #if defined(_WIN32)
-  auto const name = "Local\\kitzoo_memory_example_" + suffix;
+  const auto name = "Local\\kitzoo_memory_example_" + suffix;
 #else
-  auto const name = "/kitzoo_memory_example_" + suffix;
+  const auto name = "/kitzoo_memory_example_" + suffix;
 #endif
   if (!basic.init_shared({name, kSharedBytes}))
     throw std::runtime_error("Could not create the shared mapping");
@@ -161,7 +161,7 @@ auto demonstrate_shared_storage() -> void {
     allocator.delete_object(record);
     throw std::runtime_error("The record unexpectedly used fallback storage");
   }
-  auto const offset = reinterpret_cast<std::uintptr_t>(record) -
+  const auto offset = reinterpret_cast<std::uintptr_t>(record) -
                       reinterpret_cast<std::uintptr_t>(basic.get_shared_memory_start_address());
   std::printf("mapping: %s, payload offset: %zu bytes\n", name.c_str(), static_cast<std::size_t>(offset));
   std::printf("frame %u: %u x %u, %u channels\n", record->frame_id, record->width, record->height, record->channels);
@@ -189,7 +189,7 @@ auto main() -> int {
     demonstrate_bounded_allocation();
     demonstrate_shared_storage();
     return 0;
-  } catch (std::exception const& error) {
+  } catch (const std::exception& error) {
     std::fprintf(stderr, "Memory example failed: %s\n", error.what());
     return 1;
   }

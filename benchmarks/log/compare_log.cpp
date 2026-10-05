@@ -30,7 +30,7 @@ constexpr auto kAsyncMessage = "the quick brown fox jumps over the lazy dog";
 
 class NullSink final : public spdlog::sinks::base_sink<std::mutex> {
 protected:
-  void sink_it_(spdlog::details::log_msg const&) override {}
+  void sink_it_(const spdlog::details::log_msg&) override {}
 
   void flush_() override {}
 };
@@ -89,10 +89,10 @@ static void BM_Async_Kitzoo(benchmark::State& state) {
   logger->add_sink(std::make_shared<NullSink>());
   auto async = std::make_unique<AsyncLogger>(logger);
   for (auto _ : state) {
-    auto const start = std::chrono::steady_clock::now();
+    const auto start = std::chrono::steady_clock::now();
     for (auto i = 0; i < kAsyncBatchSize; ++i)
       async->log(Level::Info, kAsyncMessage);
-    auto const elapsed = std::chrono::steady_clock::now() - start;
+    const auto elapsed = std::chrono::steady_clock::now() - start;
     state.SetIterationTime(std::chrono::duration<double>(elapsed).count());
   }
   state.SetItemsProcessed(kAsyncBatchSize);
@@ -106,10 +106,10 @@ static void BM_Async_Spdlog(benchmark::State& state) {
   auto async = std::make_shared<spdlog::async_logger>("bench-async", std::make_shared<NullSink>(),
                                                       spdlog::thread_pool(), spdlog::async_overflow_policy::block);
   for (auto _ : state) {
-    auto const start = std::chrono::steady_clock::now();
+    const auto start = std::chrono::steady_clock::now();
     for (auto i = 0; i < kAsyncBatchSize; ++i)
       async->info(kAsyncMessage);
-    auto const elapsed = std::chrono::steady_clock::now() - start;
+    const auto elapsed = std::chrono::steady_clock::now() - start;
     state.SetIterationTime(std::chrono::duration<double>(elapsed).count());
   }
   state.SetItemsProcessed(kAsyncBatchSize);

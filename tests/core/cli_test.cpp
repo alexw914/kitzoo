@@ -17,8 +17,8 @@ TEST(CliTest, ParsesTypedOptionsAndDefaults) {
       "ids", "Item IDs", kitzoo::core::value<std::vector<int>>())("v,verbose", "Verbose output",
                                                                   kitzoo::core::value<bool>()->default_value("false"));
 
-  char const* argv[]{"test", "--count", "5", "--ids", "1,2", "-v"};
-  auto const result = options.parse(6, argv);
+  const char* argv[]{"test", "--count", "5", "--ids", "1,2", "-v"};
+  const auto result = options.parse(6, argv);
 
   EXPECT_EQ(result["count"].as<int>(), 5);
   EXPECT_EQ(result["name"].as<std::string>(), "world");
@@ -32,8 +32,8 @@ TEST(CliTest, ProvidesHelpAndDefaultFlag) {
   kitzoo::core::Options options{"test", "CLI test"};
   options.add_options()("h,help", "Show help", kitzoo::core::value<bool>()->default_value("false"));
 
-  char const* argv[]{"test"};
-  auto const result = options.parse(1, argv);
+  const char* argv[]{"test"};
+  const auto result = options.parse(1, argv);
 
   EXPECT_FALSE(result["help"].as<bool>());
   EXPECT_EQ(result.count("help"), 0U);
@@ -43,7 +43,7 @@ TEST(CliTest, ProvidesHelpAndDefaultFlag) {
 TEST(CliTest, RejectsInvalidValues) {
   kitzoo::core::Options options{"test", "CLI test"};
   options.add_options()("count", "Number of items", kitzoo::core::value<int>());
-  char const* argv[]{"test", "--count", "invalid"};
+  const char* argv[]{"test", "--count", "invalid"};
 
   EXPECT_THROW(KZ_CLI_PARSE_OPTIONS(options, 3, argv), cxxopts::exceptions::exception);
 }
@@ -65,8 +65,8 @@ TEST(CliTest, MacrosSupportDefaultsCommaTypesAndSingleEvaluation) {
                                                                    KZ_CLI_VALUE(std::vector<int, std::allocator<int>>))(
       "fallback", "Fallback IDs", KZ_CLI_DEFAULT("3,4", std::vector<int, std::allocator<int>>));
 
-  char const* argv[]{"test", "--count", "5", "--ids", "1,2"};
-  auto const result = KZ_CLI_PARSE_OPTIONS(get_options(), 5, argv);
+  const char* argv[]{"test", "--count", "5", "--ids", "1,2"};
+  const auto result = KZ_CLI_PARSE_OPTIONS(get_options(), 5, argv);
 
   EXPECT_EQ(option_accesses, 2);
   EXPECT_EQ(default_accesses, 1);

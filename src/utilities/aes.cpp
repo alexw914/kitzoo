@@ -18,7 +18,7 @@ namespace {
 
 using EvpCtx = memory::UniquePtr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)>;
 
-auto cipher_for(std::size_t const key_size) -> EVP_CIPHER const* {
+auto cipher_for(const std::size_t key_size) -> const EVP_CIPHER* {
   switch (key_size) {
   case 16:
     return EVP_aes_128_cbc();
@@ -31,17 +31,17 @@ auto cipher_for(std::size_t const key_size) -> EVP_CIPHER const* {
   }
 }
 
-auto run(bool const encrypt, std::span<std::byte const> const input, std::span<std::byte const> const key,
-         std::span<std::byte const> const iv, Padding const padding) -> std::vector<std::byte> {
-  EVP_CIPHER const* const cipher = cipher_for(key.size());
+auto run(const bool encrypt, const std::span<const std::byte> input, const std::span<const std::byte> key,
+         const std::span<const std::byte> iv, const Padding padding) -> std::vector<std::byte> {
+  const EVP_CIPHER* const cipher = cipher_for(key.size());
   if (cipher == nullptr) {
     throw std::invalid_argument{"AES key must be 16, 24, or 32 bytes"};
   }
-  auto const iv_len = static_cast<std::size_t>(EVP_CIPHER_iv_length(cipher));
+  const auto iv_len = static_cast<std::size_t>(EVP_CIPHER_iv_length(cipher));
   if (iv.size() != iv_len) {
     throw std::invalid_argument{"AES-CBC IV must be 16 bytes"};
   }
-  auto const block_size = static_cast<std::size_t>(EVP_CIPHER_block_size(cipher));
+  const auto block_size = static_cast<std::size_t>(EVP_CIPHER_block_size(cipher));
   if (padding == Padding::None && input.size() % block_size != 0) {
     throw std::invalid_argument{"AES-CBC input must be block-aligned without padding"};
   }
@@ -50,10 +50,10 @@ auto run(bool const encrypt, std::span<std::byte const> const input, std::span<s
   if (!ctx)
     throw std::runtime_error{"EVP_CIPHER_CTX_new failed"};
 
-  auto const* const k = reinterpret_cast<unsigned char const*>(key.data());
-  auto const* const v = reinterpret_cast<unsigned char const*>(iv.data());
+  const auto* const k = reinterpret_cast<const unsigned char*>(key.data());
+  const auto* const v = reinterpret_cast<const unsigned char*>(iv.data());
 
-  int const init_ok = encrypt ? EVP_EncryptInit_ex(ctx.get(), cipher, nullptr, k, v)
+  const int init_ok = encrypt ? EVP_EncryptInit_ex(ctx.get(), cipher, nullptr, k, v)
                               : EVP_DecryptInit_ex(ctx.get(), cipher, nullptr, k, v);
   if (init_ok != 1)
     throw std::runtime_error{"AES cipher initialization failed"};
@@ -64,15 +64,15 @@ auto run(bool const encrypt, std::span<std::byte const> const input, std::span<s
   int out_len = 0;
   int final_len = 0;
 
-  auto const* const in = reinterpret_cast<unsigned char const*>(input.data());
+  const auto* const in = reinterpret_cast<const unsigned char*>(input.data());
   auto* const dst = reinterpret_cast<unsigned char*>(out.data());
 
-  int const update_ok = encrypt ? EVP_EncryptUpdate(ctx.get(), dst, &out_len, in, static_cast<int>(input.size()))
+  const int update_ok = encrypt ? EVP_EncryptUpdate(ctx.get(), dst, &out_len, in, static_cast<int>(input.size()))
                                 : EVP_DecryptUpdate(ctx.get(), dst, &out_len, in, static_cast<int>(input.size()));
   if (update_ok != 1)
     throw std::runtime_error{"AES cipher update failed"};
 
-  int const final_ok = encrypt ? EVP_EncryptFinal_ex(ctx.get(), dst + out_len, &final_len)
+  const int final_ok = encrypt ? EVP_EncryptFinal_ex(ctx.get(), dst + out_len, &final_len)
                                : EVP_DecryptFinal_ex(ctx.get(), dst + out_len, &final_len);
   if (final_ok != 1)
     throw std::runtime_error{"AES cipher finalization failed"};
@@ -83,13 +83,13 @@ auto run(bool const encrypt, std::span<std::byte const> const input, std::span<s
 
 } // namespace
 
-auto aes_cbc_encrypt(std::span<std::byte const> const data, std::span<std::byte const> const key,
-                     std::span<std::byte const> const iv, Padding const padding) -> std::vector<std::byte> {
+auto aes_cbc_encrypt(const std::span<const std::byte> data, const std::span<const std::byte> key,
+                     const std::span<const std::byte> iv, const Padding padding) -> std::vector<std::byte> {
   return run(true, data, key, iv, padding);
 }
 
-auto aes_cbc_decrypt(std::span<std::byte const> const ciphertext, std::span<std::byte const> const key,
-                     std::span<std::byte const> const iv, Padding const padding) -> std::vector<std::byte> {
+auto aes_cbc_decrypt(const std::span<const std::byte> ciphertext, const std::span<const std::byte> key,
+                     const std::span<const std::byte> iv, const Padding padding) -> std::vector<std::byte> {
   return run(false, ciphertext, key, iv, padding);
 }
 

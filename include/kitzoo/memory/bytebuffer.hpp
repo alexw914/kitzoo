@@ -21,18 +21,18 @@ public:
 
   ~ByteBuffer();
 
-  ByteBuffer(ByteBuffer const&) = delete;
-  auto operator=(ByteBuffer const&) -> ByteBuffer& = delete;
+  ByteBuffer(const ByteBuffer&) = delete;
+  auto operator=(const ByteBuffer&) -> ByteBuffer& = delete;
 
   ByteBuffer(ByteBuffer&& other) noexcept;
   auto operator=(ByteBuffer&& other) noexcept -> ByteBuffer&;
 
   auto data() noexcept -> std::byte*;
-  auto data() const noexcept -> std::byte const*;
+  auto data() const noexcept -> const std::byte*;
 
   // Non-owning views cover size(), not capacity(), and follow data()'s lifetime.
   auto view() noexcept -> std::span<std::byte>;
-  auto view() const noexcept -> std::span<std::byte const>;
+  auto view() const noexcept -> std::span<const std::byte>;
 
   auto size() const noexcept -> std::size_t;
 
@@ -53,9 +53,9 @@ public:
 
   // Self/subrange append is supported. Internal sources must lie within size().
   // Empty input is a no-op; nonempty input must point to readable bytes.
-  auto append(std::span<std::byte const> bytes) -> void;
+  auto append(std::span<const std::byte> bytes) -> void;
 
-  auto append(void const* data, std::size_t size) -> void;
+  auto append(const void* data, std::size_t size) -> void;
 
   // Retains capacity for reuse. reset() releases storage instead.
   auto clear() noexcept -> void;

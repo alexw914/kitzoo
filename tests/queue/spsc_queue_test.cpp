@@ -130,7 +130,7 @@ TEST(SPSCQueueTest, StressSingleProducerSingleConsumer) {
 
   EXPECT_EQ(produced.load(), kTotal);
   // Sum of 0..kTotal-1: use int64_t to avoid overflow
-  auto const n = static_cast<std::int64_t>(kTotal);
+  const auto n = static_cast<std::int64_t>(kTotal);
   expected_sum = static_cast<int>((n - 1) * n / 2);
   EXPECT_EQ(consumed_sum.load(), expected_sum);
 }

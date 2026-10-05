@@ -23,12 +23,12 @@ enum class Padding {
   None,
 };
 
-KZ_NODISCARD auto aes_cbc_encrypt(std::span<std::byte const> data, std::span<std::byte const> key,
-                                  std::span<std::byte const> iv, Padding padding = Padding::Pkcs7)
+KZ_NODISCARD auto aes_cbc_encrypt(std::span<const std::byte> data, std::span<const std::byte> key,
+                                  std::span<const std::byte> iv, Padding padding = Padding::Pkcs7)
     -> std::vector<std::byte>;
 
-KZ_NODISCARD auto aes_cbc_decrypt(std::span<std::byte const> ciphertext, std::span<std::byte const> key,
-                                  std::span<std::byte const> iv, Padding padding = Padding::Pkcs7)
+KZ_NODISCARD auto aes_cbc_decrypt(std::span<const std::byte> ciphertext, std::span<const std::byte> key,
+                                  std::span<const std::byte> iv, Padding padding = Padding::Pkcs7)
     -> std::vector<std::byte>;
 
 } // namespace kitzoo::util

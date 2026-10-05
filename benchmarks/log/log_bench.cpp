@@ -16,7 +16,7 @@ namespace {
 
 class NullSink final : public spdlog::sinks::base_sink<std::mutex> {
 protected:
-  auto sink_it_(spdlog::details::log_msg const&) -> void override {}
+  auto sink_it_(const spdlog::details::log_msg&) -> void override {}
 
   auto flush_() -> void override {}
 };

@@ -62,8 +62,8 @@ TEST(StrTrimTest, SingleCharacter) {
 }
 
 TEST(StrTrimTest, ViewOfOriginal) {
-  std::string const original = "  hello  ";
-  auto const view = trim(original);
+  const std::string original = "  hello  ";
+  const auto view = trim(original);
   // view should point within original's buffer
   EXPECT_GE(view.data(), original.data());
   EXPECT_LT(view.data(), original.data() + original.size());
@@ -79,27 +79,27 @@ TEST(StrTrimTest, ConstexprWorks) {
 // ============================================================================
 
 TEST(StrJoinTest, EmptySpan) {
-  auto const result = join(std::span<std::string_view const>{}, ",");
+  const auto result = join(std::span<const std::string_view>{}, ",");
   EXPECT_TRUE(result.empty());
 }
 
 TEST(StrJoinTest, SingleElement) {
-  std::vector<std::string_view> const parts{"hello"};
+  const std::vector<std::string_view> parts{"hello"};
   EXPECT_EQ(join(parts, ","), "hello");
 }
 
 TEST(StrJoinTest, MultipleElements) {
-  std::vector<std::string_view> const parts{"a", "b", "c"};
+  const std::vector<std::string_view> parts{"a", "b", "c"};
   EXPECT_EQ(join(parts, ", "), "a, b, c");
 }
 
 TEST(StrJoinTest, EmptySeparator) {
-  std::vector<std::string_view> const parts{"a", "b", "c"};
+  const std::vector<std::string_view> parts{"a", "b", "c"};
   EXPECT_EQ(join(parts, ""), "abc");
 }
 
 TEST(StrJoinTest, EmptyElements) {
-  std::vector<std::string_view> const parts{"", "", ""};
+  const std::vector<std::string_view> parts{"", "", ""};
   EXPECT_EQ(join(parts, "-"), "--");
 }
 
@@ -107,14 +107,14 @@ TEST(StrJoinTest, LargeJoin) {
   std::vector<std::string_view> parts;
   for (int i = 0; i < 1000; ++i)
     parts.emplace_back("x");
-  auto const result = join(parts, ",");
+  const auto result = join(parts, ",");
   EXPECT_EQ(result.size(), 1000u + 999u);
   EXPECT_EQ(result.front(), 'x');
   EXPECT_EQ(result.back(), 'x');
 }
 
 TEST(StrJoinTest, InitializerList) {
-  auto const result = join({"a", "b", "c"}, "::");
+  const auto result = join({"a", "b", "c"}, "::");
   EXPECT_EQ(result, "a::b::c");
 }
 
@@ -200,7 +200,7 @@ TEST(StrToUpperTest, NonAlpha) {
 // ============================================================================
 
 TEST(StrCompositionTest, ReplaceAllThenToLower) {
-  auto const result = to_lower(replace_all("Hello World", " ", "-"));
+  const auto result = to_lower(replace_all("Hello World", " ", "-"));
   EXPECT_EQ(result, "hello-world");
 }
 
@@ -209,8 +209,8 @@ TEST(StrCompositionTest, ReplaceAllThenToLower) {
 // ============================================================================
 
 TEST(StrLifetimeTest, TrimViewPointsWithinSource) {
-  std::string const s = "  hello  ";
-  std::string_view const view = trim(s);
+  const std::string s = "  hello  ";
+  const std::string_view view = trim(s);
   // The view must point within the original string's buffer.
   EXPECT_GE(view.data(), s.data());
   EXPECT_LT(view.data() + view.size(), s.data() + s.size());
@@ -288,7 +288,7 @@ TEST(StrFromNumberTest, IntBase) {
 }
 
 TEST(StrFromNumberTest, Double) {
-  auto const s = from_number(1.5);
+  const auto s = from_number(1.5);
   EXPECT_TRUE(s == "1.5" || s == "1.500000");
 }
 
@@ -302,7 +302,7 @@ TEST(StrConversionRoundTripTest, IntRoundTrip) {
 // -- hex ---------------------------------------------------------------------------
 
 TEST(StrHexTest, EncodeBasic) {
-  std::byte const data[] = {std::byte{0xde}, std::byte{0xad}, std::byte{0xbe}, std::byte{0xef}};
+  const std::byte data[] = {std::byte{0xde}, std::byte{0xad}, std::byte{0xbe}, std::byte{0xef}};
   EXPECT_EQ(hex_encode(data), "deadbeef");
 }
 
@@ -335,8 +335,8 @@ TEST(StrHexTest, RoundTrip) {
   std::vector<std::byte> data;
   for (int i = 0; i < 256; ++i)
     data.push_back(static_cast<std::byte>(i));
-  auto const encoded = hex_encode(data);
-  auto const decoded = hex_decode(encoded);
+  const auto encoded = hex_encode(data);
+  const auto decoded = hex_decode(encoded);
   ASSERT_TRUE(decoded.has_value());
   EXPECT_EQ(decoded.value(), data);
 }

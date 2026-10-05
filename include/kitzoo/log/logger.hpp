@@ -92,7 +92,7 @@ struct FileSinkOptions {
 // Generated files use <filename>.kzlog.<session>.<sink>.<sequence> names.
 class ManagedFileSink final : public spdlog::sinks::base_sink<std::mutex> {
 public:
-  explicit ManagedFileSink(FileSinkOptions const& options);
+  explicit ManagedFileSink(const FileSinkOptions& options);
 
   ~ManagedFileSink() override;
 
@@ -105,7 +105,7 @@ public:
   auto cleanup_error() -> memory::String;
 
 private:
-  auto sink_it_(spdlog::details::log_msg const& message) -> void override;
+  auto sink_it_(const spdlog::details::log_msg& message) -> void override;
 
   auto flush_() -> void override;
 
@@ -136,12 +136,12 @@ public:
 
   Logger(std::string name, const LoggerOptions& options);
 
-  Logger(Logger const&) = delete;
-  auto operator=(Logger const&) -> Logger& = delete;
+  Logger(const Logger&) = delete;
+  auto operator=(const Logger&) -> Logger& = delete;
 
   auto add_sink(SinkPtr sink) -> void;
 
-  auto add_file_sink(FileSinkOptions const& options) -> memory::SharedPtr<ManagedFileSink>;
+  auto add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<ManagedFileSink>;
 
   auto set_pattern(std::string pattern) -> void;
 
@@ -149,11 +149,11 @@ public:
 
   KZ_NODISCARD auto enabled(Level level) const noexcept -> bool { return native_->should_log(to_spdlog(level)); }
 
-  auto log(Level level, std::string_view message, std::source_location const& loc = std::source_location::current())
+  auto log(Level level, std::string_view message, const std::source_location& loc = std::source_location::current())
       -> void;
 
   template <typename... Args>
-  auto logf(Level level, std::source_location const& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
+  auto logf(Level level, const std::source_location& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
     if (!enabled(level))
       return;
     memory::String message;
@@ -175,7 +175,7 @@ public:
 private:
   friend class AsyncLogger;
 
-  auto write_record(LogRecord const& record) -> bool;
+  auto write_record(const LogRecord& record) -> bool;
 
   auto report_error(std::string_view message) noexcept -> void;
 

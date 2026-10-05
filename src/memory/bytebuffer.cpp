@@ -45,7 +45,7 @@ auto ByteBuffer::data() noexcept -> std::byte* {
   return data_;
 }
 
-auto ByteBuffer::data() const noexcept -> std::byte const* {
+auto ByteBuffer::data() const noexcept -> const std::byte* {
   return data_;
 }
 
@@ -53,7 +53,7 @@ auto ByteBuffer::view() noexcept -> std::span<std::byte> {
   return {data_, size_};
 }
 
-auto ByteBuffer::view() const noexcept -> std::span<std::byte const> {
+auto ByteBuffer::view() const noexcept -> std::span<const std::byte> {
   return {data_, size_};
 }
 
@@ -94,7 +94,7 @@ auto ByteBuffer::resize(std::size_t size) -> void {
   if (size > max_size())
     throw std::length_error("ByteBuffer size exceeds max_size");
   if (size > capacity_) {
-    auto const growth = capacity_ > max_size() - capacity_ / 2 ? max_size() : capacity_ + capacity_ / 2;
+    const auto growth = capacity_ > max_size() - capacity_ / 2 ? max_size() : capacity_ + capacity_ / 2;
     reserve(std::max(size, growth));
   }
   size_ = size;
@@ -104,11 +104,11 @@ auto ByteBuffer::clear() noexcept -> void {
   size_ = 0;
 }
 
-auto ByteBuffer::append(std::span<std::byte const> bytes) -> void {
+auto ByteBuffer::append(std::span<const std::byte> bytes) -> void {
   append(bytes.data(), bytes.size());
 }
 
-auto ByteBuffer::append(void const* data, std::size_t size) -> void {
+auto ByteBuffer::append(const void* data, std::size_t size) -> void {
   if (size == 0)
     return;
   if (size > max_size() - size_)
@@ -116,9 +116,9 @@ auto ByteBuffer::append(void const* data, std::size_t size) -> void {
   if (!data)
     throw std::invalid_argument("ByteBuffer append requires non-null input");
 
-  auto const source_address = reinterpret_cast<std::uintptr_t>(data);
-  auto const base_address = reinterpret_cast<std::uintptr_t>(data_);
-  auto const internal = data_ && source_address >= base_address && source_address - base_address < capacity_;
+  const auto source_address = reinterpret_cast<std::uintptr_t>(data);
+  const auto base_address = reinterpret_cast<std::uintptr_t>(data_);
+  const auto internal = data_ && source_address >= base_address && source_address - base_address < capacity_;
   std::size_t offset = 0;
   if (internal) {
     offset = source_address - base_address;
@@ -126,10 +126,10 @@ auto ByteBuffer::append(void const* data, std::size_t size) -> void {
       throw std::invalid_argument("ByteBuffer append source exceeds its logical size");
   }
 
-  auto const previous_size = size_;
+  const auto previous_size = size_;
   resize(previous_size + size);
   // Rebuild aliased sources after growth, which may have moved the allocation.
-  auto const* source = internal ? data_ + offset : static_cast<std::byte const*>(data);
+  const auto* source = internal ? data_ + offset : static_cast<const std::byte*>(data);
   std::memmove(data_ + previous_size, source, size);
 }
 

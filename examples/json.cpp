@@ -15,7 +15,7 @@
 // Optional arguments: input.json [output.json]. Input files use the schema below.
 auto main(int argc, char** argv) -> int {
   kitzoo::json::Reader reader;
-  auto const loaded = argc > 1 ? reader.load_file(argv[1]) : reader.parse(R"({
+  const auto loaded = argc > 1 ? reader.load_file(argv[1]) : reader.parse(R"({
         "count": -3,
         "offset": -9007199254740991,
         "sequence": 18446744073709551615,
@@ -37,21 +37,21 @@ auto main(int argc, char** argv) -> int {
     auto& json = reader.raw();
 
     // Read scalar types with the native get<T>() API.
-    auto const count = json.at("count").get<int>();
-    auto const offset = json.at("offset").get<std::int64_t>();
-    auto const sequence = json.at("sequence").get<std::uint64_t>();
-    auto const scale = json.at("scale").get<float>();
-    auto const threshold = json.at("threshold").get<double>();
-    auto const enabled = json.at("enabled").get<bool>();
-    auto const name = json.at("name").get<std::string>();
-    auto const note_is_null = json.at("note").is_null();
-    auto const mode = json.value("mode", std::string{"default"});
+    const auto count = json.at("count").get<int>();
+    const auto offset = json.at("offset").get<std::int64_t>();
+    const auto sequence = json.at("sequence").get<std::uint64_t>();
+    const auto scale = json.at("scale").get<float>();
+    const auto threshold = json.at("threshold").get<double>();
+    const auto enabled = json.at("enabled").get<bool>();
+    const auto name = json.at("name").get<std::string>();
+    const auto note_is_null = json.at("note").is_null();
+    const auto mode = json.value("mode", std::string{"default"});
 
     // Read arrays, objects, and nested fields.
-    auto const ports = json.at("ports").get<std::vector<int>>();
-    auto const metadata = json.at("metadata").get<std::map<std::string, std::string>>();
-    auto const pointer = kitzoo::json::Json::json_pointer("/services/0/workers");
-    auto const workers = json.at(pointer).get<int>();
+    const auto ports = json.at("ports").get<std::vector<int>>();
+    const auto metadata = json.at("metadata").get<std::map<std::string, std::string>>();
+    const auto pointer = kitzoo::json::Json::json_pointer("/services/0/workers");
+    const auto workers = json.at(pointer).get<int>();
 
     std::cout << std::boolalpha << "int=" << count << " int64=" << offset << " uint64=" << sequence << '\n'
               << "float=" << scale << " double=" << threshold << " bool=" << enabled << '\n'
@@ -73,7 +73,7 @@ auto main(int argc, char** argv) -> int {
     json.at(pointer) = 8;
     json["mode"] = mode;
 
-    auto const text = json.dump(2);
+    const auto text = json.dump(2);
     std::cout << "Updated JSON:\n" << text << '\n';
     if (argc > 2) {
       std::error_code ec;
@@ -83,7 +83,7 @@ auto main(int argc, char** argv) -> int {
         return 1;
       }
     }
-  } catch (kitzoo::json::Json::exception const& error) {
+  } catch (const kitzoo::json::Json::exception& error) {
     // Schema/type errors are handled at the application boundary.
     std::cerr << "JSON access failed: " << error.what() << '\n';
     return 1;

@@ -33,5 +33,5 @@ TEST(SynchronizedTest, ConcurrentIncrements) {
 
 TEST(SynchronizedTest, SharedMutexRead) {
   kitzoo::thread::Synchronized<int, std::shared_mutex> value{42};
-  EXPECT_EQ(value.read([](int const& number) -> int { return number * 2; }), 84);
+  EXPECT_EQ(value.read([](const int& number) -> int { return number * 2; }), 84);
 }

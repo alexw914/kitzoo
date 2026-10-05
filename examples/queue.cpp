@@ -19,7 +19,7 @@ auto main() -> int {
 
     std::jthread consumer([&queue] {
       int sum = 0;
-      while (auto const item = queue.wait_and_pop())
+      while (const auto item = queue.wait_and_pop())
         sum += *item;
       std::printf("blocking queue sum: %d\n", sum);
     });
@@ -52,7 +52,7 @@ auto main() -> int {
 
     long long sum = 0;
     for (int seen = 0; seen < kCount;) {
-      if (auto const item = queue.pop()) {
+      if (const auto item = queue.pop()) {
         sum += *item;
         ++seen;
       } else {

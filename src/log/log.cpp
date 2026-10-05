@@ -33,7 +33,7 @@ auto Logger::to_spdlog(Level level) noexcept -> spdlog::level::level_enum {
   return static_cast<spdlog::level::level_enum>(static_cast<int>(level));
 }
 
-Logger::Logger(std::string name, Level const level)
+Logger::Logger(std::string name, const Level level)
     : name_{name.data(), name.size()}, native_{memory::make_shared<spdlog::logger>(std::move(name))},
       pattern_{kDefaultPattern} {
   native_->set_level(to_spdlog(level));
@@ -89,7 +89,7 @@ auto Logger::add_sink(SinkPtr sink) -> void {
   native_->sinks().push_back(std::move(sink));
 }
 
-auto Logger::add_file_sink(FileSinkOptions const& options) -> memory::SharedPtr<ManagedFileSink> {
+auto Logger::add_file_sink(const FileSinkOptions& options) -> memory::SharedPtr<ManagedFileSink> {
   auto sink = memory::make_shared<ManagedFileSink>(options);
   add_sink(sink);
   return sink;
@@ -100,18 +100,18 @@ auto Logger::set_pattern(std::string pattern) -> void {
   native_->set_pattern(std::string(pattern_.data(), pattern_.size()));
 }
 
-auto Logger::set_level(Level const level) noexcept -> void {
+auto Logger::set_level(const Level level) noexcept -> void {
   native_->set_level(to_spdlog(level));
 }
 
-auto Logger::write_record(LogRecord const& record) -> bool {
-  auto const loc = spdlog::source_loc{record.location.file_name(), static_cast<int>(record.location.line()),
+auto Logger::write_record(const LogRecord& record) -> bool {
+  const auto loc = spdlog::source_loc{record.location.file_name(), static_cast<int>(record.location.line()),
                                       record.location.function_name()};
-  auto const message = spdlog::string_view_t{record.message.data(), record.message.size()};
+  const auto message = spdlog::string_view_t{record.message.data(), record.message.size()};
   spdlog::details::log_msg msg{record.timestamp, loc, record.logger_name, to_spdlog(record.level), message};
   msg.thread_id = std::hash<std::thread::id>{}(record.thread_id);
   bool success = true;
-  for (auto const& sink : native_->sinks()) {
+  for (const auto& sink : native_->sinks()) {
     if (!sink->should_log(msg.level))
       continue;
     try {
@@ -129,7 +129,7 @@ auto Logger::write_record(LogRecord const& record) -> bool {
   return success;
 }
 
-auto Logger::log(Level const level, std::string_view const message, std::source_location const& loc) -> void {
+auto Logger::log(const Level level, const std::string_view message, const std::source_location& loc) -> void {
   native_->log({loc.file_name(), static_cast<int>(loc.line()), loc.function_name()}, to_spdlog(level),
                {message.data(), message.size()});
 }

@@ -62,8 +62,8 @@ public:
     return *this;
   }
 
-  unique_function(unique_function const&) = delete;
-  auto operator=(unique_function const&) -> unique_function& = delete;
+  unique_function(const unique_function&) = delete;
+  auto operator=(const unique_function&) -> unique_function& = delete;
 
   KZ_NODISCARD explicit operator bool() const noexcept { return vtable_ != nullptr; }
 
@@ -95,7 +95,7 @@ private:
   KZ_NODISCARD auto in_sbo() const noexcept -> bool { return obj_ == &storage_; }
 
   template <typename T, bool InSbo>
-  static auto vtable_for() -> VTable const& {
+  static auto vtable_for() -> const VTable& {
     static const VTable table{
 
         [](void* obj, Args&&... args) -> R { return std::invoke(*static_cast<T*>(obj), std::forward<Args>(args)...); },
@@ -120,7 +120,7 @@ private:
 
   alignas(void*) std::byte storage_[kSboSize];
   void* obj_ = nullptr;
-  VTable const* vtable_ = nullptr;
+  const VTable* vtable_ = nullptr;
 };
 
 } // namespace kitzoo::core

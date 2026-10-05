@@ -18,7 +18,7 @@
 
 namespace kitzoo::util {
 
-KZ_NODISCARD auto base64_encode(std::span<std::byte const> data) -> std::string;
+KZ_NODISCARD auto base64_encode(std::span<const std::byte> data) -> std::string;
 
 KZ_NODISCARD auto base64_decode(std::string_view b64) -> std::optional<std::vector<std::byte>>;
 

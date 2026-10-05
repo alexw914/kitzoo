@@ -134,7 +134,7 @@ TEST(OSAdaptorTest, SingletonAndCpuTime) {
   ASSERT_EQ(getrusage(RUSAGE_SELF, &before), 0);
   auto value = os.get_cpu_timestamp_ns();
   ASSERT_EQ(getrusage(RUSAGE_SELF, &after), 0);
-  auto ns = [](rusage const& r) {
+  auto ns = [](const rusage& r) {
     return static_cast<std::uint64_t>(r.ru_utime.tv_sec + r.ru_stime.tv_sec) * 1000000000ULL +
            static_cast<std::uint64_t>(r.ru_utime.tv_usec + r.ru_stime.tv_usec) * 1000ULL;
   };
@@ -190,7 +190,7 @@ using namespace kitzoo::os;
 
 TEST(OSAdaptorSystemTest, GetEnvExisting) {
   // PATH exists on every supported platform
-  auto const path = OSAdaptor::instance().get_env("PATH");
+  const auto path = OSAdaptor::instance().get_env("PATH");
   ASSERT_TRUE(path.has_value());
   EXPECT_FALSE(path->empty());
 }
@@ -200,7 +200,7 @@ TEST(OSAdaptorSystemTest, GetEnvMissing) {
 }
 
 TEST(OSAdaptorSystemTest, Hostname) {
-  auto const hn = OSAdaptor::instance().hostname();
+  const auto hn = OSAdaptor::instance().hostname();
   EXPECT_FALSE(hn.empty());
 }
 
@@ -215,7 +215,7 @@ TEST(OSAdaptorSystemTest, Pid) {
 }
 
 TEST(OSAdaptorSystemTest, PageSize) {
-  auto const ps = OSAdaptor::instance().page_size();
+  const auto ps = OSAdaptor::instance().page_size();
   EXPECT_GT(ps, 0u);
   EXPECT_EQ(ps & (ps - 1), 0u); // power of two
 }
@@ -228,7 +228,7 @@ TEST(OSAdaptorSystemTest, Username) {
   // Environment-dependent: containers often lack $USER AND a utmp entry for
   // getlogin_r. If both are unavailable, OSAdaptor::instance().username() legitimately returns
   // "".
-  auto const name = OSAdaptor::instance().username();
+  const auto name = OSAdaptor::instance().username();
   if (name.empty()) {
     GTEST_SKIP() << "no USER env and no login session (container environment)";
   }
@@ -243,12 +243,12 @@ TEST(OSAdaptorSystemTest, HomeDir) {
 }
 
 TEST(OSAdaptorSystemTest, StacktraceCapturesFrames) {
-  auto const frames = OSAdaptor::instance().stacktrace();
+  const auto frames = OSAdaptor::instance().stacktrace();
   // Symbol names are only resolvable when the binary exports them
   // (-rdynamic); without it we still get return addresses. Only assert
   // that frames were captured at all.
   EXPECT_GT(frames.size(), 1u);
-  for (auto const& frame : frames)
+  for (const auto& frame : frames)
     EXPECT_FALSE(frame.empty());
 }
 

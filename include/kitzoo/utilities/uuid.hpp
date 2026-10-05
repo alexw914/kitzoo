@@ -53,7 +53,7 @@ public:
           return std::nullopt;
         continue;
       }
-      auto const nibble = hex_value(text[i]);
+      const auto nibble = hex_value(text[i]);
       if (nibble < 0)
         return std::nullopt;
       if (high_nibble < 0) {
@@ -66,7 +66,7 @@ public:
     return Uuid{data};
   }
 
-  KZ_NODISCARD constexpr auto bytes() const noexcept -> Bytes const& { return bytes_; }
+  KZ_NODISCARD constexpr auto bytes() const noexcept -> const Bytes& { return bytes_; }
 
   KZ_NODISCARD constexpr auto is_nil() const noexcept -> bool {
     for (auto byte : bytes_)
@@ -88,7 +88,7 @@ public:
     return text;
   }
 
-  friend constexpr auto operator==(Uuid const&, Uuid const&) noexcept -> bool = default;
+  friend constexpr auto operator==(const Uuid&, const Uuid&) noexcept -> bool = default;
 
 private:
   static constexpr auto hex_value(char c) noexcept -> int {
@@ -108,7 +108,7 @@ private:
 
 template <>
 struct std::hash<kitzoo::util::Uuid> {
-  KZ_NODISCARD auto operator()(kitzoo::util::Uuid const& uuid) const noexcept -> std::size_t {
+  KZ_NODISCARD auto operator()(const kitzoo::util::Uuid& uuid) const noexcept -> std::size_t {
     std::size_t value = 0;
     for (auto byte : uuid.bytes())
       value = value * 31 + byte;

@@ -10,8 +10,8 @@
 #include <unordered_set>
 
 TEST(UuidTest, GeneratesVersionFourUuid) {
-  auto const uuid = kitzoo::util::Uuid::random();
-  auto const text = uuid.to_string();
+  const auto uuid = kitzoo::util::Uuid::random();
+  const auto text = uuid.to_string();
   EXPECT_EQ(text.size(), 36u);
   EXPECT_EQ(text[14], '4');
   EXPECT_TRUE(text[19] == '8' || text[19] == '9' || text[19] == 'a' || text[19] == 'b');

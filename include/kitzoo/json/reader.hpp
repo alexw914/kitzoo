@@ -35,11 +35,11 @@ public:
   explicit Reader(std::string_view text) { parse(text); }
 
   // Exact overloads distinguish JSON text from Json and filesystem::path conversions.
-  explicit Reader(std::string const& text) : Reader(std::string_view{text}) {}
+  explicit Reader(const std::string& text) : Reader(std::string_view{text}) {}
 
-  explicit Reader(char const* text) : Reader(std::string_view{text}) {}
+  explicit Reader(const char* text) : Reader(std::string_view{text}) {}
 
-  explicit Reader(std::filesystem::path const& path) { load_file(path); }
+  explicit Reader(const std::filesystem::path& path) { load_file(path); }
 
   // A failed load preserves the previous document and records the latest input error.
   auto parse(std::string_view text) -> bool {
@@ -53,7 +53,7 @@ public:
     return true;
   }
 
-  auto load_file(std::filesystem::path const& path) -> bool {
+  auto load_file(const std::filesystem::path& path) -> bool {
     std::error_code ec;
     auto text = os::FsAdaptor::instance().read_text(path, ec);
     if (ec) {
@@ -65,11 +65,11 @@ public:
 
   KZ_NODISCARD auto raw() noexcept -> Json& { return json_; }
 
-  KZ_NODISCARD auto raw() const noexcept -> Json const& { return json_; }
+  KZ_NODISCARD auto raw() const noexcept -> const Json& { return json_; }
 
   KZ_NODISCARD auto is_parse_success() const noexcept -> bool { return error_info_.empty(); }
 
-  KZ_NODISCARD auto error_info() const noexcept -> memory::String const& { return error_info_; }
+  KZ_NODISCARD auto error_info() const noexcept -> const memory::String& { return error_info_; }
 
 private:
   Json json_ = Json::object();

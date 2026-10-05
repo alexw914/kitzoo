@@ -122,7 +122,7 @@ TEST(ThreadPoolTest, QueuedTasksCount) {
     futures.push_back(pool.submit_task([sleep = std::chrono::milliseconds{1}] { std::this_thread::sleep_for(sleep); }));
   }
 
-  auto const queued = pool.get_tasks_queued();
+  const auto queued = pool.get_tasks_queued();
   // Most tasks should still be queued with a single worker
   EXPECT_GT(queued, 0u);
 

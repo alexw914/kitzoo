@@ -28,13 +28,13 @@ auto b64_value(char c) noexcept -> int {
 }
 } // namespace
 
-auto base64_encode(std::span<std::byte const> const data) -> std::string {
+auto base64_encode(const std::span<const std::byte> data) -> std::string {
   std::string out;
   out.reserve((data.size() + 2) / 3 * 4);
 
   std::size_t i = 0;
   for (; i + 3 <= data.size(); i += 3) {
-    auto const n = (static_cast<std::uint32_t>(data[i]) << 16) | (static_cast<std::uint32_t>(data[i + 1]) << 8) |
+    const auto n = (static_cast<std::uint32_t>(data[i]) << 16) | (static_cast<std::uint32_t>(data[i + 1]) << 8) |
                    static_cast<std::uint32_t>(data[i + 2]);
     out.push_back(kB64Alphabet[(n >> 18) & 63]);
     out.push_back(kB64Alphabet[(n >> 12) & 63]);
@@ -42,14 +42,14 @@ auto base64_encode(std::span<std::byte const> const data) -> std::string {
     out.push_back(kB64Alphabet[n & 63]);
   }
 
-  auto const rem = data.size() - i;
+  const auto rem = data.size() - i;
   if (rem == 1) {
-    auto const n = static_cast<std::uint32_t>(data[i]) << 16;
+    const auto n = static_cast<std::uint32_t>(data[i]) << 16;
     out.push_back(kB64Alphabet[(n >> 18) & 63]);
     out.push_back(kB64Alphabet[(n >> 12) & 63]);
     out += "==";
   } else if (rem == 2) {
-    auto const n = (static_cast<std::uint32_t>(data[i]) << 16) | (static_cast<std::uint32_t>(data[i + 1]) << 8);
+    const auto n = (static_cast<std::uint32_t>(data[i]) << 16) | (static_cast<std::uint32_t>(data[i + 1]) << 8);
     out.push_back(kB64Alphabet[(n >> 18) & 63]);
     out.push_back(kB64Alphabet[(n >> 12) & 63]);
     out.push_back(kB64Alphabet[(n >> 6) & 63]);
@@ -58,7 +58,7 @@ auto base64_encode(std::span<std::byte const> const data) -> std::string {
   return out;
 }
 
-auto base64_decode(std::string_view const b64) -> std::optional<std::vector<std::byte>> {
+auto base64_decode(const std::string_view b64) -> std::optional<std::vector<std::byte>> {
   if (b64.size() % 4 != 0) {
     return std::nullopt;
   }
@@ -70,7 +70,7 @@ auto base64_decode(std::string_view const b64) -> std::optional<std::vector<std:
     int v[4];
     int pad = 0;
     for (int j = 0; j < 4; ++j) {
-      char const c = b64[i + static_cast<std::size_t>(j)];
+      const char c = b64[i + static_cast<std::size_t>(j)];
       if (c == '=') {
         if (i + 4 != b64.size() || j < 2) {
           return std::nullopt;
@@ -88,7 +88,7 @@ auto base64_decode(std::string_view const b64) -> std::optional<std::vector<std:
       return std::nullopt;
     }
 
-    auto const n = (static_cast<std::uint32_t>(v[0]) << 18) | (static_cast<std::uint32_t>(v[1]) << 12) |
+    const auto n = (static_cast<std::uint32_t>(v[0]) << 18) | (static_cast<std::uint32_t>(v[1]) << 12) |
                    (static_cast<std::uint32_t>(v[2]) << 6) | static_cast<std::uint32_t>(v[3]);
     out.push_back(static_cast<std::byte>((n >> 16) & 0xFF));
     if (pad < 2)

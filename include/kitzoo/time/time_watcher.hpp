@@ -30,8 +30,8 @@ public:
   public:
     ~Scope() noexcept;
 
-    Scope(Scope const&) = delete;
-    auto operator=(Scope const&) -> Scope& = delete;
+    Scope(const Scope&) = delete;
+    auto operator=(const Scope&) -> Scope& = delete;
 
     Scope(Scope&& other) noexcept;
     auto operator=(Scope&& other) noexcept -> Scope&;

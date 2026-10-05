@@ -22,12 +22,12 @@ public:
   MiAllocator() noexcept = default;
 
   template <typename U>
-  constexpr MiAllocator(MiAllocator<U> const&) noexcept {}
+  constexpr MiAllocator(const MiAllocator<U>&) noexcept {}
 
   auto allocate(std::size_t count) -> T* {
     if (count > std::numeric_limits<std::size_t>::max() / sizeof(T))
       throw std::bad_array_new_length{};
-    auto const bytes = count == 0 ? sizeof(T) : count * sizeof(T);
+    const auto bytes = count == 0 ? sizeof(T) : count * sizeof(T);
     void* address;
     // Ordinary types take the normal mimalloc path. Over-aligned types
     // select the aligned API at compile time, with no runtime resource branch.
@@ -49,7 +49,7 @@ public:
 };
 
 template <typename T, typename U>
-constexpr auto operator==(MiAllocator<T> const&, MiAllocator<U> const&) noexcept -> bool {
+constexpr auto operator==(const MiAllocator<T>&, const MiAllocator<U>&) noexcept -> bool {
   return true;
 }
 

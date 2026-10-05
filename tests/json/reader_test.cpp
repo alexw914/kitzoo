@@ -31,11 +31,11 @@ protected:
 } // namespace
 
 TEST(ReaderTest, AcceptsJsonTextOverloads) {
-  std::string const text = R"({"workers":4})";
+  const std::string text = R"({"workers":4})";
   Reader from_string(text);
   Reader from_view(std::string_view{text});
   Reader from_literal(R"({"workers":4})");
-  for (auto const* reader : {&from_string, &from_view, &from_literal}) {
+  for (const auto* reader : {&from_string, &from_view, &from_literal}) {
     ASSERT_TRUE(reader->is_parse_success()) << reader->error_info();
     EXPECT_EQ(reader->raw(), (Json{{"workers", 4}}));
     EXPECT_TRUE(reader->error_info().empty());
@@ -43,10 +43,10 @@ TEST(ReaderTest, AcceptsJsonTextOverloads) {
 }
 
 TEST(ReaderTest, ErrorReferenceTracksLoadsAndCopies) {
-  static_assert(std::is_same_v<decltype(std::declval<Reader const&>().error_info()), kitzoo::memory::String const&>);
-  static_assert(noexcept(std::declval<Reader const&>().error_info()));
+  static_assert(std::is_same_v<decltype(std::declval<const Reader&>().error_info()), const kitzoo::memory::String&>);
+  static_assert(noexcept(std::declval<const Reader&>().error_info()));
   Reader reader;
-  auto const& error = reader.error_info();
+  const auto& error = reader.error_info();
   EXPECT_TRUE(error.empty());
   ASSERT_FALSE(reader.parse("{bad"));
   EXPECT_FALSE(error.empty());
@@ -66,7 +66,7 @@ TEST(ReaderTest, ErrorInfoWorksWithLoggerAndPrintWithoutStringCopies) {
   std::string captured;
   kitzoo::log::LoggerOptions options;
   options.sinks.push_back(
-      kitzoo::memory::make_shared<kitzoo::log::CallbackSink>([&](spdlog::details::log_msg const& message) -> void {
+      kitzoo::memory::make_shared<kitzoo::log::CallbackSink>([&](const spdlog::details::log_msg& message) -> void {
         captured.assign(message.payload.data(), message.payload.size());
       }));
   kitzoo::log::Logger logger("reader", options);
@@ -93,7 +93,7 @@ TEST(ReaderTest, OwnsCopiedAndMovedJsonValues) {
   Reader moved(std::move(original));
   EXPECT_EQ(moved.raw().at("workers"), 8);
   moved.raw()["workers"] = 9;
-  Reader const& read_only = moved;
+  const Reader& read_only = moved;
   EXPECT_EQ(read_only.raw().at("workers"), 9);
   Reader null_value(Json(nullptr));
   EXPECT_TRUE(null_value.is_parse_success());
@@ -121,7 +121,7 @@ TEST(ReaderTest, FailedParsePreservesDocumentAndSuccessfulParseClearsError) {
 }
 
 TEST_F(ReaderFileTest, ReadsFilesystemPathAndStringPath) {
-  auto const path = dir_ / "config.json";
+  const auto path = dir_ / "config.json";
   kitzoo::os::FsAdaptor::instance().write_text(path, R"({"workers":4})");
   Reader from_path(path);
   ASSERT_TRUE(from_path.is_parse_success()) << from_path.error_info();
@@ -135,7 +135,7 @@ TEST_F(ReaderFileTest, ReadsFilesystemPathAndStringPath) {
 }
 
 TEST_F(ReaderFileTest, FileErrorsPreserveDocumentAndAllowRecovery) {
-  auto const path = dir_ / "config.json";
+  const auto path = dir_ / "config.json";
   Reader reader(Json{{"workers", 4}});
   EXPECT_FALSE(reader.load_file(path));
   EXPECT_FALSE(reader.is_parse_success());

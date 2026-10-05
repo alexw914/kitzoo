@@ -36,9 +36,10 @@ KZ_NODISCARD auto random_real(T min, T max) -> T {
   return dist(thread_rng());
 }
 
-KZ_NODISCARD inline auto random_string(
-    std::size_t len,
-    std::string_view charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") -> std::string {
+KZ_NODISCARD inline auto
+random_string(std::size_t len,
+              std::string_view charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    -> std::string {
   std::string out;
   out.reserve(len);
   std::uniform_int_distribution<std::size_t> dist{0, charset.size() - 1};

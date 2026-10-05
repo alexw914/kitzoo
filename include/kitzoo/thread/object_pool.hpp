@@ -37,8 +37,8 @@ public:
   };
 
   ObjectPool() = default;
-  ObjectPool(ObjectPool const&) = delete;
-  auto operator=(ObjectPool const&) -> ObjectPool& = delete;
+  ObjectPool(const ObjectPool&) = delete;
+  auto operator=(const ObjectPool&) -> ObjectPool& = delete;
   ObjectPool(ObjectPool&&) = delete;
   auto operator=(ObjectPool&&) -> ObjectPool& = delete;
 
@@ -99,8 +99,8 @@ public:
 
   explicit LocalObjectPool(std::size_t chunk_size = 64) : chunk_size_{chunk_size == 0 ? 64 : chunk_size} {}
 
-  LocalObjectPool(LocalObjectPool const&) = delete;
-  auto operator=(LocalObjectPool const&) -> LocalObjectPool& = delete;
+  LocalObjectPool(const LocalObjectPool&) = delete;
+  auto operator=(const LocalObjectPool&) -> LocalObjectPool& = delete;
   auto operator=(LocalObjectPool&&) -> LocalObjectPool& = delete;
   LocalObjectPool(LocalObjectPool&&) = delete;
 

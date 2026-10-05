@@ -21,41 +21,41 @@ namespace kitzoo::os {
 
 class FsAdaptor : public core::Singleton<FsAdaptor> {
 public:
-  auto read_file(std::filesystem::path const& path, std::error_code& ec) const -> std::string;
-  auto read_file(std::filesystem::path const& path) const -> std::string;
+  auto read_file(const std::filesystem::path& path, std::error_code& ec) const -> std::string;
+  auto read_file(const std::filesystem::path& path) const -> std::string;
 
-  auto read_text(std::filesystem::path const& path, std::error_code& ec) const -> std::string;
-  auto read_text(std::filesystem::path const& path) const -> std::string;
+  auto read_text(const std::filesystem::path& path, std::error_code& ec) const -> std::string;
+  auto read_text(const std::filesystem::path& path) const -> std::string;
 
-  auto write_file(std::filesystem::path const& path, std::span<char const> data, std::error_code& ec) const -> void;
-  auto write_file(std::filesystem::path const& path, std::span<char const> data) const -> void;
+  auto write_file(const std::filesystem::path& path, std::span<const char> data, std::error_code& ec) const -> void;
+  auto write_file(const std::filesystem::path& path, std::span<const char> data) const -> void;
 
-  auto write_text(std::filesystem::path const& path, std::string_view data, std::error_code& ec) const -> void;
-  auto write_text(std::filesystem::path const& path, std::string_view data) const -> void;
+  auto write_text(const std::filesystem::path& path, std::string_view data, std::error_code& ec) const -> void;
+  auto write_text(const std::filesystem::path& path, std::string_view data) const -> void;
 
-  auto atomic_write(std::filesystem::path const& path, std::span<char const> data, std::error_code& ec) const -> void;
-  auto atomic_write(std::filesystem::path const& path, std::span<char const> data) const -> void;
+  auto atomic_write(const std::filesystem::path& path, std::span<const char> data, std::error_code& ec) const -> void;
+  auto atomic_write(const std::filesystem::path& path, std::span<const char> data) const -> void;
 
   auto temp_directory(std::error_code& ec) const -> std::filesystem::path;
   auto temp_directory() const -> std::filesystem::path;
 
   auto current_path(std::error_code& ec) const -> std::filesystem::path;
   auto current_path() const -> std::filesystem::path;
-  auto set_current_path(std::filesystem::path const& path, std::error_code& ec) const -> void;
-  auto set_current_path(std::filesystem::path const& path) const -> void;
+  auto set_current_path(const std::filesystem::path& path, std::error_code& ec) const -> void;
+  auto set_current_path(const std::filesystem::path& path) const -> void;
 
-  auto create_directories(std::filesystem::path const& path, std::error_code& ec) const -> bool;
-  auto create_directories(std::filesystem::path const& path) const -> bool;
+  auto create_directories(const std::filesystem::path& path, std::error_code& ec) const -> bool;
+  auto create_directories(const std::filesystem::path& path) const -> bool;
 
-  auto remove_all(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t;
-  auto remove_all(std::filesystem::path const& path) const -> std::uintmax_t;
+  auto remove_all(const std::filesystem::path& path, std::error_code& ec) const -> std::uintmax_t;
+  auto remove_all(const std::filesystem::path& path) const -> std::uintmax_t;
 
-  auto list_directory(std::filesystem::path const& dir, std::error_code& ec) const
+  auto list_directory(const std::filesystem::path& dir, std::error_code& ec) const
       -> std::vector<std::filesystem::path>;
-  auto list_directory(std::filesystem::path const& dir) const -> std::vector<std::filesystem::path>;
+  auto list_directory(const std::filesystem::path& dir) const -> std::vector<std::filesystem::path>;
 
-  auto file_size(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t;
-  auto file_size(std::filesystem::path const& path) const -> std::uintmax_t;
+  auto file_size(const std::filesystem::path& path, std::error_code& ec) const -> std::uintmax_t;
+  auto file_size(const std::filesystem::path& path) const -> std::uintmax_t;
 
   // Predicates follow symlinks except is_symlink; missing paths return false.
   auto exists(const std::filesystem::path& path, std::error_code& ec) const -> bool;

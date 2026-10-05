@@ -18,7 +18,7 @@ auto main() -> int {
   std::printf("cpus: %u, page size: %zu, pid: %ld\n", adaptor.cpu_count(), adaptor.page_size(), adaptor.current_pid());
   std::printf("physical memory: %llu bytes\n", static_cast<unsigned long long>(adaptor.total_memory()));
   std::printf("home: %s\n", adaptor.home_dir().c_str());
-  if (auto const path = adaptor.get_env("PATH")) {
+  if (const auto path = adaptor.get_env("PATH")) {
     std::printf("PATH contains %zu bytes\n", path->size());
   }
   std::printf("thread named: %s\n", adaptor.set_current_thread_name("main", "example") ? "yes" : "no");
@@ -26,25 +26,25 @@ auto main() -> int {
 
   // Filesystem paths, file updates, and directory cleanup.
   auto& fs = os::FsAdaptor::instance();
-  auto const original_dir = fs.current_path();
+  const auto original_dir = fs.current_path();
   std::printf("working directory: %s\n", original_dir.string().c_str());
 
   // Unique temp dir; the caller owns it and cleans up.
-  auto const dir = fs.temp_directory();
+  const auto dir = fs.temp_directory();
   fs.set_current_path(dir);
-  auto const config = std::filesystem::path{"app.conf"};
+  const auto config = std::filesystem::path{"app.conf"};
 
   fs.write_text(config, "mode=fast\n");
   std::printf("wrote: %s", fs.read_text(config).c_str());
 
   // Atomic overwrite: a temp file is renamed over the target.
-  std::string const updated{"mode=safe\n"};
+  const std::string updated{"mode=safe\n"};
   fs.atomic_write(config, std::span{updated.data(), updated.size()});
   std::printf("now:   %s", fs.read_text(config).c_str());
 
-  auto const entries = fs.listdir(".");
+  const auto entries = fs.listdir(".");
   std::printf("temp dir holds %zu entr%s\n", entries.size(), entries.size() == 1 ? "y" : "ies");
-  auto const size = fs.file_size(config);
+  const auto size = fs.file_size(config);
   std::printf("config size: %llu bytes\n", static_cast<unsigned long long>(size));
 
   fs.mkdir("results/nested", true);

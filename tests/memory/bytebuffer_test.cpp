@@ -27,7 +27,7 @@ TEST(ByteBufferTest, GrowthPreservesDataAndClearRetainsCapacity) {
   for (std::size_t i = 0; i < 16; ++i)
     EXPECT_EQ(buffer.data()[i], std::byte{0x5a});
   auto* address = buffer.data();
-  auto const capacity = buffer.capacity();
+  const auto capacity = buffer.capacity();
   buffer.resize(8);
   EXPECT_EQ(buffer.data(), address);
   EXPECT_EQ(buffer.capacity(), capacity);
@@ -92,7 +92,7 @@ TEST(ByteBufferTest, InvalidRequestsAndFailedGrowthPreserveState) {
     ByteBuffer buffer{8, alignment};
     buffer.data()[0] = std::byte{0x42};
     auto* address = buffer.data();
-    auto const capacity = buffer.capacity();
+    const auto capacity = buffer.capacity();
     EXPECT_THROW(buffer.resize(std::numeric_limits<std::size_t>::max()), std::length_error);
     // A near-PTRDIFF_MAX allocation exceeds supported OS address spaces.
     EXPECT_THROW(buffer.reserve(ByteBuffer::max_size()), std::bad_alloc);
@@ -106,7 +106,7 @@ TEST(ByteBufferTest, InvalidRequestsAndFailedGrowthPreserveState) {
 TEST(ByteBufferTest, AppendExternalBytesSelfAndSubranges) {
   using kitzoo::memory::ByteBuffer;
   ByteBuffer buffer{0, 64};
-  std::byte const input[]{std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}};
+  const std::byte input[]{std::byte{1}, std::byte{2}, std::byte{3}, std::byte{4}};
   buffer.append(std::span{input});
   EXPECT_EQ(buffer.size(), 4U);
   buffer.append(buffer.view()); // Forces growth beyond the original capacity.
@@ -125,8 +125,8 @@ TEST(ByteBufferTest, AppendExternalBytesSelfAndSubranges) {
   EXPECT_EQ(buffer.view()[10], std::byte{2});
   EXPECT_EQ(reinterpret_cast<std::uintptr_t>(buffer.data()) % 64, 0U);
   buffer.view()[0] = std::byte{9};
-  auto const& read_only = buffer;
-  static_assert(std::is_same_v<decltype(read_only.view()), std::span<std::byte const>>);
+  const auto& read_only = buffer;
+  static_assert(std::is_same_v<decltype(read_only.view()), std::span<const std::byte>>);
   EXPECT_EQ(read_only.view().size(), buffer.size());
   EXPECT_EQ(read_only.view()[0], std::byte{9});
   ByteBuffer empty;
@@ -142,7 +142,7 @@ TEST(ByteBufferTest, InvalidAppendPreservesContentsAndAllocation) {
   std::memset(buffer.data(), 0x5a, buffer.size());
   buffer.reserve(16);
   auto* address = buffer.data();
-  auto const capacity = buffer.capacity();
+  const auto capacity = buffer.capacity();
   EXPECT_THROW(buffer.append(nullptr, 1), std::invalid_argument);
   EXPECT_THROW(buffer.append(buffer.data() + 3, 2), std::invalid_argument);
   EXPECT_THROW(buffer.append(buffer.data() + 8, 1), std::invalid_argument);

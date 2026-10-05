@@ -41,19 +41,19 @@ struct SharedPool {
 
   explicit SharedPool(std::size_t size) : bytes(size), blocks(size / kBlockSize, 0) {}
 
-  auto contains(void const* address) const -> bool {
-    auto const value = reinterpret_cast<std::uintptr_t>(address);
-    auto const base = reinterpret_cast<std::uintptr_t>(storage);
+  auto contains(const void* address) const -> bool {
+    const auto value = reinterpret_cast<std::uintptr_t>(address);
+    const auto base = reinterpret_cast<std::uintptr_t>(storage);
     return storage != nullptr && value >= base && value - base < bytes;
   }
 
   auto allocate(std::size_t size, std::size_t alignment) -> void* {
     if (size == 0 || size > blocks.size() * kBlockSize || !valid_alignment(alignment))
       return nullptr;
-    auto const count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
-    auto const base = reinterpret_cast<std::uintptr_t>(storage);
+    const auto count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
+    const auto base = reinterpret_cast<std::uintptr_t>(storage);
     for (std::size_t scanned = 0; scanned < blocks.size(); ++scanned) {
-      auto const index = (cursor + scanned) % blocks.size();
+      const auto index = (cursor + scanned) % blocks.size();
       if (count > blocks.size() - index || (base + index * kBlockSize) % alignment != 0)
         continue;
       auto first = blocks.begin() + static_cast<std::ptrdiff_t>(index);
@@ -69,13 +69,13 @@ struct SharedPool {
   }
 
   auto deallocate(void* address, std::size_t size) -> void {
-    auto const offset = reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(storage);
+    const auto offset = reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(storage);
     if (offset % kBlockSize != 0 || offset / kBlockSize >= blocks.size() || size == 0)
       return;
-    auto const index = offset / kBlockSize;
+    const auto index = offset / kBlockSize;
     if (blocks[index] != size || size == std::numeric_limits<std::size_t>::max())
       return;
-    auto const count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
+    const auto count = size / kBlockSize + (size % kBlockSize != 0 ? 1U : 0U);
     std::fill_n(blocks.begin() + static_cast<std::ptrdiff_t>(index), count, 0);
   }
 };
@@ -90,7 +90,7 @@ public:
 
 private:
   auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override {
-    auto const actual_bytes = bytes == 0 ? 1 : bytes;
+    const auto actual_bytes = bytes == 0 ? 1 : bytes;
     auto* address = shared_ ? owner_.allocate_shared(actual_bytes, nullptr, alignment)
                             : owner_.allocate(actual_bytes, nullptr, alignment);
     if (!address)
@@ -102,7 +102,7 @@ private:
     owner_.deallocate(address, bytes == 0 ? 1 : bytes);
   }
 
-  auto do_is_equal(std::pmr::memory_resource const& other) const noexcept -> bool override { return this == &other; }
+  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override { return this == &other; }
 
   BasicMemory& owner_;
   bool shared_;
@@ -145,7 +145,7 @@ BasicMemory::BasicMemory() : impl_(memory::make_unique<Impl>(*this)) {}
 
 BasicMemory::~BasicMemory() = default;
 
-auto BasicMemory::init_virtual(BasicMemoryConfig const& config) -> bool {
+auto BasicMemory::init_virtual(const BasicMemoryConfig& config) -> bool {
   std::lock_guard lock(impl_->mutex);
   if (impl_->virtual_budget || config.memory_size_bytes == 0)
     return false;
@@ -153,9 +153,9 @@ auto BasicMemory::init_virtual(BasicMemoryConfig const& config) -> bool {
   return true;
 }
 
-auto BasicMemory::init_shared(SharedBasicMemoryConfig const& config) -> bool {
+auto BasicMemory::init_shared(const SharedBasicMemoryConfig& config) -> bool {
   std::lock_guard lock(impl_->mutex);
-  auto const& name = config.shared_memory_name;
+  const auto& name = config.shared_memory_name;
   if (impl_->shared_pool || config.memory_size_bytes < kBlockSize || name.empty() ||
       name.find('\0') != std::string::npos)
     return false;
@@ -163,12 +163,12 @@ auto BasicMemory::init_shared(SharedBasicMemoryConfig const& config) -> bool {
   // Prepare all throwing allocations before acquiring OS resources.
   String owned_name{name.data(), name.size()};
 #if defined(_WIN32)
-  auto const length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.c_str(), -1, nullptr, 0);
+  const auto length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.c_str(), -1, nullptr, 0);
   if (length <= 0)
     return false;
   std::wstring wide(static_cast<std::size_t>(length), L'\0');
   MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.c_str(), -1, wide.data(), length);
-  auto const bytes = static_cast<std::uint64_t>(config.memory_size_bytes);
+  const auto bytes = static_cast<std::uint64_t>(config.memory_size_bytes);
   auto mapping = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, static_cast<DWORD>(bytes >> 32),
                                     static_cast<DWORD>(bytes), wide.c_str());
   if (!mapping)
@@ -187,7 +187,7 @@ auto BasicMemory::init_shared(SharedBasicMemoryConfig const& config) -> bool {
   if (name.front() != '/' || name.size() == 1 || name.find('/', 1) != std::string::npos ||
       config.memory_size_bytes > static_cast<std::uintmax_t>(std::numeric_limits<off_t>::max()))
     return false;
-  auto const fd = shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+  const auto fd = shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     return false;
   if (ftruncate(fd, static_cast<off_t>(config.memory_size_bytes)) != 0) {
@@ -208,7 +208,7 @@ auto BasicMemory::init_shared(SharedBasicMemoryConfig const& config) -> bool {
   return true;
 }
 
-auto BasicMemory::memory_type(void const* address) const -> MemoryType {
+auto BasicMemory::memory_type(const void* address) const -> MemoryType {
   std::lock_guard lock(impl_->mutex);
   if (impl_->virtual_budget && impl_->virtual_budget->owns(address))
     return MemoryType::Virtual;
@@ -217,14 +217,14 @@ auto BasicMemory::memory_type(void const* address) const -> MemoryType {
   return MemoryType::Unknown;
 }
 
-auto BasicMemory::allocate(std::size_t size, void const*, std::size_t alignment) -> void* {
+auto BasicMemory::allocate(std::size_t size, const void*, std::size_t alignment) -> void* {
   if (size == 0 || !valid_alignment(alignment))
     return nullptr;
   std::lock_guard lock(impl_->mutex);
   return impl_->allocate_virtual(size, alignment);
 }
 
-auto BasicMemory::allocate_shared(std::size_t size, void const*, std::size_t alignment) -> void* {
+auto BasicMemory::allocate_shared(std::size_t size, const void*, std::size_t alignment) -> void* {
   if (size == 0 || !valid_alignment(alignment))
     return nullptr;
   std::lock_guard lock(impl_->mutex);

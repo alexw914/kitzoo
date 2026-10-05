@@ -24,8 +24,8 @@ auto owned_filename(std::string_view name, std::string_view prefix) -> bool {
     return false;
   name.remove_prefix(prefix.size());
   for (int part = 0; part < 3; ++part) {
-    auto const separator = name.find('.');
-    auto const digits = name.substr(0, separator);
+    const auto separator = name.find('.');
+    const auto digits = name.substr(0, separator);
     if (digits.empty() || digits.find_first_not_of("0123456789") != std::string_view::npos)
       return false;
     if (part == 2)
@@ -39,7 +39,7 @@ auto owned_filename(std::string_view name, std::string_view prefix) -> bool {
 } // namespace
 
 struct ManagedFileSink::Impl {
-  explicit Impl(FileSinkOptions const& settings) : options(settings) {}
+  explicit Impl(const FileSinkOptions& settings) : options(settings) {}
 
   FileSinkOptions options;
   std::filesystem::path directory;
@@ -54,7 +54,7 @@ struct ManagedFileSink::Impl {
   std::jthread cleaner;
 };
 
-ManagedFileSink::ManagedFileSink(FileSinkOptions const& options) : impl_(memory::make_unique<Impl>(options)) {
+ManagedFileSink::ManagedFileSink(const FileSinkOptions& options) : impl_(memory::make_unique<Impl>(options)) {
   if (options.path.empty() || options.path.filename().empty() || options.path.filename() == "." ||
       options.path.filename() == ".." ||
       options.path.native().find(std::filesystem::path::value_type{}) != std::filesystem::path::string_type::npos)
@@ -65,10 +65,10 @@ ManagedFileSink::ManagedFileSink(FileSinkOptions const& options) : impl_(memory:
   impl_->directory = std::filesystem::absolute(options.path).parent_path();
   std::filesystem::create_directories(impl_->directory);
   impl_->directory = std::filesystem::canonical(impl_->directory);
-  auto const name = options.path.filename().string();
+  const auto name = options.path.filename().string();
   impl_->prefix.assign(name.data(), name.size());
   impl_->prefix += ".kzlog.";
-  auto const session =
+  const auto session =
       fmt::format("{}.{}", static_cast<std::uint64_t>(time::utc_timestamp().time_since_epoch().count()),
                   next_sink.fetch_add(1, std::memory_order_relaxed));
   impl_->session.assign(session.data(), session.size());
@@ -90,7 +90,7 @@ auto ManagedFileSink::open_file() -> void {
   do {
     if (impl_->sequence == std::numeric_limits<std::uint64_t>::max())
       throw std::overflow_error("Log file sequence exhausted");
-    auto const name = fmt::format("{}{}.{}", impl_->prefix, impl_->session, impl_->sequence++);
+    const auto name = fmt::format("{}{}.{}", impl_->prefix, impl_->session, impl_->sequence++);
     path = impl_->directory / name;
   } while (std::filesystem::exists(std::filesystem::symlink_status(path)));
   std::ofstream next;
@@ -103,7 +103,7 @@ auto ManagedFileSink::open_file() -> void {
   impl_->size = 0;
 }
 
-auto ManagedFileSink::sink_it_(spdlog::details::log_msg const& message) -> void {
+auto ManagedFileSink::sink_it_(const spdlog::details::log_msg& message) -> void {
   spdlog::memory_buf_t formatted;
   formatter_->format(message, formatted);
   if (formatted.size() > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max()))
@@ -138,15 +138,15 @@ auto ManagedFileSink::cleanup_files() -> std::size_t {
   };
 
   memory::Vector<ClosedFile> files;
-  auto const now = std::filesystem::file_time_type::clock::now();
+  const auto now = std::filesystem::file_time_type::clock::now();
   std::size_t removed = 0;
-  for (auto const& entry : std::filesystem::directory_iterator(impl_->directory)) {
+  for (const auto& entry : std::filesystem::directory_iterator(impl_->directory)) {
     if (entry.path() == impl_->current || !std::filesystem::is_regular_file(entry.symlink_status()))
       continue;
-    auto const name = entry.path().filename().string();
+    const auto name = entry.path().filename().string();
     if (!owned_filename(name, impl_->prefix))
       continue;
-    auto const modified = entry.last_write_time();
+    const auto modified = entry.last_write_time();
     if (impl_->options.max_age != std::chrono::seconds::zero() && modified <= now &&
         std::chrono::duration_cast<std::chrono::seconds>(now - modified) >= impl_->options.max_age) {
       if (std::filesystem::remove(entry.path()))
@@ -156,7 +156,7 @@ auto ManagedFileSink::cleanup_files() -> std::size_t {
     }
   }
   if (impl_->options.max_files != 0 && files.size() > impl_->options.max_files) {
-    std::sort(files.begin(), files.end(), [](ClosedFile const& first, ClosedFile const& second) -> bool {
+    std::sort(files.begin(), files.end(), [](const ClosedFile& first, const ClosedFile& second) -> bool {
       return first.modified != second.modified ? first.modified < second.modified : first.path < second.path;
     });
     for (std::size_t index = 0; index < files.size() - impl_->options.max_files; ++index)
@@ -187,7 +187,7 @@ auto ManagedFileSink::cleanup_loop(std::stop_token stop) -> void {
       break;
     try {
       cleanup();
-    } catch (std::exception const& error) {
+    } catch (const std::exception& error) {
       std::lock_guard sink_lock(mutex_);
       // Allocation failure while recording diagnostics must not terminate the worker.
       try {

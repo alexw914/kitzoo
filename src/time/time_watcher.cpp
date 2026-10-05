@@ -34,10 +34,10 @@ auto TimeWatcher::begin(std::string name) -> void {
 
 auto TimeWatcher::end(std::string_view name) -> TimeDuration {
   std::lock_guard lock(state_->mutex);
-  auto const record = state_->records.find(name);
+  const auto record = state_->records.find(name);
   if (record == state_->records.end() || !record->second.watch)
     throw std::out_of_range("Named measurement is not active");
-  auto const elapsed = record->second.watch->elapsed_as<TimeDuration>();
+  const auto elapsed = record->second.watch->elapsed_as<TimeDuration>();
   record->second.watch.reset();
   record->second.last = elapsed;
   return elapsed;
@@ -45,7 +45,7 @@ auto TimeWatcher::end(std::string_view name) -> TimeDuration {
 
 auto TimeWatcher::last_result(std::string_view name) const -> std::optional<TimeDuration> {
   std::lock_guard lock(state_->mutex);
-  auto const record = state_->records.find(name);
+  const auto record = state_->records.find(name);
   return record == state_->records.end() ? std::nullopt : record->second.last;
 }
 

@@ -27,7 +27,7 @@ BENCHMARK(BM_ThreadPoolSubmitLatency);
 // -- Tiny-task throughput: many trivial tasks ---------------------------------
 
 static void BM_ThreadPoolTinyTaskThroughput(benchmark::State& state) {
-  auto const threads = static_cast<std::size_t>(state.range(0));
+  const auto threads = static_cast<std::size_t>(state.range(0));
   ThreadPool pool{threads};
   constexpr int kTasks = 10000;
 
@@ -50,7 +50,7 @@ BENCHMARK(BM_ThreadPoolTinyTaskThroughput)->Arg(1)->Arg(2)->Arg(4)->Arg(8);
 // -- CPU-bound scaling: work that benefits from parallelism -------------------
 
 static void BM_ThreadPoolCpuBound(benchmark::State& state) {
-  auto const threads = static_cast<std::size_t>(state.range(0));
+  const auto threads = static_cast<std::size_t>(state.range(0));
   ThreadPool pool{threads};
 
   auto work = [](std::int64_t n) {

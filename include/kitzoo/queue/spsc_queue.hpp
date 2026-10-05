@@ -45,21 +45,21 @@ public:
 
   ~SPSCQueue() {
     auto r = read_idx_.load(std::memory_order_relaxed);
-    auto const w = write_idx_.load(std::memory_order_relaxed);
+    const auto w = write_idx_.load(std::memory_order_relaxed);
     while (r != w) {
       std::destroy_at(slot(r));
       ++r;
     }
   }
 
-  SPSCQueue(SPSCQueue const&) = delete;
-  auto operator=(SPSCQueue const&) -> SPSCQueue& = delete;
+  SPSCQueue(const SPSCQueue&) = delete;
+  auto operator=(const SPSCQueue&) -> SPSCQueue& = delete;
   SPSCQueue(SPSCQueue&&) = delete;
   auto operator=(SPSCQueue&&) -> SPSCQueue& = delete;
 
   auto push(T value) noexcept -> bool {
-    auto const w = write_idx_.load(std::memory_order_relaxed);
-    auto const r = read_idx_.load(std::memory_order_acquire);
+    const auto w = write_idx_.load(std::memory_order_relaxed);
+    const auto r = read_idx_.load(std::memory_order_acquire);
     if (w - r == Capacity)
       return false;
     std::construct_at(slot(w), std::move(value));
@@ -68,8 +68,8 @@ public:
   }
 
   auto pop() noexcept(std::is_nothrow_move_constructible_v<T>) -> std::optional<T> {
-    auto const r = read_idx_.load(std::memory_order_relaxed);
-    auto const w = write_idx_.load(std::memory_order_acquire);
+    const auto r = read_idx_.load(std::memory_order_relaxed);
+    const auto w = write_idx_.load(std::memory_order_acquire);
     if (r == w)
       return std::nullopt;
     std::optional<T> value{std::move(*slot(r))};

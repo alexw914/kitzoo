@@ -35,8 +35,8 @@ public:
   explicit ThreadPool(std::size_t num_threads = 0);
   ~ThreadPool();
 
-  ThreadPool(ThreadPool const&) = delete;
-  auto operator=(ThreadPool const&) -> ThreadPool& = delete;
+  ThreadPool(const ThreadPool&) = delete;
+  auto operator=(const ThreadPool&) -> ThreadPool& = delete;
   ThreadPool(ThreadPool&&) = delete;
   auto operator=(ThreadPool&&) -> ThreadPool& = delete;
 

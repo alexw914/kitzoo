@@ -53,16 +53,16 @@ template <typename T>
 using Stack = std::stack<T, Deque<T>>;
 
 template <typename Key, typename T, typename Compare = std::less<Key>>
-using Map = std::map<Key, T, Compare, MiAllocator<Pair<Key const, T>>>;
+using Map = std::map<Key, T, Compare, MiAllocator<Pair<const Key, T>>>;
 
 template <typename Key, typename T, typename Compare = std::less<Key>>
-using MultiMap = std::multimap<Key, T, Compare, MiAllocator<Pair<Key const, T>>>;
+using MultiMap = std::multimap<Key, T, Compare, MiAllocator<Pair<const Key, T>>>;
 
 template <typename Key, typename T, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedMap = std::unordered_map<Key, T, Hash, Equal, MiAllocator<Pair<Key const, T>>>;
+using UnorderedMap = std::unordered_map<Key, T, Hash, Equal, MiAllocator<Pair<const Key, T>>>;
 
 template <typename Key, typename T, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedMultiMap = std::unordered_multimap<Key, T, Hash, Equal, MiAllocator<Pair<Key const, T>>>;
+using UnorderedMultiMap = std::unordered_multimap<Key, T, Hash, Equal, MiAllocator<Pair<const Key, T>>>;
 
 template <typename Key, typename Compare = std::less<Key>>
 using Set = std::set<Key, Compare, MiAllocator<Key>>;

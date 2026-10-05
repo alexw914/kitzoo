@@ -31,16 +31,16 @@ public:
 
   ~LimitedResource() override;
 
-  LimitedResource(LimitedResource const&) = delete;
+  LimitedResource(const LimitedResource&) = delete;
   LimitedResource(LimitedResource&&) = delete;
-  auto operator=(LimitedResource const&) -> LimitedResource& = delete;
+  auto operator=(const LimitedResource&) -> LimitedResource& = delete;
   auto operator=(LimitedResource&&) -> LimitedResource& = delete;
 
   auto capacity() const noexcept -> std::size_t;
 
   auto stats() const -> MemoryStats;
 
-  auto owns(void const* address) const -> bool;
+  auto owns(const void* address) const -> bool;
 
   auto try_allocate(std::size_t bytes, std::size_t alignment) -> void*;
 
@@ -52,7 +52,7 @@ private:
 
   auto do_deallocate(void* address, std::size_t bytes, std::size_t alignment) -> void override;
 
-  auto do_is_equal(std::pmr::memory_resource const& other) const noexcept -> bool override;
+  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override;
 
   struct Impl;
   UniquePtr<Impl> impl_;

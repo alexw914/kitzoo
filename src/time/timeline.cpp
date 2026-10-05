@@ -29,7 +29,7 @@ auto Timeline::sleep_until(TimeDuration target, TimeDuration timeout, std::stop_
       return true;
     auto delay = std::chrono::duration_cast<TimeDuration>(std::chrono::milliseconds{1});
     if (timeout != TimeDuration::zero()) {
-      auto const elapsed = watch.elapsed();
+      const auto elapsed = watch.elapsed();
       if (elapsed >= timeout)
         return false;
       delay = std::min(delay, timeout - std::chrono::duration_cast<TimeDuration>(elapsed));
@@ -46,7 +46,7 @@ auto Timeline::sleep_for(TimeDuration duration, TimeDuration timeout, std::stop_
     return false;
   if (duration <= TimeDuration::zero())
     return true;
-  auto const start = timestamp().count();
+  const auto start = timestamp().count();
   if (start > std::numeric_limits<TimeDuration::rep>::max() - duration.count())
     throw std::overflow_error("Timeline sleep target overflow");
   return sleep_until(TimeDuration{start + duration.count()}, timeout, stop);
@@ -114,8 +114,8 @@ auto OffsetTimeline::set_offset(TimeDuration offset) noexcept -> void {
 }
 
 auto OffsetTimeline::timestamp(std::string_view key) const -> TimeDuration {
-  auto const current = source_->timestamp(key).count();
-  auto const offset = offset_.load(std::memory_order_relaxed);
+  const auto current = source_->timestamp(key).count();
+  const auto offset = offset_.load(std::memory_order_relaxed);
   if ((offset > 0 && current > std::numeric_limits<TimeDuration::rep>::max() - offset) ||
       (offset < 0 && current < std::numeric_limits<TimeDuration::rep>::min() - offset))
     throw std::overflow_error("Timeline clock correction overflow");

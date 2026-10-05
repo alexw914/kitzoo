@@ -39,9 +39,9 @@
 
 namespace kitzoo::os {
 
-auto OSAdaptor::get_env(std::string_view const name) -> std::optional<std::string> {
-  memory::String const key{name};
-  if (char const* value = std::getenv(key.c_str())) {
+auto OSAdaptor::get_env(const std::string_view name) -> std::optional<std::string> {
+  const memory::String key{name};
+  if (const char* value = std::getenv(key.c_str())) {
     return std::string{value};
   }
   return std::nullopt;
@@ -81,7 +81,7 @@ auto OSAdaptor::page_size() noexcept -> std::size_t {
   ::GetSystemInfo(&info);
   return static_cast<std::size_t>(info.dwPageSize);
 #else
-  auto const ps = ::sysconf(_SC_PAGESIZE);
+  const auto ps = ::sysconf(_SC_PAGESIZE);
   return ps > 0 ? static_cast<std::size_t>(ps) : 0;
 #endif
 }
@@ -99,8 +99,8 @@ auto OSAdaptor::total_memory() noexcept -> std::uint64_t {
   std::size_t size = sizeof(memory);
   return ::sysctlbyname("hw.memsize", &memory, &size, nullptr, 0) == 0 ? memory : 0;
 #else
-  auto const pages = ::sysconf(_SC_PHYS_PAGES);
-  auto const ps = ::sysconf(_SC_PAGESIZE);
+  const auto pages = ::sysconf(_SC_PHYS_PAGES);
+  const auto ps = ::sysconf(_SC_PAGESIZE);
   if (pages <= 0 || ps <= 0)
     return 0;
   return static_cast<std::uint64_t>(pages) * static_cast<std::uint64_t>(ps);
@@ -108,9 +108,9 @@ auto OSAdaptor::total_memory() noexcept -> std::uint64_t {
 }
 
 auto OSAdaptor::username() -> std::string {
-  if (auto const env = get_env("USER"))
+  if (const auto env = get_env("USER"))
     return *env;
-  if (auto const env = get_env("USERNAME"))
+  if (const auto env = get_env("USERNAME"))
     return *env;
 #if !defined(_WIN32)
   char buf[256] = {};
@@ -121,22 +121,22 @@ auto OSAdaptor::username() -> std::string {
 }
 
 auto OSAdaptor::home_dir() -> std::string {
-  if (auto const env = get_env("HOME"))
+  if (const auto env = get_env("HOME"))
     return *env;
-  if (auto const env = get_env("USERPROFILE"))
+  if (const auto env = get_env("USERPROFILE"))
     return *env;
   return {};
 }
 
-auto OSAdaptor::stacktrace(int const max_frames) -> std::vector<std::string> {
+auto OSAdaptor::stacktrace(const int max_frames) -> std::vector<std::string> {
   if (max_frames <= 0)
     return {};
 #if defined(_WIN32)
   // The capture API returns a USHORT frame count. Windows provides addresses;
   // symbol resolution would additionally require DbgHelp and symbol files.
-  auto const capacity = static_cast<DWORD>(max_frames > 65535 ? 65535 : max_frames);
+  const auto capacity = static_cast<DWORD>(max_frames > 65535 ? 65535 : max_frames);
   memory::Vector<void*> frames(capacity);
-  auto const count = ::CaptureStackBackTrace(0, capacity, frames.data(), nullptr);
+  const auto count = ::CaptureStackBackTrace(0, capacity, frames.data(), nullptr);
   std::vector<std::string> out;
   out.reserve(count);
   for (USHORT i = 0; i < count; ++i) {
@@ -147,7 +147,7 @@ auto OSAdaptor::stacktrace(int const max_frames) -> std::vector<std::string> {
   return out;
 #else
   memory::Vector<void*> frames(static_cast<std::size_t>(max_frames));
-  int const n = ::backtrace(frames.data(), static_cast<int>(frames.size()));
+  const int n = ::backtrace(frames.data(), static_cast<int>(frames.size()));
   if (n <= 0)
     return {};
 
@@ -169,7 +169,7 @@ auto OSAdaptor::get_cpu_timestamp_ns() -> std::uint64_t {
   FILETIME created{}, exited{}, kernel{}, user{};
   if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user))
     return 0;
-  auto ticks = [](FILETIME const& time) -> std::uint64_t {
+  auto ticks = [](const FILETIME& time) -> std::uint64_t {
     return (static_cast<std::uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime;
   };
   return (ticks(kernel) + ticks(user)) * 100ULL;
@@ -210,7 +210,7 @@ auto OSAdaptor::set_thread_name(std::thread::native_handle_type id, const std::s
   }
   const auto final_name = prefix + trimmed;
 #if defined(_WIN32)
-  auto const size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, final_name.c_str(), -1, nullptr, 0);
+  const auto size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, final_name.c_str(), -1, nullptr, 0);
   if (size == 0)
     return false;
   std::wstring wide(static_cast<std::size_t>(size), L'\0');
@@ -244,7 +244,7 @@ auto OSAdaptor::get_thread_name(std::thread::native_handle_type id) -> std::stri
   PWSTR wide = nullptr;
   if (!function || FAILED(function(id, &wide)))
     return {};
-  auto const size = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+  const auto size = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
   std::string result;
   if (size > 0) {
     result.resize(static_cast<std::size_t>(size));
@@ -401,7 +401,7 @@ auto OSAdaptor::bind_current_cpus(const std::vector<std::uint32_t>& cores) -> bo
 auto OSAdaptor::generate_unique_domain_socket_address() -> std::string {
 #if defined(_WIN32)
   char directory[MAX_PATH + 1]{};
-  auto const length = GetTempPathA(MAX_PATH + 1, directory);
+  const auto length = GetTempPathA(MAX_PATH + 1, directory);
   if (length == 0 || length > MAX_PATH)
     return {};
   char path[MAX_PATH + 1]{};

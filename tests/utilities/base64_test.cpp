@@ -24,7 +24,7 @@ TEST(Base64Test, EncodeEmpty) {
 TEST(Base64Test, EncodeKnownVectors) {
   // RFC 4648 test vectors
   auto enc = [](std::string_view s) -> std::string {
-    return base64_encode(std::span{reinterpret_cast<std::byte const*>(s.data()), s.size()});
+    return base64_encode(std::span{reinterpret_cast<const std::byte*>(s.data()), s.size()});
   };
   EXPECT_EQ(enc("f"), "Zg==");
   EXPECT_EQ(enc("fo"), "Zm8=");
@@ -65,8 +65,8 @@ TEST(Base64Test, RoundTrip) {
   std::vector<std::byte> data;
   for (int i = 0; i < 256; ++i)
     data.push_back(static_cast<std::byte>(i));
-  auto const encoded = base64_encode(data);
-  auto const decoded = base64_decode(encoded);
+  const auto encoded = base64_encode(data);
+  const auto decoded = base64_decode(encoded);
   ASSERT_TRUE(decoded.has_value());
   EXPECT_EQ(decoded.value(), data);
 }

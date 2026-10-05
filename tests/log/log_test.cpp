@@ -273,13 +273,13 @@ TEST(LogManagedFileTest, OptionsCreateDirectoriesAndRotateWithoutRenamingOldFile
   logger.log(Level::Info, "second");
   logger.flush();
   std::vector<std::string> records;
-  for (auto const& entry : std::filesystem::directory_iterator(directory.path / "nested")) {
+  for (const auto& entry : std::filesystem::directory_iterator(directory.path / "nested")) {
     EXPECT_LE(entry.file_size(), 8u);
     records.push_back(kitzoo::os::FsAdaptor::instance().read_text(entry.path()));
   }
   ASSERT_EQ(records.size(), 2u);
-  EXPECT_TRUE(std::ranges::any_of(records, [](std::string const& text) -> bool { return text.starts_with("first"); }));
-  EXPECT_TRUE(std::ranges::any_of(records, [](std::string const& text) -> bool { return text.starts_with("second"); }));
+  EXPECT_TRUE(std::ranges::any_of(records, [](const std::string& text) -> bool { return text.starts_with("first"); }));
+  EXPECT_TRUE(std::ranges::any_of(records, [](const std::string& text) -> bool { return text.starts_with("second"); }));
 }
 
 TEST(LogManagedFileTest, OversizedRecordStaysIntactAndNextRecordStartsNewFile) {
@@ -328,7 +328,7 @@ TEST(LogManagedFileTest, CountLimitIncludesOnlyClosedFilesAndRestartRetainsHisto
     logger.flush();
   }
   std::size_t files = 0;
-  for (auto const& entry : std::filesystem::directory_iterator(directory.path))
+  for (const auto& entry : std::filesystem::directory_iterator(directory.path))
     if (entry.is_regular_file())
       ++files;
   EXPECT_EQ(files, 3u);
@@ -341,7 +341,7 @@ TEST(LogManagedFileTest, CountLimitIncludesOnlyClosedFilesAndRestartRetainsHisto
     EXPECT_TRUE(kitzoo::os::FsAdaptor::instance().read_text(sink->current_file()).starts_with("newest"));
   }
   files = 0;
-  for (auto const& entry : std::filesystem::directory_iterator(directory.path))
+  for (const auto& entry : std::filesystem::directory_iterator(directory.path))
     if (entry.is_regular_file())
       ++files;
   EXPECT_EQ(files, 3u);
@@ -365,7 +365,7 @@ TEST(LogManagedFileTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
   fs.write_text(foreign, "unrelated");
   fs.write_text(malformed, "unrelated");
   const auto old = std::filesystem::file_time_type::clock::now() - 2h;
-  for (auto const& path : {closed, active, foreign, malformed})
+  for (const auto& path : {closed, active, foreign, malformed})
     std::filesystem::last_write_time(path, old);
   EXPECT_EQ(sink->cleanup(), 1u);
   EXPECT_FALSE(std::filesystem::exists(closed));
@@ -436,7 +436,7 @@ TEST(LogManagedFileTest, AsyncFlushPersistsEveryConcurrentProducerRecord) {
   producers.clear();
   async.flush();
   std::set<std::string> records;
-  for (auto const& entry : std::filesystem::directory_iterator(directory.path)) {
+  for (const auto& entry : std::filesystem::directory_iterator(directory.path)) {
     EXPECT_LE(entry.file_size(), 64u);
     std::istringstream text(kitzoo::os::FsAdaptor::instance().read_text(entry.path()));
     for (std::string line; std::getline(text, line);) {

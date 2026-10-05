@@ -26,10 +26,10 @@ TEST(VersionTest, VersionStringMatchesStruct) {
 }
 
 TEST(VersionTest, ThreeWayComparison) {
-  version const v1{1, 0, 0};
-  version const v2{1, 0, 1};
-  version const v3{2, 0, 0};
-  version const v4{1, 0, 0};
+  const version v1{1, 0, 0};
+  const version v2{1, 0, 1};
+  const version v3{2, 0, 0};
+  const version v4{1, 0, 0};
 
   EXPECT_LT(v1, v2);
   EXPECT_LT(v2, v3);
@@ -40,7 +40,7 @@ TEST(VersionTest, ThreeWayComparison) {
 }
 
 TEST(VersionBuildInfoTest, CurrentBuildInfoReturnsValid) {
-  build_info const& info = current_build_info();
+  const build_info& info = current_build_info();
   EXPECT_EQ(info.lib_version, library_version);
   EXPECT_EQ(info.version_str, version_string);
   EXPECT_FALSE(info.compiler.empty());
@@ -48,7 +48,7 @@ TEST(VersionBuildInfoTest, CurrentBuildInfoReturnsValid) {
 }
 
 TEST(VersionBuildInfoTest, IsDebugMatchesContext) {
-  build_info const& info = current_build_info();
+  const build_info& info = current_build_info();
 #ifdef NDEBUG
   EXPECT_FALSE(info.is_debug);
 #else

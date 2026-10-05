@@ -24,8 +24,8 @@ public:
   BlockingQueue() = default;
   ~BlockingQueue() = default;
 
-  BlockingQueue(BlockingQueue const&) = delete;
-  auto operator=(BlockingQueue const&) -> BlockingQueue& = delete;
+  BlockingQueue(const BlockingQueue&) = delete;
+  auto operator=(const BlockingQueue&) -> BlockingQueue& = delete;
   BlockingQueue(BlockingQueue&&) = delete;
   auto operator=(BlockingQueue&&) -> BlockingQueue& = delete;
 

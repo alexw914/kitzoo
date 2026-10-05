@@ -10,7 +10,7 @@
 
 namespace kitzoo::core {
 
-auto current_build_info() noexcept -> build_info const& {
+auto current_build_info() noexcept -> const build_info& {
   static const build_info info{
       .lib_version = library_version,
       .version_str = version_string,

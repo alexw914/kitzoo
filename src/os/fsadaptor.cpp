@@ -17,7 +17,7 @@ namespace kitzoo::os {
 
 namespace {
 
-auto open_input(std::filesystem::path const& path, std::error_code& ec) -> std::ifstream {
+auto open_input(const std::filesystem::path& path, std::error_code& ec) -> std::ifstream {
   std::ifstream file{path, std::ios::binary | std::ios::ate};
   if (!file) {
     ec = std::make_error_code(std::errc::no_such_file_or_directory);
@@ -25,7 +25,7 @@ auto open_input(std::filesystem::path const& path, std::error_code& ec) -> std::
   return file;
 }
 
-auto open_output(std::filesystem::path const& path, std::error_code& ec) -> std::ofstream {
+auto open_output(const std::filesystem::path& path, std::error_code& ec) -> std::ofstream {
   std::ofstream file{path, std::ios::binary | std::ios::trunc};
   if (!file) {
     ec = std::make_error_code(std::errc::io_error);
@@ -33,18 +33,18 @@ auto open_output(std::filesystem::path const& path, std::error_code& ec) -> std:
   return file;
 }
 
-auto throw_if_error(std::error_code const& ec, std::filesystem::path const& path, char const* op) -> void {
+auto throw_if_error(const std::error_code& ec, const std::filesystem::path& path, const char* op) -> void {
   if (ec)
     throw std::filesystem::filesystem_error{op, path, ec};
 }
 
-auto read_file_impl(std::filesystem::path const& path, std::error_code& ec) -> std::string {
+auto read_file_impl(const std::filesystem::path& path, std::error_code& ec) -> std::string {
   ec.clear();
   auto file = open_input(path, ec);
   if (ec)
     return {};
 
-  auto const size = file.tellg();
+  const auto size = file.tellg();
   if (size < 0) {
     ec = std::make_error_code(std::errc::io_error);
     return {};
@@ -63,7 +63,7 @@ auto read_file_impl(std::filesystem::path const& path, std::error_code& ec) -> s
   return result;
 }
 
-auto write_file_impl(std::filesystem::path const& path, std::span<char const> data, std::error_code& ec) -> void {
+auto write_file_impl(const std::filesystem::path& path, std::span<const char> data, std::error_code& ec) -> void {
   ec.clear();
   auto file = open_output(path, ec);
   if (ec)
@@ -86,8 +86,8 @@ auto random_suffix() -> std::string {
   return std::to_string(dist(rng));
 }
 
-auto query_status(const std::filesystem::path& path, std::error_code& ec,
-                  bool follow = true) -> std::filesystem::file_status {
+auto query_status(const std::filesystem::path& path, std::error_code& ec, bool follow = true)
+    -> std::filesystem::file_status {
   ec.clear();
   auto status = follow ? std::filesystem::status(path, ec) : std::filesystem::symlink_status(path, ec);
   if (status.type() == std::filesystem::file_type::not_found)
@@ -111,53 +111,53 @@ auto collect_paths(Iterator iterator, std::error_code& ec) -> std::vector<std::f
 
 } // namespace
 
-auto FsAdaptor::read_file(std::filesystem::path const& path, std::error_code& ec) const -> std::string {
+auto FsAdaptor::read_file(const std::filesystem::path& path, std::error_code& ec) const -> std::string {
   return read_file_impl(path, ec);
 }
 
-auto FsAdaptor::read_file(std::filesystem::path const& path) const -> std::string {
+auto FsAdaptor::read_file(const std::filesystem::path& path) const -> std::string {
   std::error_code ec;
   auto result = read_file_impl(path, ec);
   throw_if_error(ec, path, "read_file");
   return result;
 }
 
-auto FsAdaptor::read_text(std::filesystem::path const& path, std::error_code& ec) const -> std::string {
+auto FsAdaptor::read_text(const std::filesystem::path& path, std::error_code& ec) const -> std::string {
   return read_file_impl(path, ec);
 }
 
-auto FsAdaptor::read_text(std::filesystem::path const& path) const -> std::string {
+auto FsAdaptor::read_text(const std::filesystem::path& path) const -> std::string {
   std::error_code ec;
   auto result = read_file_impl(path, ec);
   throw_if_error(ec, path, "read_text");
   return result;
 }
 
-auto FsAdaptor::write_file(std::filesystem::path const& path, std::span<char const> data,
-                           std::error_code& ec) const -> void {
+auto FsAdaptor::write_file(const std::filesystem::path& path, std::span<const char> data, std::error_code& ec) const
+    -> void {
   write_file_impl(path, data, ec);
 }
 
-auto FsAdaptor::write_file(std::filesystem::path const& path, std::span<char const> data) const -> void {
+auto FsAdaptor::write_file(const std::filesystem::path& path, std::span<const char> data) const -> void {
   std::error_code ec;
   write_file_impl(path, data, ec);
   throw_if_error(ec, path, "write_file");
 }
 
-auto FsAdaptor::write_text(std::filesystem::path const& path, std::string_view data,
-                           std::error_code& ec) const -> void {
-  std::span const bytes{data.data(), data.size()};
+auto FsAdaptor::write_text(const std::filesystem::path& path, std::string_view data, std::error_code& ec) const
+    -> void {
+  const std::span bytes{data.data(), data.size()};
   write_file_impl(path, bytes, ec);
 }
 
-auto FsAdaptor::write_text(std::filesystem::path const& path, std::string_view data) const -> void {
+auto FsAdaptor::write_text(const std::filesystem::path& path, std::string_view data) const -> void {
   std::error_code ec;
   write_text(path, data, ec);
   throw_if_error(ec, path, "write_text");
 }
 
-auto FsAdaptor::atomic_write(std::filesystem::path const& path, std::span<char const> data,
-                             std::error_code& ec) const -> void {
+auto FsAdaptor::atomic_write(const std::filesystem::path& path, std::span<const char> data, std::error_code& ec) const
+    -> void {
   ec.clear();
 
   if (auto parent = path.parent_path(); !parent.empty()) {
@@ -182,7 +182,7 @@ auto FsAdaptor::atomic_write(std::filesystem::path const& path, std::span<char c
   }
 }
 
-auto FsAdaptor::atomic_write(std::filesystem::path const& path, std::span<char const> data) const -> void {
+auto FsAdaptor::atomic_write(const std::filesystem::path& path, std::span<const char> data) const -> void {
   std::error_code ec;
   atomic_write(path, data, ec);
   throw_if_error(ec, path, "atomic_write");
@@ -218,35 +218,35 @@ auto FsAdaptor::current_path() const -> std::filesystem::path {
   return std::filesystem::current_path();
 }
 
-auto FsAdaptor::set_current_path(std::filesystem::path const& path, std::error_code& ec) const -> void {
+auto FsAdaptor::set_current_path(const std::filesystem::path& path, std::error_code& ec) const -> void {
   std::filesystem::current_path(path, ec);
 }
 
-auto FsAdaptor::set_current_path(std::filesystem::path const& path) const -> void {
+auto FsAdaptor::set_current_path(const std::filesystem::path& path) const -> void {
   std::filesystem::current_path(path);
 }
 
-auto FsAdaptor::create_directories(std::filesystem::path const& path, std::error_code& ec) const -> bool {
+auto FsAdaptor::create_directories(const std::filesystem::path& path, std::error_code& ec) const -> bool {
   return std::filesystem::create_directories(path, ec);
 }
 
-auto FsAdaptor::create_directories(std::filesystem::path const& path) const -> bool {
+auto FsAdaptor::create_directories(const std::filesystem::path& path) const -> bool {
   return std::filesystem::create_directories(path);
 }
 
-auto FsAdaptor::remove_all(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t {
+auto FsAdaptor::remove_all(const std::filesystem::path& path, std::error_code& ec) const -> std::uintmax_t {
   return std::filesystem::remove_all(path, ec);
 }
 
-auto FsAdaptor::remove_all(std::filesystem::path const& path) const -> std::uintmax_t {
+auto FsAdaptor::remove_all(const std::filesystem::path& path) const -> std::uintmax_t {
   std::error_code ec;
   auto count = std::filesystem::remove_all(path, ec);
   throw_if_error(ec, path, "remove_all");
   return count;
 }
 
-auto FsAdaptor::list_directory(const std::filesystem::path& dir,
-                               std::error_code& ec) const -> std::vector<std::filesystem::path> {
+auto FsAdaptor::list_directory(const std::filesystem::path& dir, std::error_code& ec) const
+    -> std::vector<std::filesystem::path> {
   return listdir(dir, ec);
 }
 
@@ -254,12 +254,12 @@ auto FsAdaptor::list_directory(const std::filesystem::path& dir) const -> std::v
   return listdir(dir);
 }
 
-auto FsAdaptor::file_size(std::filesystem::path const& path, std::error_code& ec) const -> std::uintmax_t {
+auto FsAdaptor::file_size(const std::filesystem::path& path, std::error_code& ec) const -> std::uintmax_t {
   ec.clear();
   return std::filesystem::file_size(path, ec);
 }
 
-auto FsAdaptor::file_size(std::filesystem::path const& path) const -> std::uintmax_t {
+auto FsAdaptor::file_size(const std::filesystem::path& path) const -> std::uintmax_t {
   return std::filesystem::file_size(path);
 }
 
@@ -351,8 +351,8 @@ auto FsAdaptor::rm(const std::filesystem::path& path, bool recursive) const -> s
   return count;
 }
 
-auto FsAdaptor::listdir(const std::filesystem::path& path, std::error_code& ec,
-                        bool recursive) const -> std::vector<std::filesystem::path> {
+auto FsAdaptor::listdir(const std::filesystem::path& path, std::error_code& ec, bool recursive) const
+    -> std::vector<std::filesystem::path> {
   ec.clear();
   if (recursive)
     return collect_paths(std::filesystem::recursive_directory_iterator(path, ec), ec);
@@ -366,8 +366,8 @@ auto FsAdaptor::listdir(const std::filesystem::path& path, bool recursive) const
   return paths;
 }
 
-auto FsAdaptor::append_text(const std::filesystem::path& path, std::string_view data,
-                            std::error_code& ec) const -> void {
+auto FsAdaptor::append_text(const std::filesystem::path& path, std::string_view data, std::error_code& ec) const
+    -> void {
   ec.clear();
   if (!std::in_range<std::streamsize>(data.size())) {
     ec = std::make_error_code(std::errc::file_too_large);

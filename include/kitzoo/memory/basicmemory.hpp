@@ -37,13 +37,13 @@ public:
   ~BasicMemory();
 
   // One-shot logical byte limit; allocations remain backed by mimalloc.
-  auto init_virtual(BasicMemoryConfig const& config) -> bool;
+  auto init_virtual(const BasicMemoryConfig& config) -> bool;
 
   // Creates exclusively; never removes or replaces an existing named mapping.
   // POSIX names must start with '/' and contain no other '/'.
-  auto init_shared(SharedBasicMemoryConfig const& config) -> bool;
+  auto init_shared(const SharedBasicMemoryConfig& config) -> bool;
 
-  auto memory_type(void const* address) const -> MemoryType;
+  auto memory_type(const void* address) const -> MemoryType;
 
   // Stable PMR adapters. Dependent objects must not outlive this singleton.
   auto resource() noexcept -> std::pmr::memory_resource*;
@@ -56,11 +56,11 @@ public:
   // Zero or invalid alignment returns nullptr. Exhausted virtual budgets return
   // nullptr; before virtual initialization allocations use mimalloc directly.
   // prefix_address is retained as a hint for interface parity; currently ignored.
-  auto allocate(std::size_t size, void const* prefix_address = nullptr, std::size_t alignment = 16) -> void*;
+  auto allocate(std::size_t size, const void* prefix_address = nullptr, std::size_t alignment = 16) -> void*;
 
   // Tries shared pool first, then allocate(). Pool metadata is process-local:
   // only the creating process may allocate/free; mapped readers use offsets.
-  auto allocate_shared(std::size_t size, void const* prefix_address = nullptr, std::size_t alignment = 16) -> void*;
+  auto allocate_shared(std::size_t size, const void* prefix_address = nullptr, std::size_t alignment = 16) -> void*;
 
   // Only allocation-start pointers returned by this instance may be passed.
   // Pool frees require the original byte size; mismatches are ignored.

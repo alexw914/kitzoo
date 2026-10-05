@@ -92,7 +92,7 @@ auto to_date_time(TimeStamp timestamp, TimeZone zone = TimeZone::Utc) -> DateTim
 
 // Validates dates and nanosecond range; weekday/day_of_year are derived, not inputs.
 // Local dates use the OS timezone and reject dates normalized by mktime (e.g. DST gaps).
-auto from_date_time(DateTime const& date, TimeZone zone = TimeZone::Utc) -> TimeStamp;
+auto from_date_time(const DateTime& date, TimeZone zone = TimeZone::Utc) -> TimeStamp;
 
 auto format_timestamp(TimeStamp tp = utc_timestamp(), TimeZone zone = TimeZone::Local,
                       TimestampPrecision precision = TimestampPrecision::Milliseconds) -> std::string;

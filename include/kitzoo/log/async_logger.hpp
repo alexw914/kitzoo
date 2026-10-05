@@ -50,10 +50,10 @@ public:
   explicit AsyncLogger(std::shared_ptr<Logger> logger, AsyncLoggerOptions options = {});
   ~AsyncLogger();
 
-  AsyncLogger(AsyncLogger const&) = delete;
-  auto operator=(AsyncLogger const&) -> AsyncLogger& = delete;
+  AsyncLogger(const AsyncLogger&) = delete;
+  auto operator=(const AsyncLogger&) -> AsyncLogger& = delete;
 
-  auto log(Level level, std::string_view message, std::source_location const& loc = std::source_location::current())
+  auto log(Level level, std::string_view message, const std::source_location& loc = std::source_location::current())
       -> void;
 
   template <typename... Args>
