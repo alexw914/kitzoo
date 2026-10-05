@@ -6,6 +6,7 @@
 
 #include <kitzoo/time/timer.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <future>
 #include <gtest/gtest.h>
@@ -131,25 +132,32 @@ TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {
 
 TEST(TimerTest, CallbackDurationDoesNotAccumulateDrift) {
   constexpr auto kInterval = 100ms;
+  constexpr auto kCallback = 40ms;
   constexpr int kTicks = 5;
-  Timer timer(kInterval);
-  std::vector<std::chrono::steady_clock::time_point> ticks;
-  std::mutex mutex;
-  std::promise<void> done;
-  auto finished = done.get_future();
-  timer.start([&] {
+  auto average_period = [&]() -> std::chrono::steady_clock::duration {
+    Timer timer(kInterval);
+    std::vector<std::chrono::steady_clock::time_point> ticks;
+    std::mutex mutex;
+    std::promise<void> done;
+    auto finished = done.get_future();
+    timer.start([&] {
+      std::lock_guard lock{mutex};
+      ticks.push_back(std::chrono::steady_clock::now());
+      if (ticks.size() == kTicks)
+        done.set_value();
+      std::this_thread::sleep_for(kCallback);
+    });
+    EXPECT_EQ(finished.wait_for(10s), std::future_status::ready);
+    timer.stop();
     std::lock_guard lock{mutex};
-    ticks.push_back(std::chrono::steady_clock::now());
-    if (ticks.size() == kTicks)
-      done.set_value();
-    std::this_thread::sleep_for(40ms);
-  });
-  ASSERT_EQ(finished.wait_for(10s), std::future_status::ready);
-  timer.stop();
-  std::lock_guard lock{mutex};
-  // A fixed-delay timer would average at least 140ms per tick here.
-  const auto average = (ticks[kTicks - 1] - ticks[0]) / (kTicks - 1);
-  EXPECT_LT(average, 130ms);
+    return ticks.size() < kTicks ? 1h : (ticks[kTicks - 1] - ticks[0]) / (kTicks - 1);
+  };
+  // Sleeps only overrun, so a fixed-delay timer can never average below
+  // kInterval + kCallback. Load may skip fixed-rate ticks, so keep the best run.
+  auto best = average_period();
+  for (int attempt = 1; attempt < 5 && best >= kInterval + kCallback; ++attempt)
+    best = std::min(best, average_period());
+  EXPECT_LT(best, kInterval + kCallback);
 }
 
 TEST(TimerTest, AcceptsMoveOnlyCallbackAndDestructorStopsWorker) {
