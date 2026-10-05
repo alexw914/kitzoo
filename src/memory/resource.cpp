@@ -75,22 +75,21 @@ auto LimitedResource::owns(const void* address) const -> bool {
 }
 
 auto LimitedResource::try_allocate(std::size_t bytes, std::size_t alignment) -> void* {
-  // memory_resource::allocate requires a power-of-two alignment before dispatch.
-  if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-    return nullptr;
-  try {
-    return allocate(bytes, alignment);
-  } catch (const std::bad_alloc&) {
-    return nullptr;
-  }
+  return allocate_within_budget(bytes, alignment);
 }
 
 auto LimitedResource::do_allocate(std::size_t bytes, std::size_t alignment) -> void* {
+  if (auto* address = allocate_within_budget(bytes, alignment))
+    return address;
+  throw std::bad_alloc{};
+}
+
+auto LimitedResource::allocate_within_budget(std::size_t bytes, std::size_t alignment) -> void* {
   if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-    throw std::bad_alloc{};
+    return nullptr;
   std::lock_guard lock(impl_->mutex);
   if (bytes > impl_->capacity - impl_->stats.used_bytes)
-    throw std::bad_alloc{};
+    return nullptr;
   auto* address = impl_->upstream->allocate(bytes, alignment);
   core::ScopeGuard release{[&] { impl_->upstream->deallocate(address, bytes, alignment); }};
   impl_->allocations.emplace(address, Impl::Allocation{bytes, alignment});

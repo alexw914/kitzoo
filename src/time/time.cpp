@@ -24,17 +24,23 @@ namespace {
 
 constexpr std::int64_t kNanosecondsPerSecond = 1000000000;
 
-auto checked_timestamp(std::int64_t seconds, unsigned fraction) -> TimeStamp {
+auto to_timestamp(std::int64_t seconds, unsigned fraction) -> std::optional<TimeStamp> {
   const auto base_seconds = seconds < 0 ? seconds + 1 : seconds;
   const auto offset = static_cast<std::int64_t>(fraction) - (seconds < 0 ? kNanosecondsPerSecond : 0);
   const auto minimum = std::numeric_limits<std::int64_t>::min();
   const auto maximum = std::numeric_limits<std::int64_t>::max();
   if (base_seconds < minimum / kNanosecondsPerSecond || base_seconds > maximum / kNanosecondsPerSecond)
-    throw std::out_of_range("Date exceeds nanosecond timestamp range");
+    return std::nullopt;
   const auto base = base_seconds * kNanosecondsPerSecond;
   if ((offset > 0 && base > maximum - offset) || (offset < 0 && base < minimum - offset))
-    throw std::out_of_range("Date exceeds nanosecond timestamp range");
+    return std::nullopt;
   return TimeStamp{TimeDuration{base + offset}};
+}
+
+auto checked_timestamp(std::int64_t seconds, unsigned fraction) -> TimeStamp {
+  if (const auto timestamp = to_timestamp(seconds, fraction))
+    return *timestamp;
+  throw std::out_of_range("Date exceeds nanosecond timestamp range");
 }
 
 auto system_timestamp(std::chrono::system_clock::time_point value) -> TimeStamp {
@@ -120,11 +126,10 @@ auto ptp_timestamp(std::string_view device) -> std::optional<TimeDuration> {
   close(descriptor);
   if (status != 0 || value.tv_nsec < 0 || value.tv_nsec >= kNanosecondsPerSecond)
     return std::nullopt;
-  try {
-    return checked_timestamp(value.tv_sec, static_cast<unsigned>(value.tv_nsec)).time_since_epoch();
-  } catch (const std::out_of_range&) {
+  const auto timestamp = to_timestamp(value.tv_sec, static_cast<unsigned>(value.tv_nsec));
+  if (!timestamp)
     return std::nullopt;
-  }
+  return timestamp->time_since_epoch();
 #else
   (void)device;
   return std::nullopt;

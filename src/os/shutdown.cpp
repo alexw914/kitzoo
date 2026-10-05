@@ -59,17 +59,23 @@ auto WINAPI on_console_event(DWORD event) -> BOOL {
 // Never drained, so the read end stays readable and wakes every waiter.
 int pipe_fds[2]{-1, -1};
 
-auto wake_pipe() -> const int* {
-  static std::once_flag once;
-  std::call_once(once, [] {
+// Returns the errno of a failed pipe creation, or zero.
+auto open_wake_pipe() noexcept -> int {
+  static const int error = [] {
     if (::pipe(pipe_fds) != 0)
-      throw std::system_error{errno, std::generic_category(), "shutdown pipe"};
+      return errno;
     for (const int fd : pipe_fds) {
       ::fcntl(fd, F_SETFD, FD_CLOEXEC);
       ::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL) | O_NONBLOCK);
     }
-  });
-  return pipe_fds;
+    return 0;
+  }();
+  return error;
+}
+
+auto require_wake_pipe() -> void {
+  if (const int error = open_wake_pipe())
+    throw std::system_error{error, std::generic_category(), "shutdown pipe"};
 }
 
 auto notify() noexcept -> void {
@@ -99,7 +105,7 @@ auto install_shutdown_handler() -> void {
     if (!::SetConsoleCtrlHandler(on_console_event, TRUE))
       throw std::system_error{static_cast<int>(::GetLastError()), std::system_category(), "SetConsoleCtrlHandler"};
 #else
-    wake_pipe();
+    require_wake_pipe();
     struct sigaction action {};
     action.sa_handler = on_signal;
     sigemptyset(&action.sa_mask);
@@ -113,9 +119,8 @@ auto install_shutdown_handler() -> void {
 
 auto request_shutdown() noexcept -> void {
 #if !defined(_WIN32)
-  try {
-    wake_pipe();
-  } catch (...) {
+  // Without a pipe nobody can be waiting, so setting the flag is enough.
+  if (open_wake_pipe() != 0) {
     requested.store(true);
     return;
   }
@@ -140,7 +145,8 @@ auto wait_for_shutdown(std::chrono::milliseconds timeout) -> bool {
   }
   return wake.wait_for(lock, timeout, ready);
 #else
-  pollfd entry{wake_pipe()[0], POLLIN, 0};
+  require_wake_pipe();
+  pollfd entry{pipe_fds[0], POLLIN, 0};
   const auto deadline = std::chrono::steady_clock::now() + timeout;
   while (!requested.load()) {
     int wait_ms = -1;

@@ -43,6 +43,8 @@ public:
 
   auto owns(const void* address) const -> bool;
 
+  // Returns nullptr when the budget is exhausted or the alignment is invalid;
+  // upstream allocation failures propagate.
   auto try_allocate(std::size_t bytes, std::size_t alignment) -> void*;
 
   // Legacy release without alignment; mismatched sizes/foreign pointers fail.
@@ -50,6 +52,8 @@ public:
 
 private:
   auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override;
+
+  auto allocate_within_budget(std::size_t bytes, std::size_t alignment) -> void*;
 
   auto do_deallocate(void* address, std::size_t bytes, std::size_t alignment) -> void override;
 

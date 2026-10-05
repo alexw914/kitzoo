@@ -51,6 +51,9 @@ TEST(ResourceTest, LimitsAlignmentStatisticsAndRollback) {
   FailingResource failing;
   LimitedResource failure_budget{1024, &failing};
   EXPECT_THROW(static_cast<void>(failure_budget.allocate(4)), std::bad_alloc);
+  // Budget exhaustion returns null; upstream failures propagate.
+  EXPECT_EQ(failure_budget.try_allocate(2048, 8), nullptr);
+  EXPECT_THROW(static_cast<void>(failure_budget.try_allocate(4, 8)), std::bad_alloc);
   EXPECT_EQ(failure_budget.stats().used_bytes, 0U);
   EXPECT_EQ(failure_budget.stats().allocation_count, 0U);
   LimitedResource outer{256, &budget};
