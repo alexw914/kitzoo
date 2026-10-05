@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <future>
 #include <gtest/gtest.h>
+#include <string>
+#include <thread>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -230,6 +232,20 @@ TEST(SysQueryTest, HomeDir) {
     GTEST_SKIP() << "no HOME/USERPROFILE in this environment";
   }
   EXPECT_FALSE(kitzoo::os::home_dir().empty());
+}
+
+TEST(SysQueryTest, LongThreadNamesUsePlatformLimit) {
+  const std::string name(kitzoo::os::kMaxThreadNameLength + 20, 'w');
+  std::jthread worker{[&] {
+    ASSERT_TRUE(kitzoo::os::set_current_thread_name(name));
+#if defined(_WIN32)
+    const auto actual = kitzoo::os::get_thread_name(GetCurrentThread());
+#else
+    const auto actual = kitzoo::os::get_thread_name(pthread_self());
+#endif
+    EXPECT_EQ(actual.size(), kitzoo::os::kMaxThreadNameLength);
+    EXPECT_TRUE(actual.starts_with(kitzoo::os::kThreadNamePrefix));
+  }};
 }
 
 TEST(SysQueryTest, StacktraceCapturesFrames) {

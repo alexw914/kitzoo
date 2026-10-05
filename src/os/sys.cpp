@@ -21,6 +21,8 @@
 #else
 #include <cerrno>
 #include <cstdio>
+#include <cxxabi.h>
+#include <dlfcn.h>
 #include <execinfo.h>
 #include <pthread.h>
 #include <sched.h>
@@ -155,8 +157,21 @@ auto stacktrace(const int max_frames) -> std::vector<std::string> {
 
   std::vector<std::string> out;
   out.reserve(static_cast<std::size_t>(n));
-  for (int i = 0; i < n; ++i)
-    out.emplace_back(symbols[i]);
+  for (int i = 0; i < n; ++i) {
+    Dl_info info{};
+    if (::dladdr(frames[static_cast<std::size_t>(i)], &info) == 0 || info.dli_sname == nullptr) {
+      out.emplace_back(symbols[i]);
+      continue;
+    }
+    int status = 0;
+    char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+    std::string entry = status == 0 ? demangled : info.dli_sname;
+    std::free(demangled);
+    const auto offset =
+        static_cast<const char*>(frames[static_cast<std::size_t>(i)]) - static_cast<const char*>(info.dli_saddr);
+    entry += " + " + std::to_string(offset);
+    out.push_back(std::move(entry));
+  }
   std::free(symbols);
   return out;
 #endif
@@ -191,11 +206,11 @@ auto set_thread_name(std::thread::native_handle_type id, std::string_view name, 
     prefix = kThreadNamePrefix;
   else if (prefix.back() != '/')
     prefix += '/';
-  if (prefix.size() > 15)
+  if (prefix.size() > kMaxThreadNameLength)
     return false;
   auto trimmed = name;
-  const auto budget = 15 - prefix.size();
-  if (trimmed.size() >= 16 - prefix.size()) {
+  const auto budget = kMaxThreadNameLength - prefix.size();
+  if (trimmed.size() > budget) {
     auto last = trimmed.rfind('/');
     trimmed = trimmed.substr(last == std::string_view::npos ? 0 : last + 1, budget);
   } else {

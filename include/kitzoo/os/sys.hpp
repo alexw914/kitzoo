@@ -29,6 +29,13 @@ enum class SchedPolicy : std::uint8_t {
 
 inline constexpr std::string_view kThreadNamePrefix{"kz/"};
 
+// Longest thread name, prefix included; Linux limits names to 15 bytes.
+#if defined(__linux__)
+inline constexpr std::size_t kMaxThreadNameLength = 15;
+#else
+inline constexpr std::size_t kMaxThreadNameLength = 63;
+#endif
+
 KZ_NODISCARD auto get_env(std::string_view name) -> std::optional<std::string>;
 
 KZ_NODISCARD auto hostname() -> std::string;
@@ -46,7 +53,8 @@ KZ_NODISCARD auto username() -> std::string;
 KZ_NODISCARD auto home_dir() -> std::string;
 
 // Captures up to max_frames entries; non-positive limits return an empty trace.
-// Windows entries contain addresses, without symbol-name resolution.
+// POSIX entries show demangled symbols when available; Windows entries contain
+// addresses, without symbol-name resolution.
 KZ_NODISCARD auto stacktrace(int max_frames = 64) -> std::vector<std::string>;
 
 // Process user + system CPU time, in nanoseconds; zero on failure.
