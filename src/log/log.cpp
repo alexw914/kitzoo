@@ -96,7 +96,21 @@ auto scope_name(std::string_view scope) -> std::string_view {
       break;
     }
   }
-  return scope.substr(begin, end - begin);
+  auto name = scope.substr(begin, end - begin);
+  // MSVC appends template arguments, as in log<int>; operators such as operator<=> keep theirs.
+  if (name.ends_with('>')) {
+    int depth = 0;
+    for (auto i = name.size(); i-- > 0;) {
+      if (name[i] == '>') {
+        ++depth;
+      } else if (name[i] == '<' && --depth == 0) {
+        if (i > 0 && !name.substr(0, i).ends_with("operator"))
+          name = name.substr(0, i);
+        break;
+      }
+    }
+  }
+  return name;
 }
 
 auto is_lambda_class(std::string_view scope) -> bool {
@@ -105,7 +119,9 @@ auto is_lambda_class(std::string_view scope) -> bool {
 }
 
 auto is_call_operator(std::string_view scope) -> bool {
-  return scope.find("operator()") != std::string_view::npos || scope.find("operator ()") != std::string_view::npos;
+  // MSVC spells the call operator of an enclosing lambda as a bare "()".
+  return scope == "()" || scope.find("operator()") != std::string_view::npos ||
+         scope.find("operator ()") != std::string_view::npos;
 }
 
 // Reduces a source_location signature to the caller's unqualified name, such as

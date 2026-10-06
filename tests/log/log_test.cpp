@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 #include <mutex>
 #include <set>
+#include <spdlog/details/os.h>
 #include <spdlog/sinks/base_sink.h>
 #include <stdexcept>
 #include <string>
@@ -36,6 +37,8 @@ struct fmt::formatter<FormatProbe> : fmt::formatter<int> {
 namespace {
 using namespace kitzoo::log;
 using namespace std::chrono_literals;
+
+const std::string kEol{spdlog::details::os::default_eol};
 
 struct CapturedRecord {
   std::string message;
@@ -181,11 +184,11 @@ TEST_F(LogTest, FunctionFlagPrintsCallerNameAndLambdasTheirEnclosingFunction) {
   }(1);
   const auto records = sink_->snapshot();
   ASSERT_EQ(records.size(), 6u);
-  EXPECT_EQ(records[0].formatted, "log_from_named_function\n");
-  EXPECT_EQ(records[1].formatted, "capture\n");
-  EXPECT_EQ(records[2].formatted, "log_from_template\n");
+  EXPECT_EQ(records[0].formatted, "log_from_named_function" + kEol);
+  EXPECT_EQ(records[1].formatted, "capture" + kEol);
+  EXPECT_EQ(records[2].formatted, "log_from_template" + kEol);
   for (std::size_t i = 3; i < records.size(); ++i)
-    EXPECT_EQ(records[i].formatted, "TestBody\n") << i;
+    EXPECT_EQ(records[i].formatted, "TestBody" + kEol) << i;
 }
 
 // Signatures as clang, GCC and MSVC spell them in std::source_location.
@@ -222,11 +225,16 @@ TEST_F(LogTest, FunctionFlagParsesEachCompilersSignatures) {
        "asynchronous_logging"},
       {"auto __cdecl `anonymous-namespace'::<lambda_1>::operator ()(void) const", "lambda"},
       {"auto __cdecl <lambda_1>::operator ()(void) const", "lambda"},
+      {"void __cdecl `anonymous-namespace'::log_from_template<int>(class std::vector<int,class std::allocator<int> >)",
+       "log_from_template"},
+      {"auto __cdecl S::TestBody::<lambda_2>::()::<lambda_1>::operator ()(void) const", "TestBody"},
+      {"auto __cdecl S::TestBody::<lambda_3>::operator ()<int>(int) const", "TestBody"},
+      {"bool __cdecl operator<=>(const S &,const S &)", "operator<=>"},
   };
   for (const auto& [signature, expected] : cases) {
     sink_->log(
         spdlog::details::log_msg{spdlog::source_loc{"file.cpp", 1, signature}, "test", spdlog::level::info, "x"});
-    EXPECT_EQ(sink_->snapshot().back().formatted, std::string{expected} + "\n") << signature;
+    EXPECT_EQ(sink_->snapshot().back().formatted, expected + kEol) << signature;
   }
 }
 
@@ -557,7 +565,7 @@ auto verify_init_routes_macros_to_rolling_files() -> void {
   EXPECT_GT(files.size(), 1u);
   const auto text = read_all(files);
   for (int frame = 0; frame < 20; ++frame)
-    EXPECT_NE(text.find(fmt::format("frame={}\n", frame)), std::string::npos) << frame;
+    EXPECT_NE(text.find(fmt::format("frame={}{}", frame, kEol)), std::string::npos) << frame;
   std::exit(::testing::Test::HasFailure() ? 1 : 0);
 }
 
@@ -570,7 +578,7 @@ auto verify_init_replaces_outputs() -> void {
   EXPECT_EQ(init({.console = false}), nullptr);
   KZ_LOG_INFO("dropped");
   default_logger().flush();
-  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "to file\n");
+  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "to file" + kEol);
   std::exit(::testing::Test::HasFailure() ? 1 : 0);
 }
 
@@ -581,7 +589,7 @@ auto verify_failed_init_keeps_configuration() -> void {
   EXPECT_THROW(init({.console = false, .file = {.path = directory / ".."}}), std::invalid_argument);
   KZ_LOG_INFO("still logged");
   default_logger().flush();
-  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "still logged\n");
+  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "still logged" + kEol);
   std::exit(::testing::Test::HasFailure() ? 1 : 0);
 }
 

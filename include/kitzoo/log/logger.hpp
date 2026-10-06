@@ -68,7 +68,7 @@ using ErrorHandler = std::function<void(std::string_view)>;
 // Files are named <stem>_<YYYYmmdd-HHMMSS>_<n><extension> from path, for example
 // logs/app.log -> logs/app_20261005-142530_0.log; existing files are never renamed.
 struct FileSinkOptions {
-  std::filesystem::path path;
+  std::filesystem::path path{};
   // A new file starts before a record would exceed this size.
   std::size_t max_size_bytes{10 * 1024 * 1024};
   // Files of this naming pattern last modified earlier are deleted; zero keeps all.
@@ -82,21 +82,21 @@ class RollingFileSink;
 // Patterns use spdlog flags plus %*, the calling function's unqualified name.
 struct LoggerOptions {
   Level level{Level::Info};
-  std::string pattern;
-  std::vector<SinkPtr> sinks;
+  std::string pattern{};
+  std::vector<SinkPtr> sinks{};
   Level flush_level{Level::Off};
-  ErrorHandler error_handler;
-  std::optional<FileSinkOptions> file;
+  ErrorHandler error_handler{};
+  std::optional<FileSinkOptions> file{};
 };
 
 // Settings for init(), which configures default_logger() and the KZ_LOG macros.
 struct InitOptions {
   Level level{Level::Info};
   // Empty keeps the default pattern.
-  std::string pattern;
+  std::string pattern{};
   bool console{true};
   // An empty path disables file output.
-  FileSinkOptions file;
+  FileSinkOptions file{};
   Level flush_level{Level::Warn};
 };
 
