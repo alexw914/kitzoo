@@ -17,6 +17,16 @@
 
 namespace kitzoo::thread {
 
+namespace detail {
+
+template <typename M>
+concept SharedLockable = requires(M& m) {
+  m.lock_shared();
+  m.unlock_shared();
+};
+
+} // namespace detail
+
 template <typename T, typename Mutex = std::mutex>
 class Synchronized {
 public:
@@ -34,17 +44,23 @@ public:
 
   template <typename F>
   auto read(F&& f) const -> decltype(auto)
-    requires requires(const Mutex& m) { std::shared_lock{m}; }
+    requires detail::SharedLockable<Mutex>
   {
     std::shared_lock lock{mutex_};
     return std::forward<F>(f)(value_);
   }
 
+  // Takes a shared lock when Mutex supports one.
   KZ_NODISCARD auto copy() const -> T
     requires std::is_copy_constructible_v<T>
   {
-    std::lock_guard lock{mutex_};
-    return value_;
+    if constexpr (detail::SharedLockable<Mutex>) {
+      std::shared_lock lock{mutex_};
+      return value_;
+    } else {
+      std::lock_guard lock{mutex_};
+      return value_;
+    }
   }
 
 private:
