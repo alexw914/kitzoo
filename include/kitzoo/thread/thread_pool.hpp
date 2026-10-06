@@ -18,6 +18,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string_view>
 #include <thread>
@@ -47,13 +48,25 @@ public:
   ThreadPool(ThreadPool&&) = delete;
   auto operator=(ThreadPool&&) -> ThreadPool& = delete;
 
+  template <typename F, typename... Args>
+  using TaskResult = std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>;
+
   // Detached tasks must not throw: an escaping exception terminates the process.
-  // submit_task reports exceptions through its future.
+  // submit_task reports exceptions through its future. Both throw runtime_error
+  // once shutdown has started.
   template <typename F, typename... Args>
   auto detach_task(F&& f, Args&&... args) -> void;
 
   template <typename F, typename... Args>
-  auto submit_task(F&& f, Args&&... args) -> std::future<std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>>;
+  auto submit_task(F&& f, Args&&... args) -> std::future<TaskResult<F, Args...>>;
+
+  // Return false or nullopt once shutdown has started, so tasks can resubmit
+  // themselves safely. Arguments are consumed either way.
+  template <typename F, typename... Args>
+  KZ_NODISCARD auto try_detach_task(F&& f, Args&&... args) -> bool;
+
+  template <typename F, typename... Args>
+  KZ_NODISCARD auto try_submit_task(F&& f, Args&&... args) -> std::optional<std::future<TaskResult<F, Args...>>>;
 
   // wait() and shutdown() throw logic_error when called from a worker thread.
   auto wait() -> void;
@@ -68,7 +81,15 @@ public:
 private:
   using Task = kitzoo::core::unique_function<void()>;
 
-  auto enqueue_task(Task task) -> void;
+  template <typename F, typename... Args>
+  static auto bind_task(F&& f, Args&&... args) {
+    return [fn = std::forward<F>(f), ... params = std::forward<Args>(args)]() mutable -> TaskResult<F, Args...> {
+      return std::invoke(std::move(fn), std::move(params)...);
+    };
+  }
+
+  KZ_NORETURN static auto throw_shutting_down() -> void;
+  auto try_enqueue_task(Task task) -> bool;
   auto finish_task() noexcept -> void;
   auto worker_loop() -> void;
 
@@ -84,23 +105,30 @@ private:
 
 template <typename F, typename... Args>
 auto ThreadPool::detach_task(F&& f, Args&&... args) -> void {
-  enqueue_task([fn = std::forward<F>(f), ... params = std::forward<Args>(args)]() mutable {
-    std::invoke(std::move(fn), std::move(params)...);
-  });
+  if (!try_detach_task(std::forward<F>(f), std::forward<Args>(args)...))
+    throw_shutting_down();
 }
 
 template <typename F, typename... Args>
-auto ThreadPool::submit_task(F&& f, Args&&... args)
-    -> std::future<std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>> {
-  using result_type = std::invoke_result_t<std::decay_t<F>, std::decay_t<Args>...>;
-
-  auto task = std::packaged_task<result_type()>{
-      [fn = std::forward<F>(f), ... params = std::forward<Args>(args)]() mutable -> result_type {
-        return std::invoke(std::move(fn), std::move(params)...);
-      }};
-
+auto ThreadPool::submit_task(F&& f, Args&&... args) -> std::future<TaskResult<F, Args...>> {
+  std::packaged_task<TaskResult<F, Args...>()> task{bind_task(std::forward<F>(f), std::forward<Args>(args)...)};
   auto future = task.get_future();
-  enqueue_task([t = std::move(task)]() mutable { t(); });
+  if (!try_enqueue_task([t = std::move(task)]() mutable { t(); }))
+    throw_shutting_down();
+  return future;
+}
+
+template <typename F, typename... Args>
+auto ThreadPool::try_detach_task(F&& f, Args&&... args) -> bool {
+  return try_enqueue_task(bind_task(std::forward<F>(f), std::forward<Args>(args)...));
+}
+
+template <typename F, typename... Args>
+auto ThreadPool::try_submit_task(F&& f, Args&&... args) -> std::optional<std::future<TaskResult<F, Args...>>> {
+  std::packaged_task<TaskResult<F, Args...>()> task{bind_task(std::forward<F>(f), std::forward<Args>(args)...)};
+  auto future = task.get_future();
+  if (!try_enqueue_task([t = std::move(task)]() mutable { t(); }))
+    return std::nullopt;
   return future;
 }
 

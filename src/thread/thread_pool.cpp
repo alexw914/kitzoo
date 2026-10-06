@@ -71,18 +71,23 @@ auto ThreadPool::finish_task() noexcept -> void {
     pending_.notify_all();
 }
 
+auto ThreadPool::throw_shutting_down() -> void {
+  throw std::runtime_error{"ThreadPool: pool is shutting down"};
+}
+
 // pending_ and accepting_ use sequentially consistent operations: a submission
 // that sees accepting_ set has already raised pending_ before shutdown reads it.
-auto ThreadPool::enqueue_task(Task task) -> void {
+auto ThreadPool::try_enqueue_task(Task task) -> bool {
   pending_.fetch_add(1);
   if (!accepting_.load()) {
     finish_task();
-    throw std::runtime_error{"ThreadPool: pool is shutting down"};
+    return false;
   }
   if (!tasks_.enqueue(std::move(task))) {
     finish_task();
     throw std::bad_alloc{};
   }
+  return true;
 }
 
 auto ThreadPool::shutdown() -> void {

@@ -111,6 +111,51 @@ TEST(ThreadPoolTest, TaskSubmissionAfterShutdownThrows) {
 
 // -- Thread count -------------------------------------------------------------
 
+TEST(ThreadPoolTest, TrySubmissionsReportShutdownWithoutThrowing) {
+  ThreadPool pool{2};
+  auto future = pool.try_submit_task([](int value) { return value * 2; }, 21);
+  ASSERT_TRUE(future.has_value());
+  EXPECT_EQ(future->get(), 42);
+  std::atomic<int> ran{0};
+  EXPECT_TRUE(pool.try_detach_task([&ran] { ran.fetch_add(1); }));
+  pool.wait();
+  EXPECT_EQ(ran.load(), 1);
+
+  pool.shutdown();
+  EXPECT_FALSE(pool.try_detach_task([&ran] { ran.fetch_add(1); }));
+  EXPECT_FALSE(pool.try_submit_task([] { return 1; }).has_value());
+  EXPECT_EQ(ran.load(), 1);
+}
+
+namespace {
+
+// Resubmits itself until the pool refuses, like a retry loop running into shutdown.
+struct ResubmittingTask {
+  ThreadPool* pool;
+  std::atomic<int>* runs;
+  std::atomic<int>* refused;
+
+  auto operator()() const -> void {
+    runs->fetch_add(1);
+    if (!pool->try_detach_task(*this))
+      refused->fetch_add(1);
+  }
+};
+
+} // namespace
+
+TEST(ThreadPoolTest, ResubmissionDuringShutdownEndsWithoutTerminating) {
+  ThreadPool pool{2};
+  std::atomic<int> runs{0};
+  std::atomic<int> refused{0};
+  ASSERT_TRUE(pool.try_detach_task(ResubmittingTask{&pool, &runs, &refused}));
+  while (runs.load() < 100)
+    std::this_thread::yield();
+  pool.shutdown();
+  EXPECT_EQ(refused.load(), 1);
+  EXPECT_EQ(pool.get_tasks_total(), 0u);
+}
+
 TEST(ThreadPoolTest, ThreadCountMatches) {
   ThreadPool pool{4};
   EXPECT_EQ(pool.get_thread_count(), 4u);
