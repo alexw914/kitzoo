@@ -1,8 +1,9 @@
 # kitzoo
 
-kitzoo is a modular C++20 foundation library for Linux, macOS, and Windows.
-It provides common utilities and integrations with established C++ libraries.
-Applications can link the modules they need.
+kitzoo is a lightweight, modular C++20 foundation library for Linux, macOS,
+and Windows. It aims to stay small: modules provide common building blocks as
+thin layers, reusing established C++ libraries instead of reimplementing them,
+and applications link only the modules they need.
 
 ## Modules
 
