@@ -16,7 +16,9 @@ namespace kitzoo::os {
 
 // Installs handlers once: SIGINT/SIGTERM on POSIX, console control events on
 // Windows. The first signal requests shutdown; a second one restores the default
-// action so the process can still be terminated.
+// action so the process can still be terminated. Closing the Windows console
+// window requests shutdown and holds the process open until main returns or
+// Windows' close timeout (about 5 seconds) expires, so cleanup must be short.
 auto install_shutdown_handler() -> void;
 
 auto request_shutdown() noexcept -> void;

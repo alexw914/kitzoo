@@ -45,7 +45,16 @@ auto notify() noexcept -> void {
 }
 
 auto WINAPI on_console_event(DWORD event) -> BOOL {
-  if (event != CTRL_C_EVENT && event != CTRL_BREAK_EVENT && event != CTRL_CLOSE_EVENT)
+  if (event == CTRL_CLOSE_EVENT) {
+    if (!requested.exchange(true))
+      notify();
+    // Windows terminates the process as soon as this handler returns, so keep
+    // it running while the program cleans up; returning from main ends the
+    // process and this thread. Windows still kills it after its close timeout.
+    ::Sleep(INFINITE);
+    return TRUE;
+  }
+  if (event != CTRL_C_EVENT && event != CTRL_BREAK_EVENT)
     return FALSE;
   // A repeated event falls through to the default handler, which terminates.
   if (requested.exchange(true))
