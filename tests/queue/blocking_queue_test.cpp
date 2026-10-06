@@ -221,3 +221,71 @@ TEST(BlockingQueueTest, PopForTimesOutAndReturnsItems) {
   }};
   EXPECT_EQ(q.pop_for(std::chrono::seconds{5}), 7);
 }
+
+TEST(BlockingQueueTest, PushEvictReplacesOldestWhenFull) {
+  BlockingQueue<int> q{3};
+  for (int i = 1; i <= 3; ++i)
+    EXPECT_EQ(q.push_evict(i), std::nullopt);
+  EXPECT_EQ(q.push_evict(4), 1);
+  EXPECT_EQ(q.push_evict(5), 2);
+  EXPECT_EQ(q.size(), 3u);
+  for (int expected = 3; expected <= 5; ++expected)
+    EXPECT_EQ(q.try_pop(), expected);
+}
+
+TEST(BlockingQueueTest, PushEvictWithCapacityOneKeepsLatest) {
+  BlockingQueue<int> q{1};
+  EXPECT_EQ(q.push_evict(1), std::nullopt);
+  EXPECT_EQ(q.push_evict(2), 1);
+  EXPECT_EQ(q.push_evict(3), 2);
+  EXPECT_EQ(q.try_pop(), 3);
+  EXPECT_TRUE(q.empty());
+}
+
+TEST(BlockingQueueTest, PushEvictNeverEvictsFromUnboundedQueue) {
+  BlockingQueue<int> q;
+  for (int i = 0; i < 100; ++i)
+    EXPECT_EQ(q.push_evict(i), std::nullopt);
+  EXPECT_EQ(q.size(), 100u);
+}
+
+TEST(BlockingQueueTest, PushEvictAfterCloseReturnsValue) {
+  BlockingQueue<std::unique_ptr<int>> q{2};
+  q.close();
+  auto returned = q.push_evict(std::make_unique<int>(7));
+  ASSERT_TRUE(returned.has_value());
+  EXPECT_EQ(**returned, 7);
+  EXPECT_TRUE(q.empty());
+}
+
+TEST(BlockingQueueTest, PushEvictWakesWaitingConsumer) {
+  BlockingQueue<int> q{1};
+  std::jthread consumer([&q] { EXPECT_EQ(q.wait_and_pop(), 9); });
+  std::this_thread::sleep_for(std::chrono::milliseconds{20});
+  EXPECT_EQ(q.push_evict(9), std::nullopt);
+}
+
+// A producer outrunning its consumer keeps only the newest frames queued, and
+// every evicted frame buffer goes back to the pool.
+TEST(BlockingQueueTest, PushEvictBoundsLatencyAndReturnsFramesToPool) {
+  constexpr int kBuffers = 6;
+  constexpr int kCapacity = 4;
+  constexpr int kFrames = 100;
+  std::vector<std::unique_ptr<int>> pool;
+  for (int i = 0; i < kBuffers; ++i)
+    pool.push_back(std::make_unique<int>());
+
+  BlockingQueue<std::unique_ptr<int>> q{kCapacity};
+  for (int frame = 0; frame < kFrames; ++frame) {
+    ASSERT_FALSE(pool.empty());
+    auto buffer = std::move(pool.back());
+    pool.pop_back();
+    *buffer = frame;
+    if (auto evicted = q.push_evict(std::move(buffer)))
+      pool.push_back(std::move(*evicted));
+  }
+
+  EXPECT_EQ(pool.size() + q.size(), static_cast<std::size_t>(kBuffers));
+  for (int frame = kFrames - kCapacity; frame < kFrames; ++frame)
+    EXPECT_EQ(*q.try_pop().value(), frame);
+}

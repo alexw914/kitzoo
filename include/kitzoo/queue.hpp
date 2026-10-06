@@ -11,6 +11,7 @@
 // Choosing a queue:
 // - BlockingQueue: general producer/consumer hand-off where consumers sleep
 //   while empty, producers may need backpressure, or the stream must close.
+//   push_evict keeps only the newest items, such as live video frames.
 // - SPSCQueue: a fixed pair of threads, such as a capture thread feeding a
 //   processing thread; the fastest option, with polling instead of waiting.
 // - MPMCQueue: many threads with a hard memory bound, no allocation after

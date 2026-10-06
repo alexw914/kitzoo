@@ -42,6 +42,19 @@ auto main() -> int {
     queue.close(); // consumer drains, then sees std::nullopt and exits
   }
 
+  // push_evict keeps only the newest items: a live stream drops its oldest
+  // frame instead of blocking the producer or letting latency grow.
+  {
+    BlockingQueue<int> frames{2};
+    int dropped = 0;
+    for (int frame = 1; frame <= 5; ++frame) {
+      if (frames.push_evict(frame))
+        ++dropped;
+    }
+    const auto first = frames.try_pop();
+    std::printf("latest frames start at %d, dropped %d\n", first ? *first : -1, dropped);
+  }
+
   // pop_for waits with a timeout instead of blocking indefinitely.
   {
     BlockingQueue<int> queue;

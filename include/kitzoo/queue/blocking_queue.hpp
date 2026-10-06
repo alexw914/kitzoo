@@ -61,6 +61,25 @@ public:
     return true;
   }
 
+  // Never blocks. When a bounded queue is full, the oldest item makes room and
+  // is returned; once closed, value itself is returned. The returned item is
+  // the one that did not end up in the queue.
+  auto push_evict(T value) -> std::optional<T> {
+    std::optional<T> evicted;
+    {
+      std::lock_guard lock{mutex_};
+      if (closed_)
+        return value;
+      deque_.push_back(std::move(value));
+      if (capacity_ != 0 && deque_.size() > capacity_) {
+        evicted.emplace(std::move(deque_.front()));
+        deque_.pop_front();
+      }
+    }
+    not_empty_.notify_one();
+    return evicted;
+  }
+
   KZ_NODISCARD auto wait_and_pop() -> std::optional<T> {
     std::unique_lock lock{mutex_};
     not_empty_.wait(lock, [this] { return !deque_.empty() || closed_; });
