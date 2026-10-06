@@ -5,6 +5,8 @@
 //   1. Submission latency: submit_task + wait for result (ping-pong)
 //   2. Tiny-task throughput: 10k empty tasks
 //   3. CPU-bound scaling: 1/2/4/8 workers on real work
+//   4. Detached tiny tasks followed by wait()
+//   5. Four external threads submitting detached tasks concurrently
 // ---------------------------------------------------------------------------
 
 #include <kitzoo/thread/thread_pool.hpp>
@@ -13,6 +15,7 @@
 #include <atomic>
 #include <benchmark/benchmark.h>
 #include <cstdint>
+#include <thread>
 #include <vector>
 
 using namespace kitzoo;
@@ -117,3 +120,68 @@ static void BM_CpuBound_BS(benchmark::State& state) {
 }
 
 BENCHMARK(BM_CpuBound_BS)->Arg(1)->Arg(2)->Arg(4)->Arg(8)->UseRealTime();
+
+// -- Detached tiny tasks + wait --------------------------------------------------
+
+template <typename Pool>
+static void detach_tiny_tasks(benchmark::State& state, Pool& pool) {
+  constexpr int kTasks = 10000;
+  std::atomic<int> counter{0};
+  for (auto _ : state) {
+    for (int i = 0; i < kTasks; ++i)
+      pool.detach_task([&counter] { counter.fetch_add(1, std::memory_order_relaxed); });
+    pool.wait();
+  }
+  benchmark::DoNotOptimize(counter.load());
+  state.SetItemsProcessed(state.iterations() * kTasks);
+}
+
+static void BM_DetachTasks_Kitzoo(benchmark::State& state) {
+  ThreadPool pool{static_cast<std::size_t>(state.range(0))};
+  detach_tiny_tasks(state, pool);
+}
+
+BENCHMARK(BM_DetachTasks_Kitzoo)->Arg(1)->Arg(4)->Arg(8)->UseRealTime();
+
+static void BM_DetachTasks_BS(benchmark::State& state) {
+  BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
+  detach_tiny_tasks(state, pool);
+}
+
+BENCHMARK(BM_DetachTasks_BS)->Arg(1)->Arg(4)->Arg(8)->UseRealTime();
+
+// -- Concurrent submitters ---------------------------------------------------------
+
+template <typename Pool>
+static void concurrent_submitters(benchmark::State& state, Pool& pool) {
+  constexpr int kSubmitters = 4;
+  constexpr int kTasksPerSubmitter = 2500;
+  std::atomic<int> counter{0};
+  for (auto _ : state) {
+    {
+      std::vector<std::jthread> submitters;
+      for (int t = 0; t < kSubmitters; ++t)
+        submitters.emplace_back([&] {
+          for (int i = 0; i < kTasksPerSubmitter; ++i)
+            pool.detach_task([&counter] { counter.fetch_add(1, std::memory_order_relaxed); });
+        });
+    }
+    pool.wait();
+  }
+  benchmark::DoNotOptimize(counter.load());
+  state.SetItemsProcessed(state.iterations() * kSubmitters * kTasksPerSubmitter);
+}
+
+static void BM_ConcurrentSubmit_Kitzoo(benchmark::State& state) {
+  ThreadPool pool{static_cast<std::size_t>(state.range(0))};
+  concurrent_submitters(state, pool);
+}
+
+BENCHMARK(BM_ConcurrentSubmit_Kitzoo)->Arg(4)->Arg(8)->UseRealTime();
+
+static void BM_ConcurrentSubmit_BS(benchmark::State& state) {
+  BS::thread_pool<> pool{static_cast<std::size_t>(state.range(0))};
+  concurrent_submitters(state, pool);
+}
+
+BENCHMARK(BM_ConcurrentSubmit_BS)->Arg(4)->Arg(8)->UseRealTime();

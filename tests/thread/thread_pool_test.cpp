@@ -12,6 +12,7 @@
 #include <functional>
 #include <future>
 #include <gtest/gtest.h>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -189,6 +190,38 @@ TEST(ThreadPoolTest, DetachedExceptionTerminates) {
         pool.wait();
       },
       "");
+}
+
+namespace {
+
+struct Account {
+  int balance = 10;
+
+  auto peek(int extra) const -> int { return balance + extra; }
+
+  auto deposit(int amount) -> void { balance += amount; }
+};
+
+} // namespace
+
+TEST(ThreadPoolTest, SubmitsMemberFunctionsWithObjectPointers) {
+  ThreadPool pool{2};
+  Account account;
+  auto owned = std::make_shared<Account>();
+  EXPECT_EQ(pool.submit_task(&Account::peek, &account, 1).get(), 11);
+  EXPECT_EQ(pool.submit_task(&Account::peek, std::cref(account), 2).get(), 12);
+  EXPECT_EQ(pool.submit_task(&Account::peek, owned, 3).get(), 13);
+  pool.detach_task(&Account::deposit, &account, 5);
+  pool.wait();
+  EXPECT_EQ(account.balance, 15);
+}
+
+TEST(ThreadPoolTest, SubmitsLambdasCapturingObjectPointers) {
+  ThreadPool pool{2};
+  Account account;
+  pool.detach_task([ptr = &account] { ptr->deposit(7); });
+  pool.wait();
+  EXPECT_EQ(pool.submit_task([ptr = &account](int extra) { return ptr->peek(extra); }, 3).get(), 20);
 }
 
 // A submission racing shutdown is either rejected or run before shutdown returns.

@@ -30,6 +30,18 @@ auto main() -> int {
     std::printf("submitted task failed: %s\n", e.what());
   }
 
+  // Member functions take the object pointer as the first argument.
+  struct Sensor {
+    int base = 40;
+
+    auto read(int offset) const -> int { return base + offset; }
+  };
+
+  Sensor sensor;
+  auto reading = workers.submit_task(&Sensor::read, &sensor, 2);
+  auto via_lambda = workers.submit_task([ptr = &sensor]() -> int { return ptr->read(1); });
+  std::printf("member function: %d, lambda: %d\n", reading.get(), via_lambda.get());
+
   // Local object reuse and shared lease ownership.
   kitzoo::thread::LocalObjectPool<int> objects{1};
   auto lease = objects.acquire_shared(7);
