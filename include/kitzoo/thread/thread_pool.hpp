@@ -10,15 +10,16 @@
 #include <kitzoo/core/macro.hpp>
 #include <kitzoo/core/unique_function.hpp>
 #include <kitzoo/memory/memory.hpp>
+#include <kitzoo/queue/concurrent_queue.hpp>
 
 #include <BS_thread_pool.hpp>
 #include <atomic>
-#include <condition_variable>
+#include <cstddef>
 #include <functional>
 #include <future>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -30,9 +31,15 @@ using BSPriorityThreadPool = BS::priority_thread_pool;
 using BSPauseThreadPool = BS::pause_thread_pool;
 using BSWdcThreadPool = BS::wdc_thread_pool;
 
+// Tasks wait in a lock-free queue and idle workers sleep on its semaphore.
+// Tasks from one submitting thread start in order; tasks from different
+// submitting threads have no relative order.
 class ThreadPool {
 public:
   explicit ThreadPool(std::size_t num_threads = 0);
+
+  // Workers are named <name>-<index> under os::kThreadNamePrefix where supported.
+  ThreadPool(std::size_t num_threads, std::string_view name);
   ~ThreadPool();
 
   ThreadPool(const ThreadPool&) = delete;
@@ -59,16 +66,20 @@ public:
   auto shutdown() -> void;
 
 private:
-  auto enqueue_task(kitzoo::core::unique_function<void()> task) -> void;
+  using Task = kitzoo::core::unique_function<void()>;
+
+  auto enqueue_task(Task task) -> void;
+  auto finish_task() noexcept -> void;
   auto worker_loop() -> void;
 
-  memory::Vector<std::jthread> workers_;
-  memory::Queue<kitzoo::core::unique_function<void()>> tasks_;
-  mutable std::mutex mutex_;
-  mutable std::condition_variable cv_;
-  mutable std::condition_variable tasks_done_cv_;
-  std::size_t running_tasks_{0};
+  // An empty Task is the stop signal; shutdown enqueues one per worker.
+  queue::BlockingConcurrentQueue<Task> tasks_;
+  // Queued plus running tasks; submit and shutdown order through it so that a
+  // racing submission is either rejected or completed before workers stop.
+  std::atomic<std::size_t> pending_{0};
+  std::atomic<std::size_t> running_{0};
   std::atomic<bool> accepting_{true};
+  memory::Vector<std::jthread> workers_;
 };
 
 template <typename F, typename... Args>

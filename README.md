@@ -13,7 +13,7 @@ Applications can link the modules they need.
 | `time` | Clocks, calendar conversion, elapsed measurements, timelines, and periodic callbacks. |
 | `os` | System queries, thread configuration, file/directory operations, and graceful shutdown. |
 | `memory` | Memory allocation, buffers, containers, and shared memory. |
-| `queue` | Blocking (optionally bounded) and concurrent queues. |
+| `queue` | Blocking, lock-free SPSC and bounded MPMC, and concurrent queues. |
 | `thread` | Thread pools, object pools, and synchronization. |
 | `log` | Synchronous/asynchronous logging, file rollover, and retention. |
 | `json` | JSON parsing, file loading, and serialization. |

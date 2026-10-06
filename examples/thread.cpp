@@ -20,8 +20,9 @@ auto main() -> int {
   auto task = pool.submit_task([]() -> int { return 42; });
   std::printf("task result: %d\n", task.get());
 
-  // kitzoo ThreadPool returns task exceptions through the future.
-  kitzoo::thread::ThreadPool workers{2};
+  // kitzoo ThreadPool returns task exceptions through the future; workers are
+  // named kz/workers-0, kz/workers-1 in debuggers and profilers.
+  kitzoo::thread::ThreadPool workers{2, "workers"};
   auto failed = workers.submit_task([]() -> int { throw std::runtime_error{"sensor offline"}; });
   try {
     static_cast<void>(failed.get());

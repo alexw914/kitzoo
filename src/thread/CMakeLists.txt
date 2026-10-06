@@ -1,4 +1,4 @@
-kitzoo_add_module(thread SOURCES thread_pool.cpp DEPENDS core memory queue_concurrentqueue)
+kitzoo_add_module(thread SOURCES thread_pool.cpp DEPENDS core memory os queue_concurrentqueue)
 
 add_library(kitzoo_thread_concurrent_pool INTERFACE)
 add_library(kitzoo::thread_concurrent_pool ALIAS kitzoo_thread_concurrent_pool)

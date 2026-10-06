@@ -1,11 +1,13 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: examples/queue.cpp
-// Description: Demonstrates blocking, single-producer, and concurrent queues.
+// Description: Demonstrates blocking, single-producer, bounded lock-free, and
+//              concurrent queues.
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/queue.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <thread>
@@ -70,6 +72,36 @@ auto main() -> int {
     }
     producer.join();
     std::printf("spsc queue sum: %lld\n", sum);
+  }
+
+  // MPMCQueue: bounded, lock-free and FIFO for many producers and consumers.
+  // Storage is allocated once; push fails instead of growing when full.
+  {
+    MPMCQueue<int> queue{256};
+    std::atomic<long long> sum{0};
+    {
+      std::jthread p1([&queue] {
+        for (int i = 1; i <= 500; ++i)
+          while (!queue.push(i))
+            std::this_thread::yield();
+      });
+      std::jthread p2([&queue] {
+        for (int i = 501; i <= 1000; ++i)
+          while (!queue.push(i))
+            std::this_thread::yield();
+      });
+      std::jthread consumer([&queue, &sum] {
+        for (int seen = 0; seen < 1000;) {
+          if (const auto item = queue.pop()) {
+            sum += *item;
+            ++seen;
+          } else {
+            std::this_thread::yield();
+          }
+        }
+      });
+    }
+    std::printf("mpmc queue sum: %lld\n", sum.load());
   }
 
   // ConcurrentQueue supports multiple producers and consumers.

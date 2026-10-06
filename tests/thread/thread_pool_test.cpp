@@ -4,6 +4,7 @@
 // Description: Verifies the built-in thread pool and public BS thread pool aliases.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/os/sys.hpp>
 #include <kitzoo/thread/thread_pool.hpp>
 
 #include <atomic>
@@ -15,6 +16,12 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 using namespace kitzoo;
 using namespace kitzoo::thread;
@@ -182,6 +189,46 @@ TEST(ThreadPoolTest, DetachedExceptionTerminates) {
         pool.wait();
       },
       "");
+}
+
+// A submission racing shutdown is either rejected or run before shutdown returns.
+TEST(ThreadPoolTest, ShutdownRacingSubmissionsRunsEveryAcceptedTask) {
+  for (int round = 0; round < 50; ++round) {
+    ThreadPool pool{2};
+    std::atomic<int> accepted{0};
+    std::atomic<int> executed{0};
+    std::atomic<bool> stop{false};
+    std::vector<std::jthread> submitters;
+    for (int t = 0; t < 4; ++t)
+      submitters.emplace_back([&] {
+        while (!stop.load()) {
+          try {
+            pool.detach_task([&executed] { executed.fetch_add(1); });
+            accepted.fetch_add(1);
+          } catch (const std::runtime_error&) {
+            return;
+          }
+        }
+      });
+    std::this_thread::sleep_for(std::chrono::microseconds{200});
+    pool.shutdown();
+    EXPECT_EQ(executed.load(), accepted.load());
+    stop = true;
+    submitters.clear();
+    EXPECT_EQ(executed.load(), accepted.load());
+  }
+}
+
+TEST(ThreadPoolTest, NamedWorkersUseIndexedNames) {
+  ThreadPool pool{1, "pool"};
+  auto name = pool.submit_task([] {
+#if defined(_WIN32)
+    return kitzoo::os::get_thread_name(GetCurrentThread());
+#else
+    return kitzoo::os::get_thread_name(pthread_self());
+#endif
+  });
+  EXPECT_EQ(name.get(), std::string{kitzoo::os::kThreadNamePrefix} + "pool-0");
 }
 
 template <typename Pool>
