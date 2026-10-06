@@ -503,6 +503,17 @@ TEST_F(LogTest, AsyncWorkerRejectsSelfWaitingFlushAndClose) {
   EXPECT_EQ(guarded.load(), 2);
 }
 
+TEST_F(LogTest, AsyncRecordsPrintTheSameThreadIdAsSynchronousOnes) {
+  logger_->set_pattern("%t");
+  logger_->log(Level::Info, "sync");
+  AsyncLogger async(logger_);
+  async.log(Level::Info, "async");
+  async.flush();
+  const auto records = sink_->snapshot();
+  ASSERT_EQ(records.size(), 2u);
+  EXPECT_EQ(records[0].formatted, records[1].formatted);
+}
+
 TEST_F(LogTest, AsyncRejectsMissingLoggerAndZeroCapacity) {
   EXPECT_THROW(AsyncLogger(nullptr), std::invalid_argument);
   EXPECT_THROW((AsyncLogger(logger_, {0})), std::invalid_argument);

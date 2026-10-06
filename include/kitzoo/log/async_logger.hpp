@@ -28,7 +28,8 @@ namespace kitzoo::log {
 struct LogRecord {
   Level level;
   std::chrono::system_clock::time_point timestamp;
-  std::thread::id thread_id;
+  // Operating-system thread id of the producer, as synchronous records print it.
+  std::size_t thread_id;
   std::source_location location;
   std::string_view logger_name;
   memory::String message;

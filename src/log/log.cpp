@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <spdlog/details/log_msg.h>
+#include <spdlog/details/os.h>
 #include <spdlog/pattern_formatter.h>
 #include <stdexcept>
 #include <string_view>
@@ -251,7 +252,7 @@ auto Logger::write_record(const LogRecord& record) -> void {
                                       record.location.function_name()};
   const auto message = spdlog::string_view_t{record.message.data(), record.message.size()};
   spdlog::details::log_msg msg{record.timestamp, loc, record.logger_name, to_spdlog(record.level), message};
-  msg.thread_id = std::hash<std::thread::id>{}(record.thread_id);
+  msg.thread_id = record.thread_id;
   static_cast<NativeLogger&>(*native_).write(msg);
 }
 
@@ -315,8 +316,12 @@ auto AsyncLogger::log(Level level, std::string_view message, const std::source_l
 }
 
 auto AsyncLogger::log_owned(Level level, memory::String message, const std::source_location& loc) -> void {
-  LogRecord record{
-      level, std::chrono::system_clock::now(), std::this_thread::get_id(), loc, logger_->name(), std::move(message)};
+  LogRecord record{level,
+                   std::chrono::system_clock::now(),
+                   spdlog::details::os::thread_id(),
+                   loc,
+                   logger_->name(),
+                   std::move(message)};
   std::unique_lock lock(mutex_);
   if (closed_) {
     ++rejected_;
