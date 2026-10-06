@@ -79,6 +79,7 @@ struct FileSinkOptions {
 
 class RollingFileSink;
 
+// Patterns use spdlog flags plus %*, the calling function's unqualified name.
 struct LoggerOptions {
   Level level{Level::Info};
   std::string pattern;
@@ -86,6 +87,17 @@ struct LoggerOptions {
   Level flush_level{Level::Off};
   ErrorHandler error_handler;
   std::optional<FileSinkOptions> file;
+};
+
+// Settings for init(), which configures default_logger() and the KZ_LOG macros.
+struct InitOptions {
+  Level level{Level::Info};
+  // Empty keeps the default pattern.
+  std::string pattern;
+  bool console{true};
+  // An empty path disables file output.
+  FileSinkOptions file;
+  Level flush_level{Level::Warn};
 };
 
 struct LogRecord;
@@ -135,6 +147,7 @@ public:
 
 private:
   friend class AsyncLogger;
+  friend auto init(const InitOptions& options) -> memory::SharedPtr<RollingFileSink>;
 
   auto write_record(const LogRecord& record) -> void;
 
@@ -156,13 +169,18 @@ private:
 // objects that may run after it.
 KZ_NODISCARD auto default_logger() -> Logger&;
 
+// Replaces the default logger's outputs and settings. Call at startup before
+// other threads log. Returns the file sink, or null without file output; if the
+// file cannot be opened it throws and leaves the configuration unchanged.
+auto init(const InitOptions& options) -> memory::SharedPtr<RollingFileSink>;
+
 } // namespace kitzoo::log
 
 #define KZ_LOG(level, ...)                                                                                             \
   do {                                                                                                                 \
     auto& kitzoo_log_instance = ::kitzoo::log::default_logger();                                                       \
     if (kitzoo_log_instance.enabled(::kitzoo::log::Level::level))                                                      \
-      kitzoo_log_instance.logf(::kitzoo::log::Level::level, std::source_location::current(), __VA_ARGS__);             \
+      kitzoo_log_instance.logf(::kitzoo::log::Level::level, ::std::source_location::current(), __VA_ARGS__);           \
   } while (false)
 #define KZ_LOG_TRACE(...) KZ_LOG(Trace, __VA_ARGS__)
 #define KZ_LOG_DEBUG(...) KZ_LOG(Debug, __VA_ARGS__)
@@ -176,7 +194,7 @@ KZ_NODISCARD auto default_logger() -> Logger&;
     if (!(expr)) {                                                                                                     \
       KZ_LOG_ERROR(__VA_ARGS__);                                                                                       \
       ::kitzoo::log::default_logger().flush();                                                                         \
-      std::abort();                                                                                                    \
+      ::std::abort();                                                                                                  \
     }                                                                                                                  \
   } while (false)
 #define KZ_CHECK(expr) KZ_CHECK_MSG(expr, "Check failed: {}", #expr)

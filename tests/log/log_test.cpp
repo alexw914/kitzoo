@@ -5,9 +5,12 @@
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/log.hpp>
+#include <kitzoo/os/filesys.hpp>
 
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
+#include <filesystem>
 #include <future>
 #include <gtest/gtest.h>
 #include <mutex>
@@ -16,6 +19,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 // Throws if a filtered call accidentally reaches formatting.
@@ -146,6 +150,126 @@ TEST_F(LogTest, FilteredFormattingIsSkippedSynchronouslyAndAsynchronously) {
   async.flush();
   EXPECT_TRUE(sink_->snapshot().empty());
   EXPECT_EQ(async.dropped_count(), 0u);
+}
+
+auto log_from_named_function(Logger& logger) -> void {
+  logger.log(Level::Info, "free");
+}
+
+struct Camera {
+  auto capture(Logger& logger) const -> int {
+    logger.log(Level::Info, "member");
+    return 0;
+  }
+};
+
+template <typename T>
+auto log_from_template(Logger& logger, std::vector<T>) -> void {
+  logger.log(Level::Info, "template");
+}
+
+TEST_F(LogTest, FunctionFlagPrintsCallerNameAndLambdasTheirEnclosingFunction) {
+  logger_->set_pattern("%*");
+  log_from_named_function(*logger_);
+  (void)Camera{}.capture(*logger_);
+  log_from_template(*logger_, std::vector<int>{});
+  [this] { logger_->log(Level::Info, "lambda"); }();
+  [this] { [this] { logger_->log(Level::Info, "nested"); }(); }();
+  [this](auto value) {
+    logger_->log(Level::Info, "generic");
+    return value;
+  }(1);
+  const auto records = sink_->snapshot();
+  ASSERT_EQ(records.size(), 6u);
+  EXPECT_EQ(records[0].formatted, "log_from_named_function\n");
+  EXPECT_EQ(records[1].formatted, "capture\n");
+  EXPECT_EQ(records[2].formatted, "log_from_template\n");
+  for (std::size_t i = 3; i < records.size(); ++i)
+    EXPECT_EQ(records[i].formatted, "TestBody\n") << i;
+}
+
+// Signatures as clang, GCC and MSVC spell them in std::source_location.
+TEST_F(LogTest, FunctionFlagParsesEachCompilersSignatures) {
+  logger_->set_pattern("%*");
+  const std::vector<std::pair<const char*, const char*>> cases{
+      {"int main()", "main"},
+      {"int app::Channel::run(int) const", "run"},
+      {"void (anonymous namespace)::file_logging()", "file_logging"},
+      {"void process(std::vector<T>) [T = int]", "process"},
+      {"std::vector<int> make()", "make"},
+      {"int Functor::operator()(int)", "operator()"},
+      {"auto outer()::(anonymous class)::operator()() const", "outer"},
+      {"auto app::Channel::run()::(anonymous class)::operator()() const", "run"},
+      {"auto outer()::(anonymous class)::operator()()::(anonymous class)::operator()() const", "outer"},
+      {"auto outer()::(anonymous class)::operator()(auto) const [x:auto = int]", "outer"},
+      {"auto app::Channel::(anonymous class)::operator()() const", "lambda"},
+      {"auto (anonymous class)::operator()() const", "lambda"},
+      {"auto (anonymous namespace)::(anonymous class)::operator()() const", "lambda"},
+      {"void {anonymous}::file_logging()", "file_logging"},
+      {"void process(std::vector<T>) [with T = int]", "process"},
+      {"{anonymous}::asynchronous_logging()::<lambda()>", "asynchronous_logging"},
+      {"void app::Channel::run()::<lambda()>", "run"},
+      {"outer()::<lambda()>::<lambda()>", "outer"},
+      {"outer()::<lambda(auto:1)> [with auto:1 = int]", "outer"},
+      {"app::Channel::<lambda()>", "lambda"},
+      {"{anonymous}::<lambda()>", "lambda"},
+      {"<lambda()>", "lambda"},
+      {"int __cdecl main(void)", "main"},
+      {"int __thiscall app::Channel::run(int) const", "run"},
+      {"void __cdecl `anonymous-namespace'::file_logging(void)", "file_logging"},
+      {"auto __cdecl outer::<lambda_1>::operator ()(void) const", "outer"},
+      {"auto __cdecl `anonymous-namespace'::asynchronous_logging::<lambda_1>::operator ()(void) const",
+       "asynchronous_logging"},
+      {"auto __cdecl `anonymous-namespace'::<lambda_1>::operator ()(void) const", "lambda"},
+      {"auto __cdecl <lambda_1>::operator ()(void) const", "lambda"},
+  };
+  for (const auto& [signature, expected] : cases) {
+    sink_->log(
+        spdlog::details::log_msg{spdlog::source_loc{"file.cpp", 1, signature}, "test", spdlog::level::info, "x"});
+    EXPECT_EQ(sink_->snapshot().back().formatted, std::string{expected} + "\n") << signature;
+  }
+}
+
+TEST(LogFormatTest, DefaultPatternShowsThreadLevelLetterAndCaller) {
+  auto sink = std::make_shared<RecordingSink>();
+  LoggerOptions options;
+  options.sinks = {sink};
+  Logger logger("format", options);
+  log_from_named_function(logger);
+  const auto formatted = sink->snapshot().at(0).formatted;
+  // [YYYY-mm-dd HH:MM:SS.mmm][<tid>][I][log_test.cpp:<line>,log_from_named_function] free
+  EXPECT_EQ(formatted[0], '[');
+  EXPECT_EQ(formatted[24], ']');
+  EXPECT_NE(formatted.find("][I][log_test.cpp:"), std::string::npos) << formatted;
+  EXPECT_NE(formatted.find(",log_from_named_function] free"), std::string::npos) << formatted;
+  EXPECT_EQ(formatted.find("[format]"), std::string::npos) << formatted;
+}
+
+// Callers need only the header: the macros qualify every name, so a caller's
+// own std, log or default_logger cannot capture them.
+namespace macro_caller {
+namespace std {
+struct source_location {};
+} // namespace std
+
+namespace log {} // namespace log
+
+inline auto default_logger() -> int {
+  return 0;
+}
+
+inline auto emit(int frame) -> void {
+  KZ_LOG_DEBUG("shadowed frame={}", frame);
+  KZ_CHECK(frame >= 0);
+}
+} // namespace macro_caller
+
+TEST(LogMacroTest, MacrosIgnoreShadowingNamesInCallerNamespace) {
+  auto& logger = default_logger();
+  logger.set_level(Level::Off);
+  macro_caller::emit(1);
+  logger.set_level(Level::Info);
+  EXPECT_EQ(macro_caller::default_logger(), 0);
 }
 
 TEST(LogMacroTest, DisabledMacroDoesNotEvaluateArguments) {
@@ -382,5 +506,83 @@ TEST_F(LogTest, AsyncWorkerRejectsSelfWaitingFlushAndClose) {
 TEST_F(LogTest, AsyncRejectsMissingLoggerAndZeroCapacity) {
   EXPECT_THROW(AsyncLogger(nullptr), std::invalid_argument);
   EXPECT_THROW((AsyncLogger(logger_, {0})), std::invalid_argument);
+}
+
+// init() reconfigures the process-wide default logger, so each case runs in a
+// child process.
+auto log_files(const std::filesystem::path& directory) -> std::vector<std::filesystem::path> {
+  std::vector<std::filesystem::path> files;
+  for (const auto& entry : std::filesystem::directory_iterator{directory})
+    if (entry.path().filename().string().starts_with("app_"))
+      files.push_back(entry.path());
+  return files;
+}
+
+auto read_all(const std::vector<std::filesystem::path>& files) -> std::string {
+  std::string text;
+  for (const auto& file : files)
+    text += kitzoo::os::read_file(file);
+  return text;
+}
+
+auto verify_init_routes_macros_to_rolling_files() -> void {
+  const auto directory = kitzoo::os::temp_directory();
+  const auto expired = directory / "app_20260101-000000_0.log";
+  kitzoo::os::write_file(expired, "expired");
+  std::filesystem::last_write_time(expired, std::filesystem::file_time_type::clock::now() - 2h);
+
+  auto sink =
+      init({.level = Level::Debug,
+            .pattern = "%v",
+            .console = false,
+            .file = {.path = directory / "app.log", .max_size_bytes = 64, .max_age = 1h, .cleanup_interval = 0ms}});
+  EXPECT_NE(sink, nullptr);
+  for (int frame = 0; frame < 20; ++frame)
+    KZ_LOG_DEBUG("frame={}", frame);
+  default_logger().flush();
+
+  EXPECT_FALSE(std::filesystem::exists(expired));
+  const auto files = log_files(directory);
+  EXPECT_GT(files.size(), 1u);
+  const auto text = read_all(files);
+  for (int frame = 0; frame < 20; ++frame)
+    EXPECT_NE(text.find(fmt::format("frame={}\n", frame)), std::string::npos) << frame;
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+auto verify_init_replaces_outputs() -> void {
+  const auto directory = kitzoo::os::temp_directory();
+  auto sink =
+      init({.pattern = "%v", .console = false, .file = {.path = directory / "app.log", .cleanup_interval = 0ms}});
+  KZ_LOG_INFO("to file");
+  default_logger().flush();
+  EXPECT_EQ(init({.console = false}), nullptr);
+  KZ_LOG_INFO("dropped");
+  default_logger().flush();
+  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "to file\n");
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+auto verify_failed_init_keeps_configuration() -> void {
+  const auto directory = kitzoo::os::temp_directory();
+  auto sink =
+      init({.pattern = "%v", .console = false, .file = {.path = directory / "app.log", .cleanup_interval = 0ms}});
+  EXPECT_THROW(init({.console = false, .file = {.path = directory / ".."}}), std::invalid_argument);
+  KZ_LOG_INFO("still logged");
+  default_logger().flush();
+  EXPECT_EQ(kitzoo::os::read_file(sink->current_file()), "still logged\n");
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+TEST(LogInitDeathTest, RoutesMacrosToRollingFilesAndCleansExpiredFiles) {
+  EXPECT_EXIT(verify_init_routes_macros_to_rolling_files(), ::testing::ExitedWithCode(0), "");
+}
+
+TEST(LogInitDeathTest, ReplacesOutputsOnEachCall) {
+  EXPECT_EXIT(verify_init_replaces_outputs(), ::testing::ExitedWithCode(0), "");
+}
+
+TEST(LogInitDeathTest, FailedInitKeepsConfiguration) {
+  EXPECT_EXIT(verify_failed_init_keeps_configuration(), ::testing::ExitedWithCode(0), "");
 }
 } // namespace

@@ -23,7 +23,6 @@ auto synchronous_logging() -> void {
   KZ_LOG_INFO("application started: version={}", "0.1");
 
   LoggerOptions options;
-  options.pattern = "[%n][%l] %v";
   options.sinks = {std::make_shared<ConsoleSink>()};
   options.flush_level = Level::Error;
   Logger logger("capture", options);
@@ -50,32 +49,28 @@ auto callback_and_historical_logging() -> void {
   logger.logf(Level::Info, std::source_location::current(), "inference result: objects={}", 3);
 }
 
-// File logging: switch to new files by size and periodically clean closed files.
-auto rolling_file_logging() -> void {
+// File logging for the KZ_LOG macros: init() configures the default logger in
+// one call, starting a new file beyond a size and deleting files past an age.
+auto file_logging() -> void {
   const auto directory = kitzoo::os::temp_directory();
-  std::filesystem::path latest;
-  {
-    Logger logger("file");
-    logger.set_pattern("%v");
-    FileSinkOptions file;
-    file.path = directory / "application.log";
-    file.max_size_bytes = 256;                     // Start a new file beyond 256 bytes.
-    file.max_age = std::chrono::days{7};           // Delete files older than a week...
-    file.cleanup_interval = std::chrono::hours{1}; // ...checking every hour.
-    auto sink = logger.add_file_sink(file);
-    for (int frame = 0; frame < 20; ++frame)
-      logger.logf(Level::Info, std::source_location::current(), "frame={} status=processed", frame);
-    logger.flush(); // Flush is not an fsync durability guarantee.
-    latest = sink->current_file();
-    std::cout << "manual cleanup removed " << sink->cleanup() << " files\n";
-  } // Stops cleanup and releases file handles before removing the directory.
-  std::cout << "latest log file: " << latest.filename().string() << '\n' << kitzoo::os::read_file(latest);
+  auto file = init({
+      .level = Level::Debug,
+      .file = {.path = directory / "application.log",
+               .max_size_bytes = 256,                      // Start a new file beyond 256 bytes.
+               .max_age = std::chrono::days{7},            // Delete files older than a week...
+               .cleanup_interval = std::chrono::hours{1}}, // ...checking every hour.
+  });
+  for (int frame = 0; frame < 20; ++frame)
+    KZ_LOG_DEBUG("frame={} status=processed", frame);
+  default_logger().flush(); // Flush is not an fsync durability guarantee.
+  std::cout << "latest log file: " << file->current_file().filename().string() << '\n';
+  init({}); // Back to console only; the file closes once the last owner releases it.
+  file.reset();
   kitzoo::os::remove_path(directory, true);
 }
 
 auto asynchronous_logging() -> void {
   LoggerOptions options;
-  options.pattern = "[%n][%l] %v";
   options.sinks = {std::make_shared<ConsoleSink>()};
   // Reuse memory's factory; logging-owned strings and queue use MiAllocator too.
   auto logger = kitzoo::memory::make_shared<Logger>("workers", options);
@@ -100,6 +95,6 @@ auto asynchronous_logging() -> void {
 auto main() -> int {
   synchronous_logging();
   callback_and_historical_logging();
-  rolling_file_logging();
+  file_logging();
   asynchronous_logging();
 }
