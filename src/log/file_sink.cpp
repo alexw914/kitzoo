@@ -12,6 +12,7 @@
 
 #include <fstream>
 #include <limits>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 
@@ -49,6 +50,8 @@ struct RollingFileSink::Impl {
   std::ofstream output;
   std::size_t size{0};
   std::string cleanup_error;
+  // Serializes cleanups without blocking writers, which use the sink mutex.
+  std::mutex cleanup_mutex;
   // Declared last so it stops before the file closes.
   std::optional<time::Timer> cleaner;
 };
@@ -67,14 +70,18 @@ RollingFileSink::RollingFileSink(const FileSinkOptions& options) : impl_(memory:
   impl_->stem = options.path.stem().string();
   impl_->extension = options.path.extension().string();
   open_file();
-  cleanup_files();
+  cleanup();
   if (options.cleanup_interval != std::chrono::milliseconds::zero()) {
     impl_->cleaner.emplace(options.cleanup_interval);
     impl_->cleaner->start([this] { cleanup(); });
   }
 }
 
-RollingFileSink::~RollingFileSink() = default;
+RollingFileSink::~RollingFileSink() {
+  // Destroying impl_ nulls the pointer before ~Impl joins the timer, so a
+  // running cleanup would dereference null; stop it while impl_ is reachable.
+  impl_->cleaner.reset();
+}
 
 auto RollingFileSink::open_file() -> void {
   const auto stamp = local_stamp();
@@ -117,8 +124,15 @@ auto RollingFileSink::current_file() -> std::filesystem::path {
   return impl_->current;
 }
 
+// Scans the directory without the sink mutex so logging continues meanwhile.
 // Filesystem errors skip the affected file and are reported through cleanup_error().
-auto RollingFileSink::cleanup_files() -> std::size_t {
+auto RollingFileSink::cleanup() -> std::size_t {
+  std::lock_guard scan(impl_->cleanup_mutex);
+  std::filesystem::path current;
+  {
+    std::lock_guard lock(mutex_);
+    current = impl_->current;
+  }
   std::error_code first_error;
   auto record = [&first_error](const std::error_code& error) -> bool {
     if (error && !first_error)
@@ -127,13 +141,13 @@ auto RollingFileSink::cleanup_files() -> std::size_t {
   };
   std::size_t removed = 0;
   if (impl_->options.max_age != std::chrono::seconds::zero()) {
+    // A file rolled over during the scan is newer than the cutoff, so it stays.
     const auto cutoff = std::filesystem::file_time_type::clock::now() - impl_->options.max_age;
     std::error_code error;
     for (std::filesystem::directory_iterator it{impl_->directory, error}, end; record(error) && it != end;
          it.increment(error)) {
       const auto& entry = *it;
-      if (entry.path() == impl_->current ||
-          !owned_filename(entry.path().filename().string(), impl_->stem, impl_->extension) ||
+      if (entry.path() == current || !owned_filename(entry.path().filename().string(), impl_->stem, impl_->extension) ||
           !std::filesystem::is_regular_file(entry.symlink_status(error)) || !record(error))
         continue;
       const auto modified = entry.last_write_time(error);
@@ -145,13 +159,9 @@ auto RollingFileSink::cleanup_files() -> std::size_t {
       record(remove_error);
     }
   }
+  std::lock_guard lock(mutex_);
   impl_->cleanup_error = first_error ? first_error.message() : std::string{};
   return removed;
-}
-
-auto RollingFileSink::cleanup() -> std::size_t {
-  std::lock_guard lock(mutex_);
-  return cleanup_files();
 }
 
 auto RollingFileSink::cleanup_error() -> std::string {

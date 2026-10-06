@@ -10,6 +10,7 @@
 #include <kitzoo/time/time.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <gtest/gtest.h>
@@ -165,6 +166,36 @@ TEST(FileSinkTest, AgeCleanupPreservesActiveAndUnrelatedFiles) {
   EXPECT_TRUE(sink->cleanup_error().empty());
 }
 
+// Scans run outside the sink mutex; concurrent cleanups still remove each file once.
+TEST(FileSinkTest, ConcurrentCleanupsWhileLoggingRemoveEachFileOnce) {
+  constexpr int kExpired = 200;
+  TemporaryDirectory directory;
+  Logger logger("concurrent-cleanup");
+  logger.set_pattern("%v");
+  auto sink = logger.add_file_sink({directory.path / "application.log", 1024 * 1024, 1h, 0ms});
+  const auto old = std::filesystem::file_time_type::clock::now() - 2h;
+  for (int i = 0; i < kExpired; ++i) {
+    const auto path = directory.path / fmt::format("application_20260101-000000_{}.log", i);
+    kitzoo::os::write_file(path, "expired");
+    std::filesystem::last_write_time(path, old);
+  }
+
+  std::atomic<std::size_t> removed{0};
+  {
+    std::vector<std::jthread> threads;
+    threads.emplace_back([&logger] {
+      for (int i = 0; i < 1000; ++i)
+        logger.log(Level::Info, "record");
+    });
+    for (int t = 0; t < 4; ++t)
+      threads.emplace_back([&] { removed += sink->cleanup(); });
+  }
+  logger.flush();
+  EXPECT_EQ(removed.load(), static_cast<std::size_t>(kExpired));
+  EXPECT_TRUE(sink->cleanup_error().empty());
+  EXPECT_TRUE(std::filesystem::exists(sink->current_file()));
+}
+
 TEST(FileSinkTest, CleanupDoesNotRemoveSymlinksOrTheirTargets) {
   TemporaryDirectory directory;
   Logger logger("links");
@@ -207,6 +238,14 @@ TEST(FileSinkTest, DestructionInterruptsLongCleanupInterval) {
     RollingFileSink sink({directory.path / "application.log", 64, 0s, 1h});
   }
   EXPECT_LT(std::chrono::steady_clock::now() - started, 5s);
+}
+
+TEST(FileSinkTest, DestructionDuringBackgroundCleanupIsSafe) {
+  TemporaryDirectory directory;
+  for (int i = 0; i < 200; ++i) {
+    RollingFileSink sink{{directory.path / "application.log", 1024, 1h, 1ms}};
+    std::this_thread::sleep_for(std::chrono::microseconds{i % 3 * 500});
+  }
 }
 
 TEST(FileSinkTest, AsyncFlushPersistsEveryConcurrentProducerRecord) {

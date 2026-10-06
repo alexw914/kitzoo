@@ -47,8 +47,6 @@ private:
 
   auto open_file() -> void;
 
-  auto cleanup_files() -> std::size_t;
-
   struct Impl;
   memory::UniquePtr<Impl> impl_;
 };
