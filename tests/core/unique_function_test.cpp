@@ -6,9 +6,12 @@
 
 #include <kitzoo/core/unique_function.hpp>
 
+#include <array>
+#include <future>
 #include <gtest/gtest.h>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 using namespace kitzoo::core;
 
@@ -37,9 +40,11 @@ TEST(UniqueFunctionTest, MoveOnlyCapture) {
 
 TEST(UniqueFunctionTest, LargeCallableHeapAllocates) {
   // Capture more than the 24-byte SBO buffer.
-  std::string big(64, 'x');
-  unique_function<std::size_t()> f = [big] { return big.size(); };
-  EXPECT_EQ(f(), 64u);
+  std::array<std::size_t, 16> big{};
+  big.back() = 64;
+  unique_function<std::size_t()> f = [big] { return big.back(); };
+  auto moved = std::move(f);
+  EXPECT_EQ(moved(), 64u);
 }
 
 TEST(UniqueFunctionTest, MoveTransfersOwnership) {
@@ -116,4 +121,44 @@ TEST(UniqueFunctionTest, ThrowingMoveCallableIsNotMovedWithWrapper) {
   auto second = std::move(first);
   EXPECT_EQ(moves, 0);
   EXPECT_EQ(second(), 7);
+}
+
+TEST(UniqueFunctionTest, VoidSignatureDiscardsResult) {
+  int calls = 0;
+  unique_function<void()> f = [&calls] { return ++calls; };
+  f();
+  EXPECT_EQ(calls, 1);
+}
+
+TEST(UniqueFunctionTest, NullFunctionAndMemberPointersAreEmpty) {
+  struct Counter {
+    auto value() const -> int { return 3; }
+  };
+
+  int (*function)() = nullptr;
+  auto (Counter::*member)() const->int = nullptr;
+  EXPECT_FALSE(static_cast<bool>(unique_function<int()>{function}));
+  EXPECT_FALSE(static_cast<bool>(unique_function<int(const Counter&)>{member}));
+
+  unique_function<int(const Counter&)> bound{&Counter::value};
+  ASSERT_TRUE(static_cast<bool>(bound));
+  EXPECT_EQ(bound(Counter{}), 3);
+}
+
+TEST(UniqueFunctionTest, RejectsCallablesNotInvocableAsLvalue) {
+  struct RvalueOnly {
+    auto operator()() && -> int { return 1; }
+  };
+
+  EXPECT_FALSE((std::is_constructible_v<unique_function<int()>, RvalueOnly>));
+  EXPECT_FALSE((std::is_constructible_v<unique_function<int()>, int>));
+}
+
+TEST(UniqueFunctionTest, PackagedTaskSurvivesMoves) {
+  std::packaged_task<int()> task{[] { return 5; }};
+  auto result = task.get_future();
+  unique_function<void()> f = [t = std::move(task)]() mutable { t(); };
+  auto moved = std::move(f);
+  moved();
+  EXPECT_EQ(result.get(), 5);
 }

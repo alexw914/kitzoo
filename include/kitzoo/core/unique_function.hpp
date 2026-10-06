@@ -28,7 +28,7 @@ class unique_function<R(Args...)> {
 
   struct VTable {
     R (*invoke)(void* obj, Args&&... args);
-    void (*move_to)(void* from, void* to) noexcept;
+    void* (*move_to)(void* from, void* to) noexcept;
     void (*destroy)(void* obj) noexcept;
   };
 
@@ -37,13 +37,17 @@ public:
 
   unique_function(std::nullptr_t) noexcept {}
 
+  // A null function or member pointer produces an empty wrapper.
   template <typename F>
-    requires(!std::is_same_v<std::decay_t<F>, unique_function> && std::is_invocable_r_v<R, F, Args...>)
+    requires(!std::is_same_v<std::decay_t<F>, unique_function> && std::is_invocable_r_v<R, std::decay_t<F>&, Args...>)
   unique_function(F&& f) {
     using T = std::decay_t<F>;
+    if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
+      if (f == nullptr)
+        return;
+    }
     if constexpr (sizeof(T) <= kSboSize && alignof(T) <= alignof(void*) && std::is_nothrow_move_constructible_v<T>) {
-      obj_ = &storage_;
-      new (obj_) T(std::forward<F>(f));
+      obj_ = ::new (static_cast<void*>(storage_)) T(std::forward<F>(f));
       vtable_ = &vtable_for<T, true>();
     } else {
       obj_ = new T(std::forward<F>(f));
@@ -87,8 +91,7 @@ private:
       return;
     vtable_ = other.vtable_;
     if (other.in_sbo()) {
-      obj_ = &storage_;
-      vtable_->move_to(other.obj_, obj_);
+      obj_ = vtable_->move_to(other.obj_, storage_);
     } else {
       obj_ = other.obj_;
     }
@@ -96,18 +99,26 @@ private:
     other.obj_ = nullptr;
   }
 
-  KZ_NODISCARD auto in_sbo() const noexcept -> bool { return obj_ == &storage_; }
+  KZ_NODISCARD auto in_sbo() const noexcept -> bool { return obj_ == static_cast<const void*>(storage_); }
 
   template <typename T, bool InSbo>
   static auto vtable_for() -> const VTable& {
     static const VTable table{
 
-        [](void* obj, Args&&... args) -> R { return std::invoke(*static_cast<T*>(obj), std::forward<Args>(args)...); },
+        [](void* obj, Args&&... args) -> R {
+          if constexpr (std::is_void_v<R>)
+            std::invoke(*static_cast<T*>(obj), std::forward<Args>(args)...);
+          else
+            return std::invoke(*static_cast<T*>(obj), std::forward<Args>(args)...);
+        },
 
-        [](KZ_MAYBE_UNUSED void* from, KZ_MAYBE_UNUSED void* to) noexcept {
+        [](KZ_MAYBE_UNUSED void* from, KZ_MAYBE_UNUSED void* to) noexcept -> void* {
           if constexpr (InSbo) {
-            new (to) T(std::move(*static_cast<T*>(from)));
+            auto* moved = ::new (to) T(std::move(*static_cast<T*>(from)));
             static_cast<T*>(from)->~T();
+            return moved;
+          } else {
+            return from;
           }
         },
 
