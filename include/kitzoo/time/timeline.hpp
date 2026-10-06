@@ -126,11 +126,13 @@ private:
   friend class core::Singleton<Time>;
   Time();
 
-  auto selected_timeline() -> memory::SharedPtr<Timeline>;
+  auto selected_timeline() -> Timeline&;
 
   std::mutex mutex_;
-  bool initialized_ = false;
   memory::SharedPtr<Timeline> timeline_;
+  // Set once on selection; timeline_ never changes afterwards, so queries read
+  // it without the mutex.
+  std::atomic<Timeline*> selected_{nullptr};
 };
 
 } // namespace kitzoo::time

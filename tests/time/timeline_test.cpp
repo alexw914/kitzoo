@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <thread>
+#include <vector>
 
 namespace {
 using namespace kitzoo::time;
@@ -215,6 +216,28 @@ auto verify_default_selection() -> void {
   EXPECT_GE(service.timestamp(), before);
   EXPECT_FALSE(service.init(std::make_shared<kitzoo::time::FeederTimeline>()));
   std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+auto verify_concurrent_default_selection() -> void {
+  std::atomic<int> system{0};
+  {
+    std::vector<std::jthread> threads;
+    for (int t = 0; t < 8; ++t)
+      threads.emplace_back([&system] {
+        for (int i = 0; i < 1000; ++i) {
+          EXPECT_GT(Time::instance().timestamp(), 0ns);
+          if (Time::instance().timeline_type() == TimelineType::System)
+            ++system;
+        }
+      });
+  }
+  EXPECT_EQ(system.load(), 8000);
+  EXPECT_FALSE(Time::instance().init(std::make_shared<FeederTimeline>()));
+  std::exit(::testing::Test::HasFailure() ? 1 : 0);
+}
+
+TEST(TimelineDeathTest, ConcurrentFirstQueriesSelectOneTimeline) {
+  EXPECT_EXIT(verify_concurrent_default_selection(), ::testing::ExitedWithCode(0), "");
 }
 
 TEST(TimelineDeathTest, ExplicitSelectionIsOneShotAndCallbackMayQueryService) {

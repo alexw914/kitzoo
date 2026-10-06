@@ -138,33 +138,36 @@ auto Time::init(std::shared_ptr<Timeline> timeline) -> bool {
   if (!timeline)
     return false;
   std::lock_guard lock(mutex_);
-  if (initialized_)
+  if (selected_.load(std::memory_order_relaxed))
     return false;
   timeline_ = std::move(timeline);
-  initialized_ = true;
+  selected_.store(timeline_.get(), std::memory_order_release);
   return true;
 }
 
-auto Time::selected_timeline() -> memory::SharedPtr<Timeline> {
+auto Time::selected_timeline() -> Timeline& {
+  if (auto* selected = selected_.load(std::memory_order_acquire))
+    return *selected;
   std::lock_guard lock(mutex_);
-  initialized_ = true;
-  return timeline_;
+  if (!selected_.load(std::memory_order_relaxed))
+    selected_.store(timeline_.get(), std::memory_order_release);
+  return *timeline_;
 }
 
 auto Time::timestamp(std::string_view key) -> TimeDuration {
-  return selected_timeline()->timestamp(key);
+  return selected_timeline().timestamp(key);
 }
 
 auto Time::is_valid() -> bool {
-  return selected_timeline()->is_valid();
+  return selected_timeline().is_valid();
 }
 
 auto Time::timeline_type() -> TimelineType {
-  return selected_timeline()->type();
+  return selected_timeline().type();
 }
 
 auto Time::sleep_for(TimeDuration duration, TimeDuration timeout, std::stop_token stop) -> bool {
-  return selected_timeline()->sleep_for(duration, timeout, stop);
+  return selected_timeline().sleep_for(duration, timeout, stop);
 }
 
 } // namespace kitzoo::time
