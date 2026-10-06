@@ -290,10 +290,14 @@ TEST(ThreadPoolTest, ShutdownRacingSubmissionsRunsEveryAcceptedTask) {
       });
     std::this_thread::sleep_for(std::chrono::microseconds{200});
     pool.shutdown();
-    EXPECT_EQ(executed.load(), accepted.load());
+    // Workers are joined, so nothing runs after this point. A submitter may
+    // still be about to count a task it already enqueued, so compare after
+    // the submitters finish.
+    const int executed_at_shutdown = executed.load();
     stop = true;
     submitters.clear();
-    EXPECT_EQ(executed.load(), accepted.load());
+    EXPECT_EQ(executed_at_shutdown, accepted.load());
+    EXPECT_EQ(executed.load(), executed_at_shutdown);
   }
 }
 
