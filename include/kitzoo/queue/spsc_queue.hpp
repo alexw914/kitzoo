@@ -2,7 +2,7 @@
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/queue/spsc_queue.hpp
 // Description: Declares a bounded single-producer, single-consumer ring queue
-//              with acquire-release synchronization.
+//              with acquire-release synchronization and cached indices.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_QUEUE_SPSC_QUEUE_HPP
@@ -10,6 +10,7 @@
 
 #include <kitzoo/core/macro.hpp>
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <memory>
@@ -30,11 +31,15 @@ class SPSCQueue {
 
   static constexpr std::size_t kMask = Capacity - 1;
 
+  // Each side owns one cache line holding its index and a cached copy of the
+  // other side's index, so the shared line is only read when the cache is stale.
   alignas(kCacheLineSize) std::atomic<std::size_t> write_idx_{0};
+  std::size_t cached_read_idx_{0};
 
   alignas(kCacheLineSize) std::atomic<std::size_t> read_idx_{0};
+  std::size_t cached_write_idx_{0};
 
-  alignas(T) std::byte buffer_[Capacity * sizeof(T)];
+  alignas(std::max(kCacheLineSize, alignof(T))) std::byte buffer_[Capacity * sizeof(T)];
 
   auto slot(std::size_t idx) noexcept -> T* {
     return std::launder(reinterpret_cast<T*>(buffer_ + (idx & kMask) * sizeof(T)));
@@ -59,9 +64,11 @@ public:
 
   auto push(T value) noexcept -> bool {
     const auto w = write_idx_.load(std::memory_order_relaxed);
-    const auto r = read_idx_.load(std::memory_order_acquire);
-    if (w - r == Capacity)
-      return false;
+    if (w - cached_read_idx_ == Capacity) {
+      cached_read_idx_ = read_idx_.load(std::memory_order_acquire);
+      if (w - cached_read_idx_ == Capacity)
+        return false;
+    }
     std::construct_at(slot(w), std::move(value));
     write_idx_.store(w + 1, std::memory_order_release);
     return true;
@@ -69,9 +76,11 @@ public:
 
   auto pop() noexcept(std::is_nothrow_move_constructible_v<T>) -> std::optional<T> {
     const auto r = read_idx_.load(std::memory_order_relaxed);
-    const auto w = write_idx_.load(std::memory_order_acquire);
-    if (r == w)
-      return std::nullopt;
+    if (r == cached_write_idx_) {
+      cached_write_idx_ = write_idx_.load(std::memory_order_acquire);
+      if (r == cached_write_idx_)
+        return std::nullopt;
+    }
     std::optional<T> value{std::move(*slot(r))};
     std::destroy_at(slot(r));
     read_idx_.store(r + 1, std::memory_order_release);

@@ -9,6 +9,7 @@
 #include <kitzoo/log/logger.hpp>
 
 #include <benchmark/benchmark.h>
+#include <memory>
 #include <spdlog/sinks/base_sink.h>
 
 using namespace kitzoo::log;
@@ -56,3 +57,19 @@ static void BM_AsyncLogProducerOverhead(benchmark::State& state) {
 }
 
 BENCHMARK(BM_AsyncLogProducerOverhead);
+
+static void BM_AsyncLogContendedProducers(benchmark::State& state) {
+  static std::unique_ptr<AsyncLogger> async;
+  if (state.thread_index() == 0) {
+    auto logger = std::make_shared<Logger>("bench-async-mp");
+    logger->add_sink(std::make_shared<NullSink>());
+    async = std::make_unique<AsyncLogger>(logger);
+  }
+  for (auto _ : state) {
+    async->log(kitzoo::log::Level::Info, "benchmark message");
+  }
+  if (state.thread_index() == 0)
+    async.reset();
+}
+
+BENCHMARK(BM_AsyncLogContendedProducers)->ThreadRange(1, 8)->UseRealTime();

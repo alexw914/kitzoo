@@ -1,4 +1,5 @@
 kitzoo_add_benchmark(thread_pool SOURCES thread_pool_bench.cpp DEPENDS thread)
+kitzoo_add_benchmark(spinlock SOURCES spinlock_bench.cpp DEPENDS thread)
 
 if(KITZOO_BUILD_COMPARE_BENCHMARKS)
     include(dependencies/thread_pool)

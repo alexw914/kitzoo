@@ -15,7 +15,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
-#include <deque>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -41,6 +40,7 @@ enum class OverflowPolicy {
 };
 
 struct AsyncLoggerOptions {
+  // Records waiting to be taken by the worker; it may hold one more batch while writing.
   std::size_t capacity{8192};
   OverflowPolicy overflow_policy{OverflowPolicy::Block};
 };
@@ -93,7 +93,10 @@ private:
   std::mutex close_mutex_;
   std::condition_variable available_;
   std::condition_variable space_;
-  memory::Deque<Work> queue_;
+  // Producers append to queue_; the worker swaps it with batch_ and drains the
+  // whole batch without the lock, reusing both buffers' storage.
+  memory::Vector<Work> queue_;
+  memory::Vector<Work> batch_;
   bool closed_{false};
   std::atomic<std::size_t> rejected_{0};
   std::atomic<std::size_t> dropped_{0};

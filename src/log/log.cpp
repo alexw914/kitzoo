@@ -210,22 +210,23 @@ auto AsyncLogger::flush() -> void {
 auto AsyncLogger::worker_loop() -> void {
   active_worker = this;
   for (;;) {
-    Work work;
     {
       std::unique_lock lock(mutex_);
       available_.wait(lock, [this] { return closed_ || !queue_.empty(); });
       if (queue_.empty())
         break;
-      work = std::move(queue_.front());
-      queue_.pop_front();
+      queue_.swap(batch_);
     }
     space_.notify_all();
-    if (work.barrier) {
-      logger_->flush();
-      work.barrier->set_value();
-    } else {
-      logger_->write_record(work.record);
+    for (auto& work : batch_) {
+      if (work.barrier) {
+        logger_->flush();
+        work.barrier->set_value();
+      } else {
+        logger_->write_record(work.record);
+      }
     }
+    batch_.clear();
   }
   active_worker = nullptr;
 }

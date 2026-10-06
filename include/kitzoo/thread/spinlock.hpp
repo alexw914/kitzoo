@@ -14,13 +14,55 @@
 #include <cstdint>
 #include <thread>
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
+
 namespace kitzoo::thread {
+
+namespace detail {
+
+KZ_ALWAYS_INLINE auto cpu_relax() noexcept -> void {
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86))
+  _mm_pause();
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+  __yield();
+#elif defined(__x86_64__) || defined(__i386__)
+  __builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+  __asm__ __volatile__("yield");
+#endif
+}
+
+// Doubles the pause count per round, then yields once the spin budget is spent.
+class Backoff {
+public:
+  auto pause() noexcept -> void {
+    if (spins_ > kMaxSpins) {
+      std::this_thread::yield();
+      return;
+    }
+    for (std::uint32_t i = 0; i < spins_; ++i)
+      cpu_relax();
+    spins_ *= 2;
+  }
+
+private:
+  static constexpr std::uint32_t kMaxSpins = 64;
+  std::uint32_t spins_{1};
+};
+
+} // namespace detail
 
 class SpinLock {
 public:
+  // Waiters spin on a load so the cache line stays shared until the lock is released.
   auto lock() noexcept -> void {
-    while (flag_.test_and_set(std::memory_order_acquire))
-      std::this_thread::yield();
+    detail::Backoff backoff;
+    while (flag_.test_and_set(std::memory_order_acquire)) {
+      while (flag_.test(std::memory_order_relaxed))
+        backoff.pause();
+    }
   }
 
   KZ_NODISCARD auto try_lock() noexcept -> bool { return !flag_.test_and_set(std::memory_order_acquire); }
@@ -34,11 +76,15 @@ private:
 class RWSpinLock {
 public:
   auto lock() noexcept -> void {
-    while (writer_gate_.test_and_set(std::memory_order_acquire))
-      std::this_thread::yield();
+    detail::Backoff backoff;
+    while (writer_gate_.test_and_set(std::memory_order_acquire)) {
+      while (writer_gate_.test(std::memory_order_relaxed))
+        backoff.pause();
+    }
     state_.fetch_or(kWriterPending, std::memory_order_acq_rel);
+    detail::Backoff drain;
     while ((state_.load(std::memory_order_acquire) & kReaderMask) != 0)
-      std::this_thread::yield();
+      drain.pause();
     state_.store(kWriterActive, std::memory_order_release);
   }
 
@@ -58,13 +104,14 @@ public:
   }
 
   auto lock_shared() noexcept -> void {
+    detail::Backoff backoff;
     auto state = state_.load(std::memory_order_relaxed);
     for (;;) {
       if ((state & kWriterMask) == 0 && (state & kReaderMask) != kReaderMask &&
           state_.compare_exchange_weak(state, state + 1, std::memory_order_acquire, std::memory_order_relaxed))
         return;
       if ((state & kWriterMask) != 0 || (state & kReaderMask) == kReaderMask) {
-        std::this_thread::yield();
+        backoff.pause();
         state = state_.load(std::memory_order_relaxed);
       }
     }
