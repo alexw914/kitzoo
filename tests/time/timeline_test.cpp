@@ -181,6 +181,41 @@ TEST(TimelineTest, SystemSleepWaitsForRemainingGapInsteadOfPolling) {
   EXPECT_LE(timeline.checks.load(), 10);
 }
 
+TEST(TimelineTest, OffsetOverSystemSleepsForRemainingGapInsteadOfPolling) {
+  auto source = std::make_shared<CountingSystemTimeline>();
+  OffsetTimeline timeline{source, 5s};
+  const auto started = std::chrono::steady_clock::now();
+  EXPECT_TRUE(timeline.sleep_for(200ms));
+  EXPECT_GE(std::chrono::steady_clock::now() - started, 200ms);
+  EXPECT_LE(source->checks.load(), 10);
+}
+
+TEST(TimelineTest, FeederWaitWakesWhenFedTimestampReachesTarget) {
+  FeederTimeline feeder;
+  feeder.feed(0ns);
+  std::atomic<bool> done{false};
+  std::jthread waiter([&] {
+    EXPECT_TRUE(feeder.sleep_until(100ns));
+    done = true;
+  });
+  std::this_thread::sleep_for(20ms);
+  feeder.feed(50ns);
+  std::this_thread::sleep_for(20ms);
+  EXPECT_FALSE(done.load());
+  feeder.feed(100ns);
+  waiter.join();
+  EXPECT_TRUE(done.load());
+}
+
+TEST(TimelineTest, OffsetWaitForwardsToFeederSource) {
+  auto feeder = std::make_shared<FeederTimeline>();
+  feeder->feed(0ns);
+  OffsetTimeline timeline{feeder, 10ns};
+  std::jthread waiter([&] { EXPECT_TRUE(timeline.sleep_until(110ns, 5s)); });
+  std::this_thread::sleep_for(20ms);
+  feeder->feed(100ns);
+}
+
 TEST(TimelineTest, RejectsNegativeTimeoutAndRelativeTargetOverflow) {
   FeederTimeline feeder;
   feeder.feed(TimeDuration::max());

@@ -19,28 +19,36 @@ auto Timeline::sleep_until(TimeDuration target, TimeDuration timeout, std::stop_
   if (timeout < TimeDuration::zero())
     throw std::invalid_argument("Timeline timeout must not be negative");
   Stopwatch watch;
-  std::mutex mutex;
-  std::condition_variable_any wake;
-  std::unique_lock lock(mutex);
   while (!stop.stop_requested()) {
     if (!is_valid())
       return false;
     const auto now = timestamp();
     if (now >= target)
       return true;
-    // The system clock advances in real time, so it sleeps for the remaining gap,
-    // capped to notice clock adjustments; other timelines may move at any rate.
-    auto delay = type() == TimelineType::System ? std::min<TimeDuration>(target - now, std::chrono::milliseconds{100})
-                                                : TimeDuration{std::chrono::milliseconds{1}};
+    // Unlimited waits still return periodically to recheck validity.
+    TimeDuration limit = std::chrono::hours{1};
     if (timeout != TimeDuration::zero()) {
-      const auto elapsed = watch.elapsed();
+      const auto elapsed = std::chrono::duration_cast<TimeDuration>(watch.elapsed());
       if (elapsed >= timeout)
         return false;
-      delay = std::min(delay, timeout - std::chrono::duration_cast<TimeDuration>(elapsed));
+      limit = timeout - elapsed;
     }
-    wake.wait_for(lock, stop, delay, []() -> bool { return false; });
+    wait_for_progress(now, target, limit, stop);
   }
   return false;
+}
+
+auto Timeline::wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
+    -> void {
+  // The system clock advances in real time, so it sleeps for the remaining gap,
+  // capped to notice clock adjustments; other timelines may move at any rate.
+  auto delay = type() == TimelineType::System ? std::min<TimeDuration>(target - now, std::chrono::milliseconds{100})
+                                              : TimeDuration{std::chrono::milliseconds{1}};
+  delay = std::min(delay, limit);
+  std::mutex mutex;
+  std::condition_variable_any wake;
+  std::unique_lock lock(mutex);
+  wake.wait_for(lock, stop, delay, []() -> bool { return false; });
 }
 
 auto Timeline::sleep_for(TimeDuration duration, TimeDuration timeout, std::stop_token stop) const -> bool {
@@ -69,9 +77,18 @@ auto SystemTimeline::type() const noexcept -> TimelineType {
 }
 
 auto FeederTimeline::feed(TimeDuration timestamp) -> void {
-  std::lock_guard lock(mutex_);
-  timestamp_ = timestamp;
-  valid_ = true;
+  {
+    std::lock_guard lock(mutex_);
+    timestamp_ = timestamp;
+    valid_ = true;
+  }
+  fed_.notify_all();
+}
+
+auto FeederTimeline::wait_for_progress(TimeDuration, TimeDuration target, TimeDuration limit,
+                                       std::stop_token stop) const -> void {
+  std::unique_lock lock(mutex_);
+  fed_.wait_for(lock, stop, limit, [this, target]() -> bool { return timestamp_ >= target; });
 }
 
 auto FeederTimeline::timestamp(std::string_view) const -> TimeDuration {
@@ -124,6 +141,24 @@ auto OffsetTimeline::timestamp(std::string_view key) const -> TimeDuration {
       (offset < 0 && current < std::numeric_limits<TimeDuration::rep>::min() - offset))
     throw std::overflow_error("Timeline clock correction overflow");
   return TimeDuration{current + offset};
+}
+
+auto OffsetTimeline::wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit,
+                                       std::stop_token stop) const -> void {
+  const auto offset = offset_.load(std::memory_order_relaxed);
+  // Saturates instead of overflowing; sleep_until rechecks the real timestamp.
+  const auto shift = [offset](TimeDuration value) -> TimeDuration {
+    constexpr auto max = std::numeric_limits<TimeDuration::rep>::max();
+    constexpr auto min = std::numeric_limits<TimeDuration::rep>::min();
+    if (offset < 0 && value.count() > max + offset)
+      return TimeDuration{max};
+    if (offset > 0 && value.count() < min + offset)
+      return TimeDuration{min};
+    return TimeDuration{value.count() - offset};
+  };
+  // A bounded wait notices offset changes made while waiting.
+  source_->wait_for_progress(shift(now), shift(target), std::min<TimeDuration>(limit, std::chrono::milliseconds{100}),
+                             stop);
 }
 
 auto OffsetTimeline::is_valid() const -> bool {

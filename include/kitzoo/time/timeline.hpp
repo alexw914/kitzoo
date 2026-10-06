@@ -13,6 +13,7 @@
 #include <kitzoo/time/time.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -46,6 +47,12 @@ public:
   auto sleep_until(TimeDuration target, TimeDuration timeout = {}, std::stop_token stop = {}) const -> bool;
 
   auto sleep_for(TimeDuration duration, TimeDuration timeout = {}, std::stop_token stop = {}) const -> bool;
+
+  // Called by sleep_until while timestamp() is below target: blocks until the
+  // timeline may have reached target, for at most limit, or until stop. The
+  // default sleeps for the remaining gap when type() is System, otherwise polls.
+  virtual auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
+      -> void;
 };
 
 class SystemTimeline final : public Timeline {
@@ -68,8 +75,13 @@ public:
 
   KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
+  // Wakes when a fed timestamp reaches target instead of polling.
+  auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
+      -> void override;
+
 private:
   mutable std::mutex mutex_;
+  mutable std::condition_variable_any fed_;
   TimeDuration timestamp_{};
   bool valid_ = false;
 };
@@ -102,6 +114,10 @@ public:
   KZ_NODISCARD auto is_valid() const -> bool override;
 
   KZ_NODISCARD auto type() const noexcept -> TimelineType override;
+
+  // Waits on the source in its own domain.
+  auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
+      -> void override;
 
 private:
   memory::SharedPtr<Timeline> source_;
