@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <bit>
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -22,12 +23,9 @@
 namespace kitzoo::queue {
 
 template <typename T, std::size_t Capacity>
+  requires(Capacity >= 2 && std::has_single_bit(Capacity) && std::is_nothrow_move_constructible_v<T>)
 class SPSCQueue {
   static constexpr std::size_t kCacheLineSize = 128;
-
-  static_assert(Capacity >= 2, "SPSCQueue needs Capacity >= 2");
-  static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2");
-  static_assert(std::is_nothrow_move_constructible_v<T>, "T must be nothrow move constructible");
 
   static constexpr std::size_t kMask = Capacity - 1;
 

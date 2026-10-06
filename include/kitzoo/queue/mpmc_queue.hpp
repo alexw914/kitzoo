@@ -25,12 +25,9 @@
 
 namespace kitzoo::queue {
 
-// Storage is allocated once; push and pop never allocate or block, and elements
-// leave in the order their push operations claimed slots.
 template <typename T>
+  requires std::is_nothrow_move_constructible_v<T>
 class MPMCQueue {
-  static_assert(std::is_nothrow_move_constructible_v<T>, "T must be nothrow move constructible");
-
 public:
   // Rounds capacity up to a power of two, at least two.
   explicit MPMCQueue(std::size_t capacity) : mask_{ring_size(capacity) - 1}, slots_(mask_ + 1) {
