@@ -199,4 +199,14 @@ auto init(const InitOptions& options) -> memory::SharedPtr<RollingFileSink>;
   } while (false)
 #define KZ_CHECK(expr) KZ_CHECK_MSG(expr, "Check failed: {}", #expr)
 
+// Non-fatal check: logs an error and returns `value` from the enclosing
+// function when `expr` is false. Leave `value` empty in void functions.
+#define KZ_CHECK_RETURN(expr, value, ...)                                                                              \
+  do {                                                                                                                 \
+    if (!(expr)) {                                                                                                     \
+      KZ_LOG_ERROR(__VA_ARGS__);                                                                                       \
+      return value;                                                                                                    \
+    }                                                                                                                  \
+  } while (false)
+
 #endif // KITZOO_LOG_LOGGER_HPP

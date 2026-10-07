@@ -297,6 +297,28 @@ TEST(LogMacroTest, CheckAbortsOnFailureInEveryBuildType) {
   EXPECT_DEATH(KZ_CHECK_MSG(value < 0, "custom {}", value), "");
 }
 
+auto checked_half(int value) -> int {
+  KZ_CHECK_RETURN(value % 2 == 0, -1, "odd value {}", value);
+  return value / 2;
+}
+
+auto checked_count(int value, int& calls) -> void {
+  KZ_CHECK_RETURN(value > 0, , "non-positive value {}", value);
+  ++calls;
+}
+
+TEST(LogMacroTest, CheckReturnReturnsInsteadOfAborting) {
+  auto& logger = default_logger();
+  logger.set_level(Level::Off);
+  EXPECT_EQ(checked_half(4), 2);
+  EXPECT_EQ(checked_half(3), -1);
+  int calls = 0;
+  checked_count(1, calls);
+  checked_count(0, calls);
+  logger.set_level(Level::Info);
+  EXPECT_EQ(calls, 1);
+}
+
 TEST_F(LogTest, ExplicitTimestampIsPreservedWithoutTimezoneAssumptions) {
   const auto timestamp = std::chrono::system_clock::time_point{} + 48h + 123ms;
   logger_->log_at(timestamp, Level::Info, "replayed frame");
