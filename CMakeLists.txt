@@ -60,7 +60,7 @@ endif()
 # Generate build_config.hpp for version.cpp (needs sanitizer info from above)
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/build_config.hpp.in"
-    "${CMAKE_BINARY_DIR}/include/kitzoo/core/build_config.hpp"
+    "${PROJECT_BINARY_DIR}/include/kitzoo/core/build_config.hpp"
     @ONLY)
 
 # Core module (build system validation target — contains only version/build info)
