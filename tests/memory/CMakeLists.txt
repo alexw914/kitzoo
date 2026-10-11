@@ -1,5 +1,7 @@
-kitzoo_add_unit_test(miallocator SOURCES miallocator_test.cpp DEPENDS memory)
 kitzoo_add_unit_test(basicmemory SOURCES basicmemory_test.cpp DEPENDS memory)
 kitzoo_add_unit_test(resource SOURCES resource_test.cpp DEPENDS memory)
 kitzoo_add_unit_test(memory SOURCES memory_test.cpp DEPENDS memory)
 kitzoo_add_unit_test(bytebuffer SOURCES bytebuffer_test.cpp DEPENDS memory)
+if(KITZOO_MIMALLOC_OVERRIDE)
+    target_compile_definitions(kitzoo_test_memory PRIVATE KITZOO_MIMALLOC_OVERRIDE)
+endif()

@@ -10,6 +10,5 @@
 #include <kitzoo/memory/basicmemory.hpp>
 #include <kitzoo/memory/bytebuffer.hpp>
 #include <kitzoo/memory/memory.hpp>
-#include <kitzoo/memory/miallocator.hpp>
 
 #endif // KITZOO_MEMORY_HPP

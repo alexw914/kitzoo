@@ -40,6 +40,15 @@ option(KITZOO_SANITIZE_RECOVER_ALL "Allow sanitizers to continue after first err
 # AES utilities are opt-in. Other module dependencies are always fetched.
 option(KITZOO_WITH_OPENSSL "Enable OpenSSL AES utilities" OFF)
 
+# Executables linking kitzoo::memory get mimalloc's single object file, which
+# replaces malloc/free and new/delete for the whole process. Windows needs the
+# static CRT for this and sanitizers bring their own allocator, so both opt out.
+option(KITZOO_MIMALLOC_OVERRIDE "Replace the process allocator with mimalloc" ON)
+if(KITZOO_MIMALLOC_OVERRIDE AND (WIN32 OR KITZOO_SANITIZERS))
+    message(STATUS "kitzoo: mimalloc override disabled on Windows and in sanitizer builds")
+    set(KITZOO_MIMALLOC_OVERRIDE OFF CACHE BOOL "Replace the process allocator with mimalloc" FORCE)
+endif()
+
 # -- Dependency provider options -----------------------------------------------
 option(KITZOO_USE_SYSTEM_GOOGLETEST "Use system-installed GoogleTest" OFF)
 option(KITZOO_USE_SYSTEM_BENCHMARK "Use system-installed Google Benchmark" OFF)

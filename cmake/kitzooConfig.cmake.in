@@ -4,3 +4,33 @@ include(CMakeFindDependencyMacro)
 @KITZOO_CONFIG_FIND_DEPS@
 
 include("${CMAKE_CURRENT_LIST_DIR}/kitzooTargets.cmake")
+
+# Installed packages link mimalloc's object file in place of its static library.
+# Paths come from the exported mimalloc-static target: mimalloc's config
+# variables are wrong for top-level installs.
+set(KITZOO_MIMALLOC_OVERRIDE @KITZOO_MIMALLOC_OVERRIDE@)
+if(KITZOO_MIMALLOC_OVERRIDE)
+    get_target_property(KITZOO_MIMALLOC_LIBRARY mimalloc-static LOCATION)
+    get_filename_component(KITZOO_MIMALLOC_LIBRARY_DIR "${KITZOO_MIMALLOC_LIBRARY}" DIRECTORY)
+    find_file(KITZOO_MIMALLOC_OBJECT NAMES mimalloc.o mimalloc-debug.o PATHS "${KITZOO_MIMALLOC_LIBRARY_DIR}"
+              NO_DEFAULT_PATH)
+    if(NOT KITZOO_MIMALLOC_OBJECT)
+        set(${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+        set(${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE
+            "mimalloc object file not found in ${KITZOO_MIMALLOC_LIBRARY_DIR}")
+        return()
+    endif()
+    get_filename_component(KITZOO_PACKAGE_LIBRARY_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+    find_file(KITZOO_MIMALLOC_INIT_OBJECT NAMES kitzoo_mimalloc_init.o PATHS "${KITZOO_PACKAGE_LIBRARY_DIR}"
+              NO_DEFAULT_PATH)
+    if(NOT KITZOO_MIMALLOC_INIT_OBJECT)
+        set(${CMAKE_FIND_PACKAGE_NAME}_FOUND FALSE)
+        set(${CMAKE_FIND_PACKAGE_NAME}_NOT_FOUND_MESSAGE "kitzoo_mimalloc_init.o not found in ${KITZOO_PACKAGE_LIBRARY_DIR}")
+        return()
+    endif()
+    get_target_property(KITZOO_MIMALLOC_INCLUDE_DIRS mimalloc-static INTERFACE_INCLUDE_DIRECTORIES)
+    set_property(TARGET kitzoo::memory APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${KITZOO_MIMALLOC_INCLUDE_DIRS})
+    # Ahead of the executable's objects, so mimalloc initializes first.
+    set_property(TARGET kitzoo::memory APPEND PROPERTY INTERFACE_LINK_OPTIONS "${KITZOO_MIMALLOC_OBJECT}"
+                                                                              "${KITZOO_MIMALLOC_INIT_OBJECT}")
+endif()

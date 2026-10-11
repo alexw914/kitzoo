@@ -35,11 +35,10 @@ struct SharedRecord {
 static_assert(std::is_trivially_copyable_v<SharedRecord>);
 
 auto demonstrate_containers() -> void {
-  std::printf("[1] STL containers with explicit mimalloc allocation\n");
+  std::printf("[1] Container aliases served by the mimalloc process allocator\n");
 
-  // Explicit standard containers and the convenient aliases use the same
-  // MiAllocator. Ordinary std::vector<int> still uses its standard allocator.
-  std::vector<int, memory::MiAllocator<int>> values{1, 2, 3};
+  // The aliases are the std types; linking kitzoo::memory replaces malloc and new.
+  memory::Vector<int> values{1, 2, 3};
   memory::Vector<memory::String> names;
   names.emplace_back("front camera");
   memory::Map<int, memory::String> labels;

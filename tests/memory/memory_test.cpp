@@ -1,7 +1,8 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: tests/memory/memory_test.cpp
-// Description: Verifies container aliases, ownership, alignment, and construction rollback.
+// Description: Verifies container aliases, ownership, alignment, construction rollback
+//              and the mimalloc process allocator.
 // -----------------------------------------------------------------------------
 
 #include <kitzoo/memory/memory.hpp>
@@ -9,11 +10,16 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <gtest/gtest.h>
 #include <limits>
+#include <map>
 #include <memory>
+#include <mimalloc.h>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 namespace {
 
@@ -99,7 +105,6 @@ struct FactoryThrowing {
 
 TEST(MemoryUniquePtrTest, ConstructionMoveResetAndExplicitRelease) {
   namespace memory = kitzoo::memory;
-  static_assert(std::is_empty_v<memory::MiDeleter<FactoryTracked>>);
   static_assert(!std::is_copy_constructible_v<memory::UniquePtr<FactoryTracked>>);
   static_assert(std::is_nothrow_move_constructible_v<memory::UniquePtr<FactoryTracked>>);
   static_assert(std::is_same_v<decltype(memory::make_unique<FactoryTracked>(42)), memory::UniquePtr<FactoryTracked>>);
@@ -130,57 +135,15 @@ TEST(MemoryUniquePtrTest, ConstructionMoveResetAndExplicitRelease) {
 }
 
 TEST(MemoryUniquePtrTest, ConstructorExceptionPropagates) {
-  EXPECT_THROW(kitzoo::memory::make_unique<FactoryThrowing>(1), std::runtime_error);
-  kitzoo::memory::MiDeleter<int>{}(nullptr);
-}
-
-TEST(MemoryUniquePtrTest, FactorySupportsCustomDefaultDeleter) {
-  struct Deleter : kitzoo::memory::MiDeleter<FactoryTracked> {};
-
-  auto object = kitzoo::memory::make_unique<FactoryTracked, Deleter>(42);
-  static_assert(std::is_same_v<decltype(object), kitzoo::memory::UniquePtr<FactoryTracked, Deleter>>);
-  EXPECT_EQ(object->value, 42);
-  EXPECT_EQ(FactoryTracked::live, 1);
-  object.reset();
-  EXPECT_EQ(FactoryTracked::live, 0);
-}
-
-TEST(MemoryUniquePtrTest, StatefulDeleterSurvivesMoveAndRunsOnce) {
-  struct Deleter {
-    int* calls;
-    kitzoo::memory::UniquePtr<int> state;
-
-    auto operator()(FactoryTracked* object) const noexcept -> void {
-      ++*calls;
-      kitzoo::memory::MiDeleter<FactoryTracked>{}(object);
-    }
-  };
-
-  int calls = 0;
-  static_assert(!std::is_copy_constructible_v<Deleter>);
-  auto object = kitzoo::memory::make_unique_with_deleter<FactoryTracked>(
-      Deleter{&calls, kitzoo::memory::make_unique<int>(7)}, 42);
-  EXPECT_EQ(object.get_deleter().calls, &calls);
-  auto moved = std::move(object);
-  EXPECT_FALSE(object);
-  EXPECT_EQ(moved->value, 42);
-  EXPECT_EQ(*moved.get_deleter().state, 7);
-  moved.reset();
-  EXPECT_EQ(calls, 1);
-  EXPECT_EQ(FactoryTracked::live, 0);
-  moved.reset();
-  EXPECT_EQ(calls, 1);
-
-  auto destroy_throwing = [&calls](FactoryThrowing* value) noexcept -> void {
-    ++calls;
-    kitzoo::memory::MiDeleter<FactoryThrowing>{}(value);
-  };
-  EXPECT_THROW(kitzoo::memory::make_unique_with_deleter<FactoryThrowing>(destroy_throwing, 1), std::runtime_error);
-  EXPECT_EQ(calls, 1);
+  EXPECT_THROW(static_cast<void>(kitzoo::memory::make_unique<FactoryThrowing>(1)), std::runtime_error);
 }
 
 TEST(MemoryTypesTest, ContainerAliases) {
   using namespace kitzoo::memory;
+  static_assert(std::is_same_v<String, std::string>);
+  static_assert(std::is_same_v<Vector<int>, std::vector<int>>);
+  static_assert(std::is_same_v<Map<int, int>, std::map<int, int>>);
+  static_assert(std::is_same_v<UniquePtr<int>, std::unique_ptr<int>>);
   Vector<int> values{1, 2, 3};
   EXPECT_EQ(values[2], 3);
   Map<int, String> names;
@@ -232,68 +195,7 @@ TEST(MemoryTypesTest, SharedFactorySupportsWeakReferencesAndAlignedObjects) {
   EXPECT_EQ(FactoryTracked::live, 0);
   EXPECT_TRUE(weak.expired());
   EXPECT_FALSE(weak.lock());
-  EXPECT_THROW(memory::make_shared<FactoryThrowing>(1), std::runtime_error);
-}
-
-TEST(MemorySharedPtrTest, StatefulDeleterRunsAfterLastOwner) {
-  namespace memory = kitzoo::memory;
-
-  struct Deleter {
-    int* calls;
-    memory::UniquePtr<int> state;
-
-    auto operator()(FactoryTracked* object) const noexcept -> void {
-      ++*calls;
-      memory::MiDeleter<FactoryTracked>{}(object);
-    }
-  };
-
-  static_assert(!std::is_copy_constructible_v<Deleter>);
-  int calls = 0;
-  auto first = memory::make_shared_with_deleter<FactoryTracked>(Deleter{&calls, memory::make_unique<int>(7)}, 42);
-  static_assert(std::is_same_v<decltype(first), memory::SharedPtr<FactoryTracked>>);
-  ASSERT_EQ(FactoryTracked::live, 1);
-  EXPECT_EQ(first->value, 42);
-  EXPECT_EQ(reinterpret_cast<std::uintptr_t>(first.get()) % alignof(FactoryTracked), 0U);
-  auto* stored = std::get_deleter<Deleter>(first);
-  ASSERT_NE(stored, nullptr);
-  EXPECT_EQ(*stored->state, 7);
-
-  auto second = first;
-  memory::WeakPtr<FactoryTracked> weak = first;
-  first.reset();
-  EXPECT_EQ(calls, 0);
-  EXPECT_EQ(FactoryTracked::live, 1);
-  second.reset();
-  EXPECT_EQ(calls, 1);
-  EXPECT_EQ(FactoryTracked::live, 0);
-  EXPECT_TRUE(weak.expired());
-  weak.reset();
-  EXPECT_EQ(calls, 1);
-}
-
-TEST(MemorySharedPtrTest, ConstructorFailureDoesNotInvokeDeleter) {
-  int calls = 0;
-  auto deleter = [&calls](FactoryThrowing* object) noexcept -> void {
-    ++calls;
-    kitzoo::memory::MiDeleter<FactoryThrowing>{}(object);
-  };
-
-  EXPECT_THROW(kitzoo::memory::make_shared_with_deleter<FactoryThrowing>(deleter, 1), std::runtime_error);
-  EXPECT_EQ(calls, 0);
-}
-
-TEST(MemorySharedPtrTest, FactorySupportsCustomDefaultDeleter) {
-  namespace memory = kitzoo::memory;
-
-  struct Deleter : memory::MiDeleter<FactoryTracked> {};
-
-  auto object = memory::make_shared<FactoryTracked, Deleter>(42);
-  EXPECT_EQ(object->value, 42);
-  EXPECT_EQ(FactoryTracked::live, 1);
-  EXPECT_NE(std::get_deleter<Deleter>(object), nullptr);
-  object.reset();
-  EXPECT_EQ(FactoryTracked::live, 0);
+  EXPECT_THROW(static_cast<void>(memory::make_shared<FactoryThrowing>(1)), std::runtime_error);
 }
 
 TEST(MemorySharedPtrTest, DefaultFactorySupportsArrays) {
@@ -304,3 +206,20 @@ TEST(MemorySharedPtrTest, DefaultFactorySupportsArrays) {
   values.reset();
   EXPECT_EQ(copied[2], 42);
 }
+
+#ifdef KITZOO_MIMALLOC_OVERRIDE
+TEST(MemoryOverrideTest, ProcessAllocationsComeFromMimalloc) {
+  void* raw = std::malloc(64);
+  auto* object = new int(7);
+  const std::string text(256, 'x');
+  const std::vector<int> values(1024, 1);
+  EXPECT_TRUE(mi_is_in_heap_region(raw));
+  EXPECT_TRUE(mi_is_in_heap_region(object));
+  EXPECT_TRUE(mi_is_in_heap_region(text.data()));
+  EXPECT_TRUE(mi_is_in_heap_region(values.data()));
+  // Exit-time teardown stays off so late shared-library destructors can allocate.
+  EXPECT_EQ(mi_option_get(mi_option_destroy_on_exit), 2);
+  delete object;
+  std::free(raw);
+}
+#endif

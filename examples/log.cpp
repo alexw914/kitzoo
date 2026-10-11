@@ -72,7 +72,6 @@ auto file_logging() -> void {
 auto asynchronous_logging() -> void {
   LoggerOptions options;
   options.sinks = {std::make_shared<ConsoleSink>()};
-  // Reuse memory's factory; logging-owned strings and queue use MiAllocator too.
   auto logger = kitzoo::memory::make_shared<Logger>("workers", options);
   // Block preserves accepted records with a bounded queue. DropNewest avoids
   // waiting when full; inspect dropped_count() when selecting that policy.

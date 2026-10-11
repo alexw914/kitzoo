@@ -36,6 +36,8 @@ ctest --test-dir build/debug --output-on-failure
 Tests and examples are enabled by default in standalone builds. Add
 `-DKITZOO_BUILD_BENCHMARKS=ON` to build benchmarks, or `-DKITZOO_WITH_OPENSSL=ON`
 to enable AES, SHA-256, and HMAC utilities with an installed OpenSSL development package.
+Executables linking `kitzoo::memory` replace the process `malloc`/`new` with mimalloc;
+`-DKITZOO_MIMALLOC_OVERRIDE=OFF` keeps the system allocator (always off on Windows and with sanitizers).
 
 Clang and Ninja users can also use the Debug preset:
 

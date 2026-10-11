@@ -76,7 +76,7 @@ public:
 
   KZ_NODISCARD auto acquire_shared() -> memory::SharedPtr<T> {
     auto object = acquire();
-    return memory::SharedPtr<T>{object.release(), Deleter{this}, memory::MiAllocator<T>{}};
+    return memory::SharedPtr<T>{object.release(), Deleter{this}};
   }
 
   KZ_NODISCARD auto available_approx() const noexcept -> std::size_t { return objects_.size_approx(); }
@@ -117,7 +117,7 @@ public:
   template <typename... Args>
   KZ_NODISCARD auto acquire_shared(Args&&... args) -> memory::SharedPtr<T> {
     auto object = acquire(std::forward<Args>(args)...);
-    return memory::SharedPtr<T>{object.release(), Deleter{this}, memory::MiAllocator<T>{}};
+    return memory::SharedPtr<T>{object.release(), Deleter{this}};
   }
 
   template <typename... Args>

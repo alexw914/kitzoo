@@ -1,14 +1,14 @@
 // -----------------------------------------------------------------------------
 // kitzoo | C++20 Foundation Library
 // File: include/kitzoo/memory/memory.hpp
-// Description: Provides container aliases, ownership helpers, and resource-selectable allocation.
+// Description: Provides container and ownership aliases plus resource-selectable
+//              allocation; mimalloc serves them through the process allocator.
 // -----------------------------------------------------------------------------
 
 #ifndef KITZOO_MEMORY_MEMORY_HPP
 #define KITZOO_MEMORY_MEMORY_HPP
 
 #include <kitzoo/core/scopeguard.hpp>
-#include <kitzoo/memory/miallocator.hpp>
 
 #include <deque>
 #include <functional>
@@ -33,49 +33,49 @@ namespace kitzoo::memory {
 template <typename A, typename B>
 using Pair = std::pair<A, B>;
 
-using String = std::basic_string<char, std::char_traits<char>, MiAllocator<char>>;
+using String = std::string;
 
 template <typename T>
-using Vector = std::vector<T, MiAllocator<T>>;
+using Vector = std::vector<T>;
 
 template <typename T>
-using List = std::list<T, MiAllocator<T>>;
+using List = std::list<T>;
 
 template <typename T>
-using Deque = std::deque<T, MiAllocator<T>>;
+using Deque = std::deque<T>;
 
 template <typename T>
-using Queue = std::queue<T, Deque<T>>;
+using Queue = std::queue<T>;
 
 template <typename T, typename Container = Vector<T>, typename Compare = std::less<T>>
 using PriorityQueue = std::priority_queue<T, Container, Compare>;
 
 template <typename T>
-using Stack = std::stack<T, Deque<T>>;
+using Stack = std::stack<T>;
 
 template <typename Key, typename T, typename Compare = std::less<Key>>
-using Map = std::map<Key, T, Compare, MiAllocator<Pair<const Key, T>>>;
+using Map = std::map<Key, T, Compare>;
 
 template <typename Key, typename T, typename Compare = std::less<Key>>
-using MultiMap = std::multimap<Key, T, Compare, MiAllocator<Pair<const Key, T>>>;
+using MultiMap = std::multimap<Key, T, Compare>;
 
 template <typename Key, typename T, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedMap = std::unordered_map<Key, T, Hash, Equal, MiAllocator<Pair<const Key, T>>>;
+using UnorderedMap = std::unordered_map<Key, T, Hash, Equal>;
 
 template <typename Key, typename T, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedMultiMap = std::unordered_multimap<Key, T, Hash, Equal, MiAllocator<Pair<const Key, T>>>;
+using UnorderedMultiMap = std::unordered_multimap<Key, T, Hash, Equal>;
 
 template <typename Key, typename Compare = std::less<Key>>
-using Set = std::set<Key, Compare, MiAllocator<Key>>;
+using Set = std::set<Key, Compare>;
 
 template <typename Key, typename Compare = std::less<Key>>
-using MultiSet = std::multiset<Key, Compare, MiAllocator<Key>>;
+using MultiSet = std::multiset<Key, Compare>;
 
 template <typename Key, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedSet = std::unordered_set<Key, Hash, Equal, MiAllocator<Key>>;
+using UnorderedSet = std::unordered_set<Key, Hash, Equal>;
 
 template <typename Key, typename Hash = std::hash<Key>, typename Equal = std::equal_to<Key>>
-using UnorderedMultiSet = std::unordered_multiset<Key, Hash, Equal, MiAllocator<Key>>;
+using UnorderedMultiSet = std::unordered_multiset<Key, Hash, Equal>;
 
 template <typename T>
 using WeakPtr = std::weak_ptr<T>;
@@ -83,61 +83,11 @@ using WeakPtr = std::weak_ptr<T>;
 template <typename T>
 using SharedPtr = std::shared_ptr<T>;
 
-template <typename T>
-struct MiDeleter {
-  static_assert(!std::is_array_v<T>);
-
-  auto operator()(T* address) const noexcept -> void {
-    if (!address)
-      return;
-    std::destroy_at(address);
-    MiAllocator<T>{}.deallocate(address, 1);
-  }
-};
-
-template <typename T, typename Deleter = MiDeleter<T>>
+template <typename T, typename Deleter = std::default_delete<T>>
 using UniquePtr = std::unique_ptr<T, Deleter>;
 
-template <typename T, typename Deleter, typename... Args>
-  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
-auto make_unique_with_deleter(Deleter deleter, Args&&... args) -> UniquePtr<T, Deleter> {
-  // The deleter must reclaim mimalloc storage or transfer its ownership.
-  MiAllocator<T> allocator;
-  auto* address = allocator.allocate(1);
-  KZ_SCOPE_FAIL {
-    allocator.deallocate(address, 1);
-  };
-  std::construct_at(address, std::forward<Args>(args)...);
-  return UniquePtr<T, Deleter>{address, std::move(deleter)};
-}
-
-template <typename T, typename Deleter = MiDeleter<T>, typename... Args>
-  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
-auto make_unique(Args&&... args) -> UniquePtr<T, Deleter> {
-  return make_unique_with_deleter<T>(Deleter{}, std::forward<Args>(args)...);
-}
-
-template <typename T, typename Deleter, typename... Args>
-  requires(!std::is_array_v<T> && std::is_nothrow_move_constructible_v<Deleter>)
-auto make_shared_with_deleter(Deleter deleter, Args&&... args) -> SharedPtr<T> {
-  if constexpr (std::is_same_v<Deleter, MiDeleter<T>>) {
-    return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
-  } else {
-    // Custom deleters require separate object and control-block allocations.
-    auto object = make_unique_with_deleter<T>(MiDeleter<T>{}, std::forward<Args>(args)...);
-    // The shared constructor invokes the deleter if control-block allocation fails.
-    return SharedPtr<T>{object.release(), std::move(deleter), MiAllocator<T>{}};
-  }
-}
-
-template <typename T, typename Deleter = MiDeleter<T>, typename... Args>
-auto make_shared(Args&&... args) -> SharedPtr<T> {
-  if constexpr (std::is_array_v<T> && std::is_same_v<Deleter, MiDeleter<T>>) {
-    return std::allocate_shared<T>(MiAllocator<T>{}, std::forward<Args>(args)...);
-  } else {
-    return make_shared_with_deleter<T>(Deleter{}, std::forward<Args>(args)...);
-  }
-}
+using std::make_shared;
+using std::make_unique;
 
 template <typename T, typename... Args>
 auto make_shared_with_resource(std::pmr::memory_resource* resource, Args&&... args) -> SharedPtr<T> {
@@ -169,7 +119,7 @@ public:
       throw std::bad_array_new_length{};
     if (resource_)
       return alloc_array<T>(std::pmr::polymorphic_allocator<T>{resource_}, count);
-    return alloc_array<T>(MiAllocator<T>{}, count);
+    return alloc_array<T>(std::allocator<T>{}, count);
   }
 
 private:
