@@ -10,6 +10,8 @@
 
 #include <kitzoo/core/scopeguard.hpp>
 
+#include <array>
+#include <cstddef>
 #include <deque>
 #include <functional>
 #include <limits>
@@ -34,6 +36,9 @@ template <typename A, typename B>
 using Pair = std::pair<A, B>;
 
 using String = std::string;
+
+template <typename T, std::size_t N>
+using Array = std::array<T, N>;
 
 template <typename T>
 using Vector = std::vector<T>;

@@ -8,6 +8,7 @@
 #include <kitzoo/memory/memory.hpp>
 #include <kitzoo/memory/resource.hpp>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -141,6 +142,7 @@ TEST(MemoryUniquePtrTest, ConstructorExceptionPropagates) {
 TEST(MemoryTypesTest, ContainerAliases) {
   using namespace kitzoo::memory;
   static_assert(std::is_same_v<String, std::string>);
+  static_assert(std::is_same_v<Array<int, 3>, std::array<int, 3>>);
   static_assert(std::is_same_v<Vector<int>, std::vector<int>>);
   static_assert(std::is_same_v<Map<int, int>, std::map<int, int>>);
   static_assert(std::is_same_v<UniquePtr<int>, std::unique_ptr<int>>);
