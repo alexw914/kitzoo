@@ -1,8 +1,32 @@
 name: Build
 
+# Only changes to code, build files or the build scripts start a build;
+# documentation and other files do not.
 on:
   push:
+    paths:
+      - "include/**"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "benchmarks/**"
+      - "cmake/**"
+      - "**/CMakeLists.txt"
+      - "CMakePresets.json"
+      - "scripts/**"
+      - ".github/workflows/build.yml"
   pull_request:
+    paths:
+      - "include/**"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "benchmarks/**"
+      - "cmake/**"
+      - "**/CMakeLists.txt"
+      - "CMakePresets.json"
+      - "scripts/**"
+      - ".github/workflows/build.yml"
   workflow_dispatch:
 
 permissions:
