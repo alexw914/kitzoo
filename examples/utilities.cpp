@@ -6,7 +6,6 @@
 
 #include <kitzoo/utilities.hpp>
 
-#include <array>
 #include <cstdio>
 #include <span>
 #include <string>

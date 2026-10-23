@@ -38,7 +38,6 @@ using BSWdcThreadPool = BS::wdc_thread_pool;
 class ThreadPool {
 public:
   explicit ThreadPool(std::size_t num_threads = 0);
-
   // Workers are named <name>-<index> under os::kThreadNamePrefix where supported.
   ThreadPool(std::size_t num_threads, std::string_view name);
   ~ThreadPool();
@@ -71,12 +70,12 @@ public:
   // wait() and shutdown() throw logic_error when called from a worker thread.
   auto wait() -> void;
 
+  auto shutdown() -> void;
+
   KZ_NODISCARD auto get_thread_count() const noexcept -> std::size_t;
   KZ_NODISCARD auto get_tasks_queued() const noexcept -> std::size_t;
   KZ_NODISCARD auto get_tasks_running() const noexcept -> std::size_t;
   KZ_NODISCARD auto get_tasks_total() const noexcept -> std::size_t;
-
-  auto shutdown() -> void;
 
 private:
   using Task = kitzoo::core::unique_function<void()>;
@@ -113,7 +112,7 @@ template <typename F, typename... Args>
 auto ThreadPool::submit_task(F&& f, Args&&... args) -> std::future<TaskResult<F, Args...>> {
   std::packaged_task<TaskResult<F, Args...>()> task{bind_task(std::forward<F>(f), std::forward<Args>(args)...)};
   auto future = task.get_future();
-  if (!try_enqueue_task([t = std::move(task)]() mutable { t(); }))
+  if (!try_enqueue_task([t = std::move(task)]() mutable -> void { t(); }))
     throw_shutting_down();
   return future;
 }
@@ -127,7 +126,7 @@ template <typename F, typename... Args>
 auto ThreadPool::try_submit_task(F&& f, Args&&... args) -> std::optional<std::future<TaskResult<F, Args...>>> {
   std::packaged_task<TaskResult<F, Args...>()> task{bind_task(std::forward<F>(f), std::forward<Args>(args)...)};
   auto future = task.get_future();
-  if (!try_enqueue_task([t = std::move(task)]() mutable { t(); }))
+  if (!try_enqueue_task([t = std::move(task)]() mutable -> void { t(); }))
     return std::nullopt;
   return future;
 }

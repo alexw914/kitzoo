@@ -21,9 +21,11 @@ using namespace std::chrono_literals;
 
 class CustomTimeline final : public Timeline {
 public:
-  auto timestamp(std::string_view key = {}) const -> TimeDuration override { return key == "frame" ? 42ns : 7ns; }
+  KZ_NODISCARD auto timestamp(std::string_view key = {}) const -> TimeDuration override {
+    return key == "frame" ? 42ns : 7ns;
+  }
 
-  auto is_valid() const -> bool override { return true; }
+  KZ_NODISCARD auto is_valid() const -> bool override { return true; }
 };
 
 TEST(TimelineTest, SystemTimelineUsesUnixUtcDomain) {
@@ -59,7 +61,7 @@ TEST(TimelineTest, CallbackReceivesKeyAndPropagatesExceptions) {
   EXPECT_EQ(callback.type(), TimelineType::Callback);
   EXPECT_EQ(callback.timestamp("camera"), 42ms);
   EXPECT_EQ(callback.timestamp(), 7ms);
-  EXPECT_THROW(callback.timestamp("invalid"), std::runtime_error);
+  EXPECT_THROW(static_cast<void>(callback.timestamp("invalid")), std::runtime_error);
   EXPECT_THROW(CallbackTimeline(ClockCallback{}), std::invalid_argument);
   CustomTimeline custom;
   EXPECT_EQ(custom.type(), TimelineType::Custom);
@@ -85,10 +87,10 @@ TEST(TimelineTest, OffsetPreservesValidityAndRejectsArithmeticOverflow) {
   EXPECT_FALSE(offset.is_valid());
   source->feed(TimeDuration::max());
   EXPECT_TRUE(offset.is_valid());
-  EXPECT_THROW(offset.timestamp(), std::overflow_error);
+  EXPECT_THROW(static_cast<void>(offset.timestamp()), std::overflow_error);
   source->feed(TimeDuration::min());
   offset.set_offset(-1ns);
-  EXPECT_THROW(offset.timestamp(), std::overflow_error);
+  EXPECT_THROW(static_cast<void>(offset.timestamp()), std::overflow_error);
   offset.set_offset(0ns);
   EXPECT_EQ(offset.timestamp(), TimeDuration::min());
 }
@@ -99,7 +101,7 @@ TEST(TimelineTest, AbsoluteWaitCompletesWhenProducerFeedsTarget) {
   std::promise<void> started;
   std::promise<bool> completed;
   auto result = completed.get_future();
-  std::jthread waiter([&] {
+  std::jthread waiter([&]() -> void {
     started.set_value();
     completed.set_value(feeder.sleep_until(10ms, 2s));
   });
@@ -144,7 +146,7 @@ TEST(TimelineTest, StopTokenCancelsUnlimitedWait) {
   feeder.feed(0ns);
   std::promise<void> started;
   bool reached = true;
-  std::jthread waiter([&](std::stop_token token) {
+  std::jthread waiter([&](std::stop_token token) -> void {
     started.set_value();
     reached = feeder.sleep_until(1s, {}, token);
   });
@@ -194,7 +196,7 @@ TEST(TimelineTest, FeederWaitWakesWhenFedTimestampReachesTarget) {
   FeederTimeline feeder;
   feeder.feed(0ns);
   std::atomic<bool> done{false};
-  std::jthread waiter([&] {
+  std::jthread waiter([&]() -> void {
     EXPECT_TRUE(feeder.sleep_until(100ns));
     done = true;
   });
@@ -211,7 +213,7 @@ TEST(TimelineTest, OffsetWaitForwardsToFeederSource) {
   auto feeder = std::make_shared<FeederTimeline>();
   feeder->feed(0ns);
   OffsetTimeline timeline{feeder, 10ns};
-  std::jthread waiter([&] { EXPECT_TRUE(timeline.sleep_until(110ns, 5s)); });
+  std::jthread waiter([&]() -> void { EXPECT_TRUE(timeline.sleep_until(110ns, 5s)); });
   std::this_thread::sleep_for(20ms);
   feeder->feed(100ns);
 }
@@ -219,21 +221,21 @@ TEST(TimelineTest, OffsetWaitForwardsToFeederSource) {
 TEST(TimelineTest, RejectsNegativeTimeoutAndRelativeTargetOverflow) {
   FeederTimeline feeder;
   feeder.feed(TimeDuration::max());
-  EXPECT_THROW(feeder.sleep_for(1ns), std::overflow_error);
-  EXPECT_THROW(feeder.sleep_for(1s, -1ns), std::invalid_argument);
-  EXPECT_THROW(feeder.sleep_until(1s, -1ns), std::invalid_argument);
+  EXPECT_THROW(static_cast<void>(feeder.sleep_for(1ns)), std::overflow_error);
+  EXPECT_THROW(static_cast<void>(feeder.sleep_for(1s, -1ns)), std::invalid_argument);
+  EXPECT_THROW(static_cast<void>(feeder.sleep_until(1s, -1ns)), std::invalid_argument);
 }
 
 // One-shot global selection is checked in isolated child processes.
 auto verify_explicit_selection() -> void {
   auto& service = Time::instance();
   // Static setup also permits --gtest_repeat without trying to reset the singleton.
-  static const bool initialized =
+  static const bool kInitialized =
       service.init(std::make_shared<CallbackTimeline>([](std::string_view key) -> TimeDuration {
         EXPECT_EQ(Time::instance().timeline_type(), TimelineType::Callback);
         return key == "camera" ? 42ms : 0ns;
       }));
-  EXPECT_TRUE(initialized);
+  EXPECT_TRUE(kInitialized);
   EXPECT_FALSE(service.init(nullptr));
   EXPECT_FALSE(service.init(std::make_shared<SystemTimeline>()));
   EXPECT_TRUE(service.is_valid());
@@ -258,7 +260,7 @@ auto verify_concurrent_default_selection() -> void {
   {
     std::vector<std::jthread> threads;
     for (int t = 0; t < 8; ++t)
-      threads.emplace_back([&system] {
+      threads.emplace_back([&system]() -> void {
         for (int i = 0; i < 1000; ++i) {
           EXPECT_GT(Time::instance().timestamp(), 0ns);
           if (Time::instance().timeline_type() == TimelineType::System)

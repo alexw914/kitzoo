@@ -29,7 +29,7 @@ ThreadPool::ThreadPool(std::size_t num_threads, std::string_view name) {
   workers_.reserve(num_threads);
   for (std::size_t i = 0; i < num_threads; ++i) {
     auto worker_name = name.empty() ? std::string{} : std::string{name} + "-" + std::to_string(i);
-    workers_.emplace_back([this, worker_name = std::move(worker_name)] {
+    workers_.emplace_back([this, worker_name = std::move(worker_name)]() -> void {
       if (!worker_name.empty())
         os::set_current_thread_name(worker_name);
       worker_loop();

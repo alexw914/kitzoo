@@ -105,7 +105,6 @@ struct LogRecord;
 class Logger {
 public:
   explicit Logger(std::string name, Level level = Level::Info);
-
   Logger(std::string name, const LoggerOptions& options);
 
   Logger(const Logger&) = delete;
@@ -119,10 +118,11 @@ public:
 
   auto set_level(Level level) noexcept -> void;
 
-  KZ_NODISCARD auto enabled(Level level) const noexcept -> bool { return native_->should_log(to_spdlog(level)); }
-
   auto log(Level level, std::string_view message, const std::source_location& loc = std::source_location::current())
       -> void;
+
+  auto log_at(std::chrono::system_clock::time_point timestamp, Level level, std::string_view message,
+              const std::source_location& loc = std::source_location::current()) -> void;
 
   template <typename... Args>
   auto logf(Level level, const std::source_location& loc, fmt::format_string<Args...> format, Args&&... args) -> void {
@@ -133,27 +133,26 @@ public:
     log(level, {message.data(), message.size()}, loc);
   }
 
-  auto log_at(std::chrono::system_clock::time_point timestamp, Level level, std::string_view message,
-              const std::source_location& loc = std::source_location::current()) -> void;
-
   auto set_flush_level(Level level) -> void;
 
   // The handler must not throw: it runs from noexcept error reporting.
   auto set_error_handler(ErrorHandler handler) -> void;
 
-  KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
-
   auto flush() -> void;
+
+  KZ_NODISCARD auto enabled(Level level) const noexcept -> bool { return native_->should_log(to_spdlog(level)); }
+
+  KZ_NODISCARD auto failed_count() const noexcept -> std::size_t { return failed_.load(); }
 
 private:
   friend class AsyncLogger;
   friend auto init(const InitOptions& options) -> memory::SharedPtr<RollingFileSink>;
 
+  static auto to_spdlog(Level level) noexcept -> spdlog::level::level_enum;
+
   auto write_record(const LogRecord& record) -> void;
 
   auto report_error(std::string_view message) noexcept -> void;
-
-  KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 
   memory::String name_;
   memory::SharedPtr<spdlog::logger> native_;
@@ -162,7 +161,7 @@ private:
   std::mutex error_mutex_;
   ErrorHandler error_handler_;
 
-  static auto to_spdlog(Level level) noexcept -> spdlog::level::level_enum;
+  KZ_NODISCARD auto name() const noexcept -> std::string_view { return name_; }
 };
 
 // Destroyed during static destruction; do not log from destructors of static

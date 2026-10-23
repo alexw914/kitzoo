@@ -37,10 +37,6 @@ public:
   auto operator=(const LimitedResource&) -> LimitedResource& = delete;
   auto operator=(LimitedResource&&) -> LimitedResource& = delete;
 
-  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
-
-  KZ_NODISCARD auto stats() const -> MemoryStats;
-
   auto owns(const void* address) const -> bool;
 
   // Returns nullptr when the budget is exhausted or the alignment is invalid;
@@ -50,14 +46,18 @@ public:
   // Legacy release without alignment; mismatched sizes/foreign pointers fail.
   auto release(void* address, std::size_t bytes) -> bool;
 
-private:
-  auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override;
+  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
 
+  KZ_NODISCARD auto stats() const -> MemoryStats;
+
+private:
   auto allocate_within_budget(std::size_t bytes, std::size_t alignment) -> void*;
+
+  auto do_allocate(std::size_t bytes, std::size_t alignment) -> void* override;
 
   auto do_deallocate(void* address, std::size_t bytes, std::size_t alignment) -> void override;
 
-  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override;
+  KZ_NODISCARD auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override;
 
   struct Impl;
   UniquePtr<Impl> impl_;

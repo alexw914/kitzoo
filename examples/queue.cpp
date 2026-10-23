@@ -21,18 +21,18 @@ auto main() -> int {
   {
     BlockingQueue<int> queue{16};
 
-    std::jthread consumer([&queue] {
+    std::jthread consumer([&queue]() -> void {
       int sum = 0;
       while (const auto item = queue.wait_and_pop())
         sum += *item;
       std::printf("blocking queue sum: %d\n", sum);
     });
 
-    std::jthread p1([&queue] {
+    std::jthread p1([&queue]() -> void {
       for (int i = 1; i <= 50; ++i)
         queue.push(i);
     });
-    std::jthread p2([&queue] {
+    std::jthread p2([&queue]() -> void {
       for (int i = 51; i <= 100; ++i)
         queue.push(i);
     });
@@ -67,7 +67,7 @@ auto main() -> int {
     SPSCQueue<int, 1024> queue;
     constexpr int kCount = 100000;
 
-    std::jthread producer([&queue] {
+    std::jthread producer([&queue]() -> void {
       for (int i = 1; i <= kCount; ++i) {
         while (!queue.push(i))
           std::this_thread::yield(); // full — retry
@@ -93,17 +93,17 @@ auto main() -> int {
     MPMCQueue<int> queue{256};
     std::atomic<long long> sum{0};
     {
-      std::jthread p1([&queue] {
+      std::jthread p1([&queue]() -> void {
         for (int i = 1; i <= 500; ++i)
           while (!queue.push(i))
             std::this_thread::yield();
       });
-      std::jthread p2([&queue] {
+      std::jthread p2([&queue]() -> void {
         for (int i = 501; i <= 1000; ++i)
           while (!queue.push(i))
             std::this_thread::yield();
       });
-      std::jthread consumer([&queue, &sum] {
+      std::jthread consumer([&queue, &sum]() -> void {
         for (int seen = 0; seen < 1000;) {
           if (const auto item = queue.pop()) {
             sum += *item;

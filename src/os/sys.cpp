@@ -11,7 +11,6 @@
 
 #include <cstdint>
 #include <cstdlib>
-#include <sstream>
 
 #if defined(_WIN32)
 #ifndef NOMINMAX

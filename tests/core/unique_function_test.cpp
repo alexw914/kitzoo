@@ -28,13 +28,13 @@ TEST(UniqueFunctionTest, EmptyCallAssertsInDebug) {
 #endif
 
 TEST(UniqueFunctionTest, InvokeSmallLambda) {
-  unique_function<int(int)> f = [](int x) { return x * 2; };
+  unique_function<int(int)> f = [](int x) -> int { return x * 2; };
   EXPECT_EQ(f(21), 42);
 }
 
 TEST(UniqueFunctionTest, MoveOnlyCapture) {
   auto ptr = std::make_unique<int>(7);
-  unique_function<int()> f = [p = std::move(ptr)] { return *p; };
+  unique_function<int()> f = [p = std::move(ptr)]() -> int { return *p; };
   EXPECT_EQ(f(), 7);
 }
 
@@ -42,14 +42,14 @@ TEST(UniqueFunctionTest, LargeCallableHeapAllocates) {
   // Capture more than the 24-byte SBO buffer.
   std::array<std::size_t, 16> big{};
   big.back() = 64;
-  unique_function<std::size_t()> f = [big] { return big.back(); };
+  unique_function<std::size_t()> f = [big]() -> std::size_t { return big.back(); };
   auto moved = std::move(f);
   EXPECT_EQ(moved(), 64u);
 }
 
 TEST(UniqueFunctionTest, MoveTransfersOwnership) {
   int count = 0;
-  unique_function<void()> a = [&count] { ++count; };
+  unique_function<void()> a = [&count]() -> void { ++count; };
   unique_function<void()> b = std::move(a);
   EXPECT_FALSE(static_cast<bool>(a));
   ASSERT_TRUE(static_cast<bool>(b));
@@ -62,13 +62,13 @@ namespace {
 // Tracks the number of LIVE objects (ctor ++, dtor --), immune to
 // temporary/moved-from bookkeeping noise.
 struct Watchdog {
-  int& alive;
+  int& alive_;
 
-  explicit Watchdog(int& c) : alive{c} { ++alive; }
+  explicit Watchdog(int& c) : alive_{c} { ++alive_; }
 
-  Watchdog(Watchdog&& o) noexcept : alive{o.alive} { ++alive; }
+  ~Watchdog() { --alive_; }
 
-  ~Watchdog() { --alive; }
+  Watchdog(Watchdog&& o) noexcept : alive_{o.alive_} { ++alive_; }
 
   auto operator()() -> void {}
 };
@@ -80,7 +80,7 @@ TEST(UniqueFunctionTest, MoveAssignmentDestroysOld) {
   {
     unique_function<void()> a = Watchdog{alive};
     EXPECT_EQ(alive, 1); // one live object, inside a
-    unique_function<void()> b = [] {};
+    unique_function<void()> b = []() -> void {};
     b = std::move(a);    // b's lambda destroyed; watchdog moved into b
     EXPECT_EQ(alive, 1); // still exactly one
     b();
@@ -98,19 +98,19 @@ TEST(UniqueFunctionTest, DestructorCallsTargetDestructor) {
 }
 
 TEST(UniqueFunctionTest, VoidAndNonVoid) {
-  unique_function<void(int)> v = [](int) {};
+  unique_function<void(int)> v = [](int) -> void {};
   v(1);
-  unique_function<std::string(std::string)> s = [](std::string in) { return in + "!"; };
+  unique_function<std::string(std::string)> s = [](std::string in) -> std::string { return in + "!"; };
   EXPECT_EQ(s("hi"), "hi!");
 }
 
 TEST(UniqueFunctionTest, ThrowingMoveCallableIsNotMovedWithWrapper) {
   struct ThrowingMove {
-    int* moves;
+    int* moves_;
 
-    explicit ThrowingMove(int* counter) : moves(counter) {}
+    explicit ThrowingMove(int* counter) : moves_(counter) {}
 
-    ThrowingMove(ThrowingMove&& other) noexcept(false) : moves(other.moves) { ++*moves; }
+    ThrowingMove(ThrowingMove&& other) noexcept(false) : moves_(other.moves_) { ++*moves_; }
 
     auto operator()() const -> int { return 7; }
   };
@@ -125,14 +125,14 @@ TEST(UniqueFunctionTest, ThrowingMoveCallableIsNotMovedWithWrapper) {
 
 TEST(UniqueFunctionTest, VoidSignatureDiscardsResult) {
   int calls = 0;
-  unique_function<void()> f = [&calls] { return ++calls; };
+  unique_function<void()> f = [&calls]() -> int { return ++calls; };
   f();
   EXPECT_EQ(calls, 1);
 }
 
 TEST(UniqueFunctionTest, NullFunctionAndMemberPointersAreEmpty) {
   struct Counter {
-    auto value() const -> int { return 3; }
+    KZ_NODISCARD auto value() const -> int { return 3; }
   };
 
   int (*function)() = nullptr;
@@ -155,9 +155,9 @@ TEST(UniqueFunctionTest, RejectsCallablesNotInvocableAsLvalue) {
 }
 
 TEST(UniqueFunctionTest, PackagedTaskSurvivesMoves) {
-  std::packaged_task<int()> task{[] { return 5; }};
+  std::packaged_task<int()> task{[]() -> int { return 5; }};
   auto result = task.get_future();
-  unique_function<void()> f = [t = std::move(task)]() mutable { t(); };
+  unique_function<void()> f = [t = std::move(task)]() mutable -> void { t(); };
   auto moved = std::move(f);
   moved();
   EXPECT_EQ(result.get(), 5);

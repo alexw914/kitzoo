@@ -52,8 +52,6 @@ public:
   // Uses the shared mapping first, with the same fallback as allocate_shared().
   auto shared_resource() noexcept -> std::pmr::memory_resource*;
 
-  KZ_NODISCARD auto virtual_stats() const -> MemoryStats;
-
   // Zero or invalid alignment returns nullptr. Exhausted virtual budgets return
   // nullptr; before virtual initialization allocations use mimalloc directly.
   // prefix_address is retained as a hint for interface parity; currently ignored.
@@ -66,6 +64,8 @@ public:
   // Only allocation-start pointers returned by this instance may be passed.
   // Pool frees require the original byte size; mismatches are ignored.
   auto deallocate(void* address, std::size_t size) -> void;
+
+  KZ_NODISCARD auto virtual_stats() const -> MemoryStats;
 
   KZ_NODISCARD auto shared_memory_name() const -> std::string;
 

@@ -35,11 +35,11 @@ auto synchronous_logging() -> void {
 
 auto callback_and_historical_logging() -> void {
   LoggerOptions options;
-  options.sinks = {std::make_shared<CallbackSink>([](const auto& record) {
+  options.sinks = {std::make_shared<CallbackSink>([](const auto& record) -> void {
     // The payload view only lives during this callback. Copy it when storing.
     std::cout << "callback: " << std::string(record.payload.data(), record.payload.size()) << '\n';
   })};
-  options.error_handler = [](std::string_view error) {
+  options.error_handler = [](std::string_view error) -> void {
     // Report errors through an independent channel, not this logger.
     std::cerr << "logging error: " << error << '\n';
   };
@@ -78,7 +78,7 @@ auto asynchronous_logging() -> void {
   AsyncLogger async(logger, {.capacity = 64, .overflow_policy = OverflowPolicy::Block});
   std::vector<std::jthread> producers;
   for (int worker = 0; worker < 2; ++worker)
-    producers.emplace_back([&, worker] {
+    producers.emplace_back([&, worker]() -> void {
       for (int frame = 0; frame < 3; ++frame)
         async.logf(Level::Info, std::source_location::current(), "worker={} frame={}", worker, frame);
     });

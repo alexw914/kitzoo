@@ -60,7 +60,7 @@ auto main() -> int {
 
   // Graceful shutdown: Ctrl+C or SIGTERM, or a request from the program itself.
   os::install_shutdown_handler();
-  std::jthread stopper{[] {
+  std::jthread stopper{[]() -> void {
     std::this_thread::sleep_for(std::chrono::milliseconds{10});
     os::request_shutdown();
   }};

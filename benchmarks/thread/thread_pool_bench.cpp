@@ -17,7 +17,7 @@ using namespace kitzoo::thread;
 static void BM_ThreadPoolSubmitLatency(benchmark::State& state) {
   ThreadPool pool{2};
   for (auto _ : state) {
-    auto f = pool.submit_task([] { return 1; });
+    auto f = pool.submit_task([]() -> int { return 1; });
     benchmark::DoNotOptimize(f.get());
   }
 }
@@ -36,7 +36,7 @@ static void BM_ThreadPoolTinyTaskThroughput(benchmark::State& state) {
     std::vector<std::future<void>> futures;
     futures.reserve(kTasks);
     for (int i = 0; i < kTasks; ++i) {
-      futures.push_back(pool.submit_task([&counter] { counter.fetch_add(1, std::memory_order_relaxed); }));
+      futures.push_back(pool.submit_task([&counter]() -> void { counter.fetch_add(1, std::memory_order_relaxed); }));
     }
     for (auto& f : futures)
       f.get();
@@ -53,7 +53,7 @@ static void BM_ThreadPoolCpuBound(benchmark::State& state) {
   const auto threads = static_cast<std::size_t>(state.range(0));
   ThreadPool pool{threads};
 
-  auto work = [](std::int64_t n) {
+  auto work = [](std::int64_t n) -> std::int64_t {
     std::int64_t acc = 0;
     for (std::int64_t i = 0; i < n; ++i)
       acc += (i * i) % 7;

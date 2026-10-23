@@ -10,7 +10,6 @@
 #include <cctype>
 #include <gtest/gtest.h>
 #include <numeric>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -78,7 +77,7 @@ TEST(RandomTest, ThreadLocalEnginesAreIndependent) {
   // and should produce values in range.
   std::vector<std::jthread> threads;
   for (int t = 0; t < 4; ++t) {
-    threads.emplace_back([] {
+    threads.emplace_back([]() -> void {
       for (int i = 0; i < 1000; ++i) {
         const auto v = random_int(0, 100);
         EXPECT_GE(v, 0);

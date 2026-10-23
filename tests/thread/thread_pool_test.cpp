@@ -31,20 +31,20 @@ using namespace kitzoo::thread;
 
 TEST(ThreadPoolTest, SubmitSingleReturnsValue) {
   ThreadPool pool{2};
-  auto future = pool.submit_task([] { return 42; });
+  auto future = pool.submit_task([]() -> int { return 42; });
   EXPECT_EQ(future.get(), 42);
 }
 
 TEST(ThreadPoolTest, SubmitWithArguments) {
   ThreadPool pool{2};
-  auto future = pool.submit_task([](int a, int b) { return a + b; }, 10, 32);
+  auto future = pool.submit_task([](int a, int b) -> int { return a + b; }, 10, 32);
   EXPECT_EQ(future.get(), 42);
 }
 
 TEST(ThreadPoolTest, SubmitVoid) {
   ThreadPool pool{2};
   std::atomic<int> counter{0};
-  auto future = pool.submit_task([&counter] { counter.store(1); });
+  auto future = pool.submit_task([&counter]() -> void { counter.store(1); });
   future.get();
   EXPECT_EQ(counter.load(), 1);
 }
@@ -66,7 +66,7 @@ TEST(ThreadPoolTest, ParallelExecution) {
   futures.reserve(kTasks);
 
   for (int i = 0; i < kTasks; ++i) {
-    futures.push_back(pool.submit_task([i] { return i * i; }));
+    futures.push_back(pool.submit_task([i]() -> int { return i * i; }));
   }
 
   for (int i = 0; i < kTasks; ++i) {
@@ -85,7 +85,7 @@ TEST(ThreadPoolTest, StressTest) {
   futures.reserve(kTasks);
 
   for (int i = 0; i < kTasks; ++i) {
-    futures.push_back(pool.submit_task([&counter] { counter.fetch_add(1, std::memory_order_relaxed); }));
+    futures.push_back(pool.submit_task([&counter]() -> void { counter.fetch_add(1, std::memory_order_relaxed); }));
   }
 
   for (auto& f : futures)
@@ -97,7 +97,7 @@ TEST(ThreadPoolTest, StressTest) {
 
 TEST(ThreadPoolTest, ExplicitShutdown) {
   ThreadPool pool{4};
-  auto f = pool.submit_task([] { return 99; });
+  auto f = pool.submit_task([]() -> int { return 99; });
   pool.shutdown();
   EXPECT_EQ(f.get(), 99);
 }
@@ -105,25 +105,25 @@ TEST(ThreadPoolTest, ExplicitShutdown) {
 TEST(ThreadPoolTest, TaskSubmissionAfterShutdownThrows) {
   ThreadPool pool{2};
   pool.shutdown();
-  EXPECT_THROW(pool.detach_task([] {}), std::runtime_error);
-  EXPECT_THROW(pool.submit_task([] {}), std::runtime_error);
+  EXPECT_THROW(pool.detach_task([]() -> void {}), std::runtime_error);
+  EXPECT_THROW(pool.submit_task([]() -> void {}), std::runtime_error);
 }
 
 // -- Thread count -------------------------------------------------------------
 
 TEST(ThreadPoolTest, TrySubmissionsReportShutdownWithoutThrowing) {
   ThreadPool pool{2};
-  auto future = pool.try_submit_task([](int value) { return value * 2; }, 21);
+  auto future = pool.try_submit_task([](int value) -> int { return value * 2; }, 21);
   ASSERT_TRUE(future.has_value());
   EXPECT_EQ(future->get(), 42);
   std::atomic<int> ran{0};
-  EXPECT_TRUE(pool.try_detach_task([&ran] { ran.fetch_add(1); }));
+  EXPECT_TRUE(pool.try_detach_task([&ran]() -> void { ran.fetch_add(1); }));
   pool.wait();
   EXPECT_EQ(ran.load(), 1);
 
   pool.shutdown();
-  EXPECT_FALSE(pool.try_detach_task([&ran] { ran.fetch_add(1); }));
-  EXPECT_FALSE(pool.try_submit_task([] { return 1; }).has_value());
+  EXPECT_FALSE(pool.try_detach_task([&ran]() -> void { ran.fetch_add(1); }));
+  EXPECT_FALSE(pool.try_submit_task([]() -> int { return 1; }).has_value());
   EXPECT_EQ(ran.load(), 1);
 }
 
@@ -174,7 +174,8 @@ TEST(ThreadPoolTest, QueuedTasksCount) {
 
   std::vector<std::future<void>> futures;
   for (int i = 0; i < kTasks; ++i) {
-    futures.push_back(pool.submit_task([sleep = std::chrono::milliseconds{1}] { std::this_thread::sleep_for(sleep); }));
+    futures.push_back(
+        pool.submit_task([sleep = std::chrono::milliseconds{1}]() -> void { std::this_thread::sleep_for(sleep); }));
   }
 
   const auto queued = pool.get_tasks_queued();
@@ -192,7 +193,7 @@ TEST(ThreadPoolTest, DestructorDrainsTasks) {
   {
     ThreadPool pool{4};
     for (int i = 0; i < 100; ++i) {
-      pool.detach_task([&counter] { counter.fetch_add(1); });
+      pool.detach_task([&counter]() -> void { counter.fetch_add(1); });
     }
   } // destructor waits for all tasks
   EXPECT_EQ(counter.load(), 100);
@@ -202,8 +203,8 @@ TEST(ThreadPoolTest, DestructorDrainsTasks) {
 
 TEST(ThreadPoolTest, SubmitFromWorkerThread) {
   ThreadPool pool{4};
-  auto future = pool.submit_task([&pool] {
-    auto inner = pool.submit_task([] { return 7; });
+  auto future = pool.submit_task([&pool]() -> int {
+    auto inner = pool.submit_task([]() -> int { return 7; });
     return inner.get() * 6;
   });
   EXPECT_EQ(future.get(), 42);
@@ -211,17 +212,17 @@ TEST(ThreadPoolTest, SubmitFromWorkerThread) {
 
 TEST(ThreadPoolTest, WaitAndShutdownFromWorkerThrow) {
   ThreadPool pool{1};
-  auto wait = pool.submit_task([&pool] { pool.wait(); });
+  auto wait = pool.submit_task([&pool]() -> void { pool.wait(); });
   EXPECT_THROW(wait.get(), std::logic_error);
-  auto shutdown = pool.submit_task([&pool] { pool.shutdown(); });
+  auto shutdown = pool.submit_task([&pool]() -> void { pool.shutdown(); });
   EXPECT_THROW(shutdown.get(), std::logic_error);
-  EXPECT_EQ(pool.submit_task([] { return 1; }).get(), 1);
+  EXPECT_EQ(pool.submit_task([]() -> int { return 1; }).get(), 1);
 }
 
 TEST(ThreadPoolTest, DetachTaskRunsAndWaitWaitsForCompletion) {
   ThreadPool pool{2};
   std::atomic<int> counter{0};
-  pool.detach_task([&counter] { counter.fetch_add(1); });
+  pool.detach_task([&counter]() -> void { counter.fetch_add(1); });
   pool.wait();
   EXPECT_EQ(counter.load(), 1);
   EXPECT_EQ(pool.get_tasks_total(), 0u);
@@ -231,7 +232,7 @@ TEST(ThreadPoolTest, DetachedExceptionTerminates) {
   EXPECT_DEATH(
       {
         ThreadPool pool{1};
-        pool.detach_task([] { throw std::runtime_error{"detached"}; });
+        pool.detach_task([]() -> void { throw std::runtime_error{"detached"}; });
         pool.wait();
       },
       "");
@@ -242,9 +243,9 @@ namespace {
 struct Account {
   int balance = 10;
 
-  auto peek(int extra) const -> int { return balance + extra; }
-
   auto deposit(int amount) -> void { balance += amount; }
+
+  KZ_NODISCARD auto peek(int extra) const -> int { return balance + extra; }
 };
 
 } // namespace
@@ -264,9 +265,9 @@ TEST(ThreadPoolTest, SubmitsMemberFunctionsWithObjectPointers) {
 TEST(ThreadPoolTest, SubmitsLambdasCapturingObjectPointers) {
   ThreadPool pool{2};
   Account account;
-  pool.detach_task([ptr = &account] { ptr->deposit(7); });
+  pool.detach_task([ptr = &account]() -> void { ptr->deposit(7); });
   pool.wait();
-  EXPECT_EQ(pool.submit_task([ptr = &account](int extra) { return ptr->peek(extra); }, 3).get(), 20);
+  EXPECT_EQ(pool.submit_task([ptr = &account](int extra) -> int { return ptr->peek(extra); }, 3).get(), 20);
 }
 
 // A submission racing shutdown is either rejected or run before shutdown returns.
@@ -278,10 +279,10 @@ TEST(ThreadPoolTest, ShutdownRacingSubmissionsRunsEveryAcceptedTask) {
     std::atomic<bool> stop{false};
     std::vector<std::jthread> submitters;
     for (int t = 0; t < 4; ++t)
-      submitters.emplace_back([&] {
+      submitters.emplace_back([&]() -> void {
         while (!stop.load()) {
           try {
-            pool.detach_task([&executed] { executed.fetch_add(1); });
+            pool.detach_task([&executed]() -> void { executed.fetch_add(1); });
             accepted.fetch_add(1);
           } catch (const std::runtime_error&) {
             return;
@@ -303,7 +304,7 @@ TEST(ThreadPoolTest, ShutdownRacingSubmissionsRunsEveryAcceptedTask) {
 
 TEST(ThreadPoolTest, NamedWorkersUseIndexedNames) {
   ThreadPool pool{1, "pool"};
-  auto name = pool.submit_task([] {
+  auto name = pool.submit_task([]() -> std::string {
 #if defined(_WIN32)
     return kitzoo::os::get_thread_name(GetCurrentThread());
 #else

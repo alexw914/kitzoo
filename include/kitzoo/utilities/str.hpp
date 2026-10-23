@@ -57,7 +57,6 @@ KZ_NODISCARD auto split(std::string_view s, std::string_view delimiter, bool ski
     -> std::vector<std::string_view>;
 
 KZ_NODISCARD auto join(std::span<const std::string_view> parts, std::string_view separator) -> std::string;
-
 KZ_NODISCARD auto join(std::initializer_list<std::string_view> parts, std::string_view separator) -> std::string;
 
 KZ_NODISCARD auto replace_all(std::string_view s, std::string_view from, std::string_view to) -> std::string;

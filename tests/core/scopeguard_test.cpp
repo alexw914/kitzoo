@@ -68,7 +68,7 @@ TEST(ScopeGuardTest, GuardsRunInReverseDeclarationOrder) {
 TEST(ScopeGuardTest, DismissDisarmsNamedGuard) {
   int calls = 0;
   {
-    ScopeGuard guard{[&]() noexcept { ++calls; }};
+    ScopeGuard guard{[&]() noexcept -> void { ++calls; }};
     guard.dismiss();
   }
   EXPECT_EQ(calls, 0);
@@ -79,14 +79,14 @@ TEST(ScopeGuardTest, FailGuardIgnoresExceptionAlreadyInFlight) {
   Counts counts;
 
   struct Unwinder {
-    Counts* counts;
+    Counts* counts_;
 
     ~Unwinder() {
       KZ_SCOPE_FAIL {
-        ++counts->fail;
+        ++counts_->fail;
       };
       KZ_SCOPE_SUCCESS {
-        ++counts->success;
+        ++counts_->success;
       };
     }
   };

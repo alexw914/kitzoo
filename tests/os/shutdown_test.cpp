@@ -42,8 +42,8 @@ TEST(ShutdownTest, WaitTimesOutUntilRequested) {
 TEST(ShutdownTest, RequestWakesBlockedWaiters) {
   EXPECT_EXIT(
       {
-        std::jthread first{[] { check(kitzoo::os::wait_for_shutdown()); }};
-        std::jthread second{[] { check(kitzoo::os::wait_for_shutdown(10s)); }};
+        std::jthread first{[]() -> void { check(kitzoo::os::wait_for_shutdown()); }};
+        std::jthread second{[]() -> void { check(kitzoo::os::wait_for_shutdown(10s)); }};
         std::this_thread::sleep_for(20ms);
         kitzoo::os::request_shutdown();
         first.join();

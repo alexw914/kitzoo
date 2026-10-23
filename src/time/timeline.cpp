@@ -148,12 +148,12 @@ auto OffsetTimeline::wait_for_progress(TimeDuration now, TimeDuration target, Ti
   const auto offset = offset_.load(std::memory_order_relaxed);
   // Saturates instead of overflowing; sleep_until rechecks the real timestamp.
   const auto shift = [offset](TimeDuration value) -> TimeDuration {
-    constexpr auto max = std::numeric_limits<TimeDuration::rep>::max();
-    constexpr auto min = std::numeric_limits<TimeDuration::rep>::min();
-    if (offset < 0 && value.count() > max + offset)
-      return TimeDuration{max};
-    if (offset > 0 && value.count() < min + offset)
-      return TimeDuration{min};
+    constexpr auto kMax = std::numeric_limits<TimeDuration::rep>::max();
+    constexpr auto kMin = std::numeric_limits<TimeDuration::rep>::min();
+    if (offset < 0 && value.count() > kMax + offset)
+      return TimeDuration{kMax};
+    if (offset > 0 && value.count() < kMin + offset)
+      return TimeDuration{kMin};
     return TimeDuration{value.count() - offset};
   };
   // A bounded wait notices offset changes made while waiting.

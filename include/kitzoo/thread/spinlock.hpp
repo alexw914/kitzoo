@@ -65,9 +65,9 @@ public:
     }
   }
 
-  KZ_NODISCARD auto try_lock() noexcept -> bool { return !flag_.test_and_set(std::memory_order_acquire); }
-
   auto unlock() noexcept -> void { flag_.clear(std::memory_order_release); }
+
+  KZ_NODISCARD auto try_lock() noexcept -> bool { return !flag_.test_and_set(std::memory_order_acquire); }
 
 private:
   std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
@@ -86,16 +86,6 @@ public:
     while ((state_.load(std::memory_order_acquire) & kReaderMask) != 0)
       drain.pause();
     state_.store(kWriterActive, std::memory_order_release);
-  }
-
-  KZ_NODISCARD auto try_lock() noexcept -> bool {
-    if (writer_gate_.test_and_set(std::memory_order_acquire))
-      return false;
-    auto expected = std::uint32_t{0};
-    if (state_.compare_exchange_strong(expected, kWriterActive, std::memory_order_acquire, std::memory_order_relaxed))
-      return true;
-    writer_gate_.clear(std::memory_order_release);
-    return false;
   }
 
   auto unlock() noexcept -> void {
@@ -117,6 +107,18 @@ public:
     }
   }
 
+  auto unlock_shared() noexcept -> void { state_.fetch_sub(1, std::memory_order_release); }
+
+  KZ_NODISCARD auto try_lock() noexcept -> bool {
+    if (writer_gate_.test_and_set(std::memory_order_acquire))
+      return false;
+    auto expected = std::uint32_t{0};
+    if (state_.compare_exchange_strong(expected, kWriterActive, std::memory_order_acquire, std::memory_order_relaxed))
+      return true;
+    writer_gate_.clear(std::memory_order_release);
+    return false;
+  }
+
   KZ_NODISCARD auto try_lock_shared() noexcept -> bool {
     auto state = state_.load(std::memory_order_relaxed);
     while ((state & kWriterMask) == 0 && (state & kReaderMask) != kReaderMask) {
@@ -125,8 +127,6 @@ public:
     }
     return false;
   }
-
-  auto unlock_shared() noexcept -> void { state_.fetch_sub(1, std::memory_order_release); }
 
 private:
   static constexpr std::uint32_t kWriterActive = std::uint32_t{1} << 31;

@@ -7,10 +7,8 @@
 #include <kitzoo/queue/spsc_queue.hpp>
 
 #include <atomic>
-#include <chrono>
 #include <gtest/gtest.h>
 #include <thread>
-#include <vector>
 
 using namespace kitzoo;
 using namespace kitzoo::queue;
@@ -22,7 +20,6 @@ constexpr std::size_t kQueueCap = 1024;
 TEST(SPSCQueueTest, PushPopSingleThread) {
   SPSCQueue<int, kQueueCap> q;
   EXPECT_TRUE(q.empty());
-
   EXPECT_TRUE(q.push(42));
   EXPECT_FALSE(q.empty());
 
@@ -34,10 +31,10 @@ TEST(SPSCQueueTest, PushPopSingleThread) {
 
 TEST(SPSCQueueTest, FifoOrder) {
   SPSCQueue<int, kQueueCap> q;
-  constexpr int N = 100;
-  for (int i = 0; i < N; ++i)
+  constexpr int kCount = 100;
+  for (int i = 0; i < kCount; ++i)
     EXPECT_TRUE(q.push(i));
-  for (int i = 0; i < N; ++i) {
+  for (int i = 0; i < kCount; ++i) {
     auto v = q.pop();
     ASSERT_TRUE(v.has_value());
     EXPECT_EQ(*v, i);
@@ -111,7 +108,7 @@ TEST(SPSCQueueTest, StressSingleProducerSingleConsumer) {
   std::atomic<int> consumed_sum{0};
   int expected_sum = 0;
 
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     while (!start.load()) {
     }
     for (int i = 0; i < kTotal; ++i) {
@@ -121,7 +118,7 @@ TEST(SPSCQueueTest, StressSingleProducerSingleConsumer) {
     }
   }};
 
-  std::jthread consumer{[&] {
+  std::jthread consumer{[&]() -> void {
     while (!start.load()) {
     }
     int received = 0;
@@ -150,7 +147,7 @@ TEST(SPSCQueueTest, ManyRoundTripsNoDataLoss) {
   std::atomic<bool> done{false};
   std::atomic<int> checksum{0};
 
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     for (int i = 0; i < 500'000; ++i) {
       while (!q.push(i)) {
       }
@@ -158,7 +155,7 @@ TEST(SPSCQueueTest, ManyRoundTripsNoDataLoss) {
     done.store(true, std::memory_order_release);
   }};
 
-  std::jthread consumer{[&] {
+  std::jthread consumer{[&]() -> void {
     int expected = 0;
     while (!done.load(std::memory_order_acquire) || !q.empty()) {
       auto v = q.pop();

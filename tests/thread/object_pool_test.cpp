@@ -7,7 +7,6 @@
 #include <kitzoo/thread/object_pool.hpp>
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <future>
 #include <gtest/gtest.h>
@@ -64,7 +63,7 @@ TEST(ObjectPoolTest, LeaseCanReturnFromAnotherThread) {
   pool.add(kitzoo::memory::make_unique<int>(7));
   auto object = pool.acquire();
 
-  std::thread worker{[lease = std::move(object)]() mutable { lease.reset(); }};
+  std::thread worker{[lease = std::move(object)]() mutable -> void { lease.reset(); }};
   worker.join();
 
   EXPECT_EQ(pool.available_approx(), 1u);
@@ -77,16 +76,16 @@ TEST(ObjectPoolTest, SupportsConcurrentAcquireAndReturn) {
   };
 
   ObjectPool<Counter> pool;
-  constexpr int object_count = 4;
-  constexpr int thread_count = 8;
-  constexpr int iterations = 200;
-  for (int i = 0; i < object_count; ++i)
+  constexpr int kObjectCount = 4;
+  constexpr int kThreadCount = 8;
+  constexpr int kIterations = 200;
+  for (int i = 0; i < kObjectCount; ++i)
     pool.add(kitzoo::memory::make_unique<Counter>());
 
   std::vector<std::thread> workers;
-  for (int i = 0; i < thread_count; ++i) {
-    workers.emplace_back([&pool] {
-      for (int j = 0; j < iterations; ++j) {
+  for (int i = 0; i < kThreadCount; ++i) {
+    workers.emplace_back([&pool]() -> void {
+      for (int j = 0; j < kIterations; ++j) {
         auto object = pool.acquire();
         object->uses.fetch_add(1, std::memory_order_relaxed);
       }
@@ -97,14 +96,14 @@ TEST(ObjectPoolTest, SupportsConcurrentAcquireAndReturn) {
 
   int total = 0;
   std::vector<decltype(pool.acquire())> objects;
-  for (int i = 0; i < object_count; ++i) {
+  for (int i = 0; i < kObjectCount; ++i) {
     objects.push_back(pool.acquire());
     total += objects.back()->uses.load(std::memory_order_relaxed);
   }
-  EXPECT_EQ(total, thread_count * iterations);
+  EXPECT_EQ(total, kThreadCount * kIterations);
   EXPECT_EQ(pool.available_approx(), 0u);
   objects.clear();
-  EXPECT_EQ(pool.available_approx(), static_cast<std::size_t>(object_count));
+  EXPECT_EQ(pool.available_approx(), static_cast<std::size_t>(kObjectCount));
 }
 
 TEST(ObjectPoolTest, SharedLeaseReturnsAfterLastOwner) {

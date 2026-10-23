@@ -183,12 +183,12 @@ TEST(FileSinkTest, ConcurrentCleanupsWhileLoggingRemoveEachFileOnce) {
   std::atomic<std::size_t> removed{0};
   {
     std::vector<std::jthread> threads;
-    threads.emplace_back([&logger] {
+    threads.emplace_back([&logger]() -> void {
       for (int i = 0; i < 1000; ++i)
         logger.log(Level::Info, "record");
     });
     for (int t = 0; t < 4; ++t)
-      threads.emplace_back([&] { removed += sink->cleanup(); });
+      threads.emplace_back([&]() -> void { removed += sink->cleanup(); });
   }
   logger.flush();
   EXPECT_EQ(removed.load(), static_cast<std::size_t>(kExpired));

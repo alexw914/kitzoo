@@ -9,7 +9,6 @@
 - 自有头文件和实现文件使用下列文件头，`File` 填写从仓库根目录开始的
   实际路径，`Description` 简洁说明职责；续行与描述正文对齐。
 - 使用英文描述，不加入作者、日期或修改历史；这些信息由 Git 记录。
-- 头文件使用 include guard，禁止使用 `#pragma once`。
 - 宏名由公开头文件路径生成：从 `kitzoo/` 开始，将路径分隔符、点替换为
   下划线并全部大写。例如 `include/kitzoo/os/sys.hpp` 对应
   `KITZOO_OS_SYS_HPP`。不得重复或使用保留的双下划线。
@@ -35,18 +34,19 @@
 
 ## 格式与函数
 
-- 使用仓库根目录 `.clang-format`，通过 `clang-format -i <修改的文件>` 格式化。
-  格式检查使用 `clang-format --dry-run --Werror <修改的文件>`。
-- 格式选项以 `.clang-format` 为准，不在本文件重复规定。
-- `const` 等限定符统一写在类型左侧（`const T&`、`const T*`），由 `.clang-format`
-  的 `QualifierAlignment: Left` 保证；生成头文件模板需手动保持一致。
+- 格式和可自动检查的规则以仓库根目录 `.clang-format`（>=21，通过 `clang-format -i <修改的文件>`
+  格式化，检查用 `--dry-run --Werror`）和 `.clang-tidy`（配合构建目录的 compile_commands.json）为准，
+  本文件不重复：包括缩进、include 顺序、限定符在类型左侧、枚举末项逗号、命名风格、`kName` 常量、
+  class 成员变量的 `_` 后缀、函数和 lambda 的尾置返回类型、const 查询的 `KZ_NODISCARD`、override、
+  enum class、禁止 `#pragma once` 和未使用的头文件。生成头文件模板需手动保持一致。
 - 非 C++ 文本使用 LF，Windows `.bat`、`.cmd` 使用 CRLF。
-- 函数声明之间保留一个空行；紧密相关的重载可成组排列。
-- 新增和修改的函数声明、定义使用尾置返回类型：
-  `auto read_file(...) -> std::string`、`auto write_file(...) -> void`。
-  构造函数、析构函数、类型转换运算符按 C++ 所要求的语法书写。
-- 有显式返回值的 lambda 优先使用 `[](...) -> ReturnType { ... }`；泛型
-  lambda 可按需要使用返回类型推导。
+- 函数声明之间保留一个空行；同名重载（含构造函数）连续声明、不空行。
+- 类的每个访问区段（public、protected、private）内依次放：静态成员函数；构造函数、析构函数和拷贝、移动操作
+  （依此顺序）；普通成员函数；虚函数（`virtual`、`override` 或纯虚）；以 `KZ_NODISCARD` 等属性宏开头的函数。
+  同名重载按首个声明归组。
+- 转发给成员的方法与被调方法同名，不另起名字造成歧义；第三方接口的封装可沿用本库的公开命名。
+- 忽略返回值即为错误的函数加 `KZ_NODISCARD`：除 clang-tidy 要求的 const 查询外，也包括取出数据或
+  获取资源的函数（如 `try_pop`、`acquire`、`try_lock`）和无副作用的自由查询函数。
 - 函数参数按使用语义优先采用引用：只读访问较大对象使用 `const T&`，修改
   调用方对象使用 `T&`；转移所有权时按需要使用值传递或 `T&&`。数值、指针、
   `std::string_view` 等轻量类型按值传递，不为使用引用而增加间接访问。
@@ -66,15 +66,11 @@
 - 同一模块的公开代码统一使用该模块的命名空间，不按文件或功能另建公开
   命名空间；utilities 统一使用 `kitzoo::util`，其余模块使用
   `kitzoo::<module>`。内部辅助实现可使用 `detail` 或匿名命名空间。
-- 类、结构体和枚举类型使用大驼峰命名，例如 `ThreadPool`、`BasicMemory`、
-  `SchedPolicy`。
-- 函数和变量使用小写下划线命名，例如 `set_thread_name`、`cpu_count`。
-  标准库要求的名称和第三方接口遵循其原有约定。
-- 枚举使用 `enum class`，枚举项使用大驼峰命名，禁止全大写加模块前缀的
-  枚举项，例如 `SchedPolicy::Other`、`Rr`、`Fifo`。
-- 底层枚举类型仅在序列化、ABI 或明确的存储需求下指定；数值只有在接口
-  语义需要时显式给出。最后一项保留逗号。
-- 常量遵循已有的 `kThreadNamePrefix` 风格；宏使用大写下划线形式。
+- 标准库要求的名称和第三方接口遵循其原有约定。自定义构造或析构的 struct 的成员变量也以 `_` 结尾，
+  纯数据 struct（参数、配置、结果、公开值类型）成员不加。
+- 底层枚举类型仅在序列化、ABI 或明确的存储需求下指定；数值只有在接口语义需要时显式给出。
+  日志需要枚举名时用 `to_string` 重载返回枚举项同名的 `std::string_view`，只为实际用到的枚举添加。
+  枚举项和结构体成员的简短说明只写在声明后的行尾，不另起一行写在上方。
 - 只有持有进程级共享状态的对象才使用单例；无状态的工具接口使用模块命名
   空间下的自由函数。单例优先继承 `kitzoo::core::Singleton<T>`，派生类构造
   函数设为私有，并声明模板基类为 friend；不重复实现 `instance()` 或拷贝、

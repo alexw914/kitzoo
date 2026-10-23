@@ -15,16 +15,16 @@ namespace kitzoo::core {
 template <typename T>
 class Singleton {
 public:
-  Singleton(const Singleton&) = delete;
-  Singleton(Singleton&&) = delete;
-  auto operator=(const Singleton&) -> Singleton& = delete;
-  auto operator=(Singleton&&) -> Singleton& = delete;
-
   KZ_NODISCARD static auto instance() -> T& {
     // C++ guarantees serialized initialization and retries after a constructor throws.
     static T value;
     return value;
   }
+
+  Singleton(const Singleton&) = delete;
+  Singleton(Singleton&&) = delete;
+  auto operator=(const Singleton&) -> Singleton& = delete;
+  auto operator=(Singleton&&) -> Singleton& = delete;
 
 protected:
   Singleton() = default;
@@ -36,16 +36,16 @@ protected:
 template <typename T>
 class EagerSingleton {
 public:
-  EagerSingleton(const EagerSingleton&) = delete;
-  EagerSingleton(EagerSingleton&&) = delete;
-  auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
-  auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
-
   KZ_NODISCARD static auto instance() -> T& {
     // ODR-use the initializer without reading its value during static startup.
     static_cast<void>(&value_);
     return storage();
   }
+
+  EagerSingleton(const EagerSingleton&) = delete;
+  EagerSingleton(EagerSingleton&&) = delete;
+  auto operator=(const EagerSingleton&) -> EagerSingleton& = delete;
+  auto operator=(EagerSingleton&&) -> EagerSingleton& = delete;
 
 protected:
   EagerSingleton() = default;

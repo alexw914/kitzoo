@@ -176,9 +176,9 @@ TEST_F(LogTest, FunctionFlagPrintsCallerNameAndLambdasTheirEnclosingFunction) {
   log_from_named_function(*logger_);
   (void)Camera{}.capture(*logger_);
   log_from_template(*logger_, std::vector<int>{});
-  [this] { logger_->log(Level::Info, "lambda"); }();
-  [this] { [this] { logger_->log(Level::Info, "nested"); }(); }();
-  [this](auto value) {
+  [this]() -> void { logger_->log(Level::Info, "lambda"); }();
+  [this]() -> void { [this]() -> void { logger_->log(Level::Info, "nested"); }(); }();
+  [this](auto value) -> auto {
     logger_->log(Level::Info, "generic");
     return value;
   }(1);
@@ -257,7 +257,7 @@ TEST(LogFormatTest, DefaultPatternShowsThreadLevelLetterAndCaller) {
 // own std, log or default_logger cannot capture them.
 namespace macro_caller {
 namespace std {
-struct source_location {};
+struct source_location {}; // NOLINT(readability-identifier-naming): stands in for the std name.
 } // namespace std
 
 namespace log {} // namespace log
@@ -360,7 +360,7 @@ TEST(LogCallbackTest, CopiesPayloadBeforeCallbackReturns) {
   std::string copied;
   LoggerOptions options;
   options.sinks = {std::make_shared<CallbackSink>(
-      [&](const auto& record) { copied.assign(record.payload.data(), record.payload.size()); })};
+      [&](const auto& record) -> void { copied.assign(record.payload.data(), record.payload.size()); })};
   Logger logger("callback", options);
   logger.logf(Level::Info, std::source_location::current(), "{}", std::string(1024, 'x'));
   EXPECT_EQ(copied, std::string(1024, 'x'));
@@ -368,8 +368,9 @@ TEST(LogCallbackTest, CopiesPayloadBeforeCallbackReturns) {
 
 TEST_F(LogTest, SinkErrorsInvokeHandler) {
   std::vector<std::string> errors;
-  logger_->set_error_handler([&](std::string_view error) { errors.emplace_back(error); });
-  logger_->add_sink(std::make_shared<CallbackSink>([](const auto&) { throw std::runtime_error("output failed"); }));
+  logger_->set_error_handler([&](std::string_view error) -> void { errors.emplace_back(error); });
+  logger_->add_sink(
+      std::make_shared<CallbackSink>([](const auto&) -> void { throw std::runtime_error("output failed"); }));
   EXPECT_NO_THROW(logger_->log(Level::Error, "attempt"));
   ASSERT_EQ(errors.size(), 1u);
   EXPECT_NE(errors[0].find("output failed"), std::string::npos);
@@ -377,8 +378,9 @@ TEST_F(LogTest, SinkErrorsInvokeHandler) {
 }
 
 TEST_F(LogTest, ThrowingErrorHandlerTerminates) {
-  logger_->set_error_handler([](std::string_view) { throw std::runtime_error("error callback failed"); });
-  logger_->add_sink(std::make_shared<CallbackSink>([](const auto&) { throw std::runtime_error("output failed"); }));
+  logger_->set_error_handler([](std::string_view) -> void { throw std::runtime_error("error callback failed"); });
+  logger_->add_sink(
+      std::make_shared<CallbackSink>([](const auto&) -> void { throw std::runtime_error("output failed"); }));
   EXPECT_DEATH(logger_->log(Level::Error, "attempt"), "");
 }
 
@@ -398,7 +400,7 @@ TEST_F(LogTest, AsyncFlushIsReusableAndFlushesPriorRecords) {
 
 TEST_F(LogTest, AsyncOwnsLongMessageAfterProducerExits) {
   AsyncLogger async(logger_, {2});
-  std::jthread producer([&] {
+  std::jthread producer([&]() -> void {
     std::string text(4096, 'x');
     async.logf(Level::Info, std::source_location::current(), "{}:{}", text, 42);
     text.assign(4096, 'y');
@@ -427,7 +429,7 @@ TEST_F(LogTest, AsyncBlockPolicyPreservesEveryConcurrentProducerMessage) {
   AsyncLogger async(logger_, {1, OverflowPolicy::Block});
   std::vector<std::jthread> producers;
   for (int t = 0; t < 4; ++t)
-    producers.emplace_back([&, t] {
+    producers.emplace_back([&, t]() -> void {
       for (int i = 0; i < 100; ++i)
         async.logf(Level::Info, std::source_location::current(), "{}:{}", t, i);
     });
@@ -447,7 +449,7 @@ TEST_F(LogTest, AsyncBlockPolicyPreservesEveryConcurrentProducerMessage) {
 
 TEST_F(LogTest, AsyncDropNewestPreservesAcceptedRecordsAndFlushBarrier) {
   OutputGate gate;
-  logger_->add_sink(std::make_shared<CallbackSink>([&](const auto&) { gate.pause_first(); }));
+  logger_->add_sink(std::make_shared<CallbackSink>([&](const auto&) -> void { gate.pause_first(); }));
   AsyncLogger async(logger_, {1, OverflowPolicy::DropNewest});
   async.log(Level::Info, "in flight");
   const bool entered = gate.wait_until_entered();
@@ -471,8 +473,8 @@ TEST_F(LogTest, AsyncDropNewestPreservesAcceptedRecordsAndFlushBarrier) {
 TEST_F(LogTest, AsyncCloseIsConcurrentAndRejectsFurtherSubmissions) {
   AsyncLogger async(logger_, {1});
   async.log(Level::Info, "before close");
-  std::jthread first([&] { async.close(); });
-  std::jthread second([&] { async.close(); });
+  std::jthread first([&]() -> void { async.close(); });
+  std::jthread second([&]() -> void { async.close(); });
   first.join();
   second.join();
   async.close();
@@ -486,8 +488,9 @@ TEST_F(LogTest, AsyncCloseIsConcurrentAndRejectsFurtherSubmissions) {
 
 TEST_F(LogTest, AsyncFailureDoesNotPreventOtherSinksOrLaterRecords) {
   std::atomic<int> errors{0};
-  logger_->set_error_handler([&](std::string_view) { ++errors; });
-  logger_->add_sink(std::make_shared<CallbackSink>([](const auto&) { throw std::runtime_error("output failed"); }));
+  logger_->set_error_handler([&](std::string_view) -> void { ++errors; });
+  logger_->add_sink(
+      std::make_shared<CallbackSink>([](const auto&) -> void { throw std::runtime_error("output failed"); }));
   AsyncLogger async(logger_);
   async.log(Level::Info, "first");
   async.log(Level::Info, "second");
@@ -514,7 +517,7 @@ TEST_F(LogTest, AsyncHonorsSinkFilteringAndAutomaticFlush) {
 TEST_F(LogTest, AsyncWorkerRejectsSelfWaitingFlushAndClose) {
   AsyncLogger* worker = nullptr;
   std::atomic<int> guarded{0};
-  logger_->add_sink(std::make_shared<CallbackSink>([&](const auto&) {
+  logger_->add_sink(std::make_shared<CallbackSink>([&](const auto&) -> void {
     try {
       worker->flush();
     } catch (const std::logic_error&) {

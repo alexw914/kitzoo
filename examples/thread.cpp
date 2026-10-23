@@ -34,7 +34,7 @@ auto main() -> int {
   struct Sensor {
     int base = 40;
 
-    auto read(int offset) const -> int { return base + offset; }
+    KZ_NODISCARD auto read(int offset) const -> int { return base + offset; }
   };
 
   Sensor sensor;

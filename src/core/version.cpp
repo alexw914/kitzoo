@@ -11,7 +11,7 @@
 namespace kitzoo::core {
 
 auto current_build_info() noexcept -> const build_info& {
-  static const build_info info{
+  static const build_info kInfo{
       .lib_version = library_version,
       .version_str = version_string,
       .compiler = KITZOO_COMPILER_INFO,
@@ -22,7 +22,7 @@ auto current_build_info() noexcept -> const build_info& {
 #endif
       .sanitizers = KITZOO_ENABLED_SANITIZERS,
   };
-  return info;
+  return kInfo;
 }
 
 } // namespace kitzoo::core

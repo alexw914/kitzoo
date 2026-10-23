@@ -72,8 +72,8 @@ TEST(StrTrimTest, ViewOfOriginal) {
 }
 
 TEST(StrTrimTest, ConstexprWorks) {
-  constexpr auto v = trim("  hi  ");
-  static_assert(v == "hi");
+  constexpr auto kTrimmed = trim("  hi  ");
+  static_assert(kTrimmed == "hi");
 }
 
 // ============================================================================

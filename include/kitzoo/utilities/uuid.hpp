@@ -25,10 +25,6 @@ class Uuid {
 public:
   using Bytes = std::array<std::uint8_t, 16>;
 
-  constexpr Uuid() noexcept = default;
-
-  explicit constexpr Uuid(Bytes bytes) noexcept : bytes_{bytes} {}
-
   KZ_NODISCARD static auto random() -> Uuid {
     static_assert(std::random_device::max() >= 0xffffffffU, "random_device must yield 32 bits");
     std::random_device source;
@@ -69,6 +65,12 @@ public:
     return Uuid{data};
   }
 
+  constexpr Uuid() noexcept = default;
+
+  explicit constexpr Uuid(Bytes bytes) noexcept : bytes_{bytes} {}
+
+  friend constexpr auto operator==(const Uuid&, const Uuid&) noexcept -> bool = default;
+
   KZ_NODISCARD constexpr auto bytes() const noexcept -> const Bytes& { return bytes_; }
 
   KZ_NODISCARD constexpr auto is_nil() const noexcept -> bool {
@@ -79,19 +81,17 @@ public:
   }
 
   KZ_NODISCARD auto to_string() const -> std::string {
-    constexpr char digits[] = "0123456789abcdef";
+    constexpr char kDigits[] = "0123456789abcdef";
     std::string text;
     text.reserve(36);
     for (std::size_t i = 0; i < bytes_.size(); ++i) {
       if (i == 4 || i == 6 || i == 8 || i == 10)
         text.push_back('-');
-      text.push_back(digits[bytes_[i] >> 4]);
-      text.push_back(digits[bytes_[i] & 0x0fU]);
+      text.push_back(kDigits[bytes_[i] >> 4]);
+      text.push_back(kDigits[bytes_[i] & 0x0fU]);
     }
     return text;
   }
-
-  friend constexpr auto operator==(const Uuid&, const Uuid&) noexcept -> bool = default;
 
 private:
   static constexpr auto hex_value(char c) noexcept -> int {

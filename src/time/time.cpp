@@ -4,7 +4,6 @@
 // Description: Implements basic clocks, calendar conversion and steady timing utilities.
 // -----------------------------------------------------------------------------
 
-#include <kitzoo/memory/memory.hpp>
 #include <kitzoo/time/time.hpp>
 
 #include <cstdint>

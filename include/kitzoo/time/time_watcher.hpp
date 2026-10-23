@@ -59,10 +59,10 @@ public:
 
   auto end(std::string_view name) -> TimeDuration;
 
-  auto last_result(std::string_view name) const -> std::optional<TimeDuration>;
-
   // A scope owns shared state and can safely outlive its watcher object.
   auto scope(std::string_view name, WatchCallback callback = {}) -> Scope;
+
+  KZ_NODISCARD auto last_result(std::string_view name) const -> std::optional<TimeDuration>;
 
 private:
   memory::SharedPtr<State> state_;

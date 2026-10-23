@@ -73,7 +73,7 @@ RollingFileSink::RollingFileSink(const FileSinkOptions& options) : impl_(memory:
   cleanup();
   if (options.cleanup_interval != std::chrono::milliseconds::zero()) {
     impl_->cleaner.emplace(options.cleanup_interval);
-    impl_->cleaner->start([this] { cleanup(); });
+    impl_->cleaner->start([this]() -> void { cleanup(); });
   }
 }
 

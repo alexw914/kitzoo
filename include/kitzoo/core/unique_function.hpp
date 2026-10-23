@@ -103,7 +103,7 @@ private:
 
   template <typename T, bool InSbo>
   static auto vtable_for() -> const VTable& {
-    static const VTable table{
+    static const VTable kTable{
 
         [](void* obj, Args&&... args) -> R {
           if constexpr (std::is_void_v<R>)
@@ -122,7 +122,7 @@ private:
           }
         },
 
-        [](void* obj) noexcept {
+        [](void* obj) noexcept -> void {
           if constexpr (InSbo) {
             static_cast<T*>(obj)->~T();
           } else {
@@ -130,7 +130,7 @@ private:
           }
         },
     };
-    return table;
+    return kTable;
   }
 
   alignas(void*) std::byte storage_[kSboSize];

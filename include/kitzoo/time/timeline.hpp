@@ -36,6 +36,12 @@ class Timeline {
 public:
   virtual ~Timeline() = default;
 
+  // Called by sleep_until while timestamp() is below target: blocks until the
+  // timeline may have reached target, for at most limit, or until stop. The
+  // default sleeps for the remaining gap when type() is System, otherwise polls.
+  virtual auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
+      -> void;
+
   KZ_NODISCARD virtual auto timestamp(std::string_view key = {}) const -> TimeDuration = 0;
 
   KZ_NODISCARD virtual auto is_valid() const -> bool = 0;
@@ -44,20 +50,16 @@ public:
 
   // Uses timeline progress, with a steady-clock timeout; zero timeout means unlimited.
   // Invalid timelines return false. Backward jumps postpone the target, not wrap time.
-  auto sleep_until(TimeDuration target, TimeDuration timeout = {}, std::stop_token stop = {}) const -> bool;
+  KZ_NODISCARD auto sleep_until(TimeDuration target, TimeDuration timeout = {}, std::stop_token stop = {}) const
+      -> bool;
 
-  auto sleep_for(TimeDuration duration, TimeDuration timeout = {}, std::stop_token stop = {}) const -> bool;
-
-  // Called by sleep_until while timestamp() is below target: blocks until the
-  // timeline may have reached target, for at most limit, or until stop. The
-  // default sleeps for the remaining gap when type() is System, otherwise polls.
-  virtual auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
-      -> void;
+  KZ_NODISCARD auto sleep_for(TimeDuration duration, TimeDuration timeout = {}, std::stop_token stop = {}) const
+      -> bool;
 };
 
 class SystemTimeline final : public Timeline {
 public:
-  auto timestamp(std::string_view key = {}) const -> TimeDuration override;
+  KZ_NODISCARD auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
   KZ_NODISCARD auto is_valid() const -> bool override;
 
@@ -71,13 +73,13 @@ public:
 
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  KZ_NODISCARD auto is_valid() const -> bool override;
-
-  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
-
   // Wakes when a fed timestamp reaches target instead of polling.
   auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
       -> void override;
+
+  KZ_NODISCARD auto is_valid() const -> bool override;
+
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
 private:
   mutable std::mutex mutex_;
@@ -92,7 +94,7 @@ class CallbackTimeline final : public Timeline {
 public:
   explicit CallbackTimeline(ClockCallback callback);
 
-  auto timestamp(std::string_view key = {}) const -> TimeDuration override;
+  KZ_NODISCARD auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
   KZ_NODISCARD auto is_valid() const -> bool override;
 
@@ -111,13 +113,13 @@ public:
 
   auto timestamp(std::string_view key = {}) const -> TimeDuration override;
 
-  KZ_NODISCARD auto is_valid() const -> bool override;
-
-  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
-
   // Waits on the source in its own domain.
   auto wait_for_progress(TimeDuration now, TimeDuration target, TimeDuration limit, std::stop_token stop) const
       -> void override;
+
+  KZ_NODISCARD auto is_valid() const -> bool override;
+
+  KZ_NODISCARD auto type() const noexcept -> TimelineType override;
 
 private:
   memory::SharedPtr<Timeline> source_;

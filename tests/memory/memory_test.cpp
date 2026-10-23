@@ -27,25 +27,25 @@ namespace {
 constexpr std::size_t kBudgetBytes = 65536;
 
 struct alignas(64) Tracked {
-  static inline int live = 0;
+  static inline int live_ = 0;
   int value = 42;
 
-  Tracked() { ++live; }
+  Tracked() { ++live_; }
 
-  ~Tracked() { --live; }
+  ~Tracked() { --live_; }
 };
 
 struct Throwing {
-  static inline int live = 0;
-  static inline int attempts = 0;
+  static inline int live_ = 0;
+  static inline int attempts_ = 0;
 
   Throwing() {
-    if (++attempts == 3)
+    if (++attempts_ == 3)
       throw std::runtime_error("construction failed");
-    ++live;
+    ++live_;
   }
 
-  ~Throwing() { --live; }
+  ~Throwing() { --live_; }
 };
 
 } // namespace
@@ -57,18 +57,18 @@ TEST(MemoryTest, ObjectAndArrayLifetimeAlignmentAndExceptions) {
   {
     auto shared = memory.alloc_object<Tracked>();
     auto array = memory.alloc_basic_array<Tracked>(4);
-    EXPECT_EQ(Tracked::live, 5);
+    EXPECT_EQ(Tracked::live_, 5);
     EXPECT_EQ(array[3].value, 42);
     EXPECT_EQ(reinterpret_cast<std::uintptr_t>(array.get()) % alignof(Tracked), 0U);
   }
-  EXPECT_EQ(Tracked::live, 0);
+  EXPECT_EQ(Tracked::live_, 0);
   auto zeros = memory.alloc_basic_array<int>(4);
   EXPECT_EQ(zeros[3], 0);
   EXPECT_FALSE(memory.alloc_basic_array<int>(0));
   EXPECT_THROW(memory.alloc_basic_array<int>(std::numeric_limits<std::size_t>::max()), std::bad_array_new_length);
-  Throwing::attempts = 0;
+  Throwing::attempts_ = 0;
   EXPECT_THROW(memory.alloc_basic_array<Throwing>(4), std::runtime_error);
-  EXPECT_EQ(Throwing::live, 0);
+  EXPECT_EQ(Throwing::live_, 0);
   zeros.reset();
   EXPECT_EQ(budget.stats().used_bytes, 0U); // Constructor failures reclaimed storage.
 }
@@ -78,24 +78,24 @@ TEST(MemoryTest, DefaultResourceSupportsAlignedObjectsAndArrays) {
   {
     auto object = objects.alloc_object<Tracked>();
     auto array = objects.alloc_basic_array<Tracked>(3);
-    EXPECT_EQ(Tracked::live, 4);
+    EXPECT_EQ(Tracked::live_, 4);
     EXPECT_EQ(array[2].value, 42);
     EXPECT_EQ(reinterpret_cast<std::uintptr_t>(object.get()) % alignof(Tracked), 0U);
     EXPECT_EQ(reinterpret_cast<std::uintptr_t>(array.get()) % alignof(Tracked), 0U);
   }
-  EXPECT_EQ(Tracked::live, 0);
+  EXPECT_EQ(Tracked::live_, 0);
 }
 
 // Public container aliases and smart pointer factories.
 namespace {
 
 struct alignas(256) FactoryTracked {
-  static inline int live = 0;
+  static inline int live_ = 0;
   int value;
 
-  explicit FactoryTracked(int input) : value(input) { ++live; }
+  explicit FactoryTracked(int input) : value(input) { ++live_; }
 
-  ~FactoryTracked() { --live; }
+  ~FactoryTracked() { --live_; }
 };
 
 struct FactoryThrowing {
@@ -112,7 +112,7 @@ TEST(MemoryUniquePtrTest, ConstructionMoveResetAndExplicitRelease) {
   {
     auto object = memory::make_unique<FactoryTracked>(42);
     EXPECT_EQ(object->value, 42);
-    EXPECT_EQ(FactoryTracked::live, 1);
+    EXPECT_EQ(FactoryTracked::live_, 1);
     EXPECT_EQ(reinterpret_cast<std::uintptr_t>(object.get()) % 256, 0U);
     auto moved = std::move(object);
     EXPECT_FALSE(object);
@@ -122,12 +122,12 @@ TEST(MemoryUniquePtrTest, ConstructionMoveResetAndExplicitRelease) {
     auto replacement = memory::make_unique<FactoryTracked>(7);
     adopted.reset(replacement.release());
     EXPECT_FALSE(replacement);
-    EXPECT_EQ(FactoryTracked::live, 1);
+    EXPECT_EQ(FactoryTracked::live_, 1);
     EXPECT_EQ(adopted->value, 7);
     adopted.reset();
-    EXPECT_EQ(FactoryTracked::live, 0);
+    EXPECT_EQ(FactoryTracked::live_, 0);
   }
-  EXPECT_EQ(FactoryTracked::live, 0);
+  EXPECT_EQ(FactoryTracked::live_, 0);
   EXPECT_EQ(*memory::make_unique<int>(), 0);
   auto text = memory::make_unique<memory::String>(100, 'x');
   EXPECT_EQ(text->size(), 100U);
@@ -189,12 +189,12 @@ TEST(MemoryTypesTest, SharedFactorySupportsWeakReferencesAndAlignedObjects) {
     auto locked = weak.lock();
     ASSERT_NE(locked, nullptr);
     EXPECT_EQ(locked.get(), object.get());
-    EXPECT_EQ(FactoryTracked::live, 1);
+    EXPECT_EQ(FactoryTracked::live_, 1);
     EXPECT_EQ(reinterpret_cast<std::uintptr_t>(object.get()) % alignof(FactoryTracked), 0U);
     object.reset();
-    EXPECT_EQ(FactoryTracked::live, 1);
+    EXPECT_EQ(FactoryTracked::live_, 1);
   }
-  EXPECT_EQ(FactoryTracked::live, 0);
+  EXPECT_EQ(FactoryTracked::live_, 0);
   EXPECT_TRUE(weak.expired());
   EXPECT_FALSE(weak.lock());
   EXPECT_THROW(static_cast<void>(memory::make_shared<FactoryThrowing>(1)), std::runtime_error);

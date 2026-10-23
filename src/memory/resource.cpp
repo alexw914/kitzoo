@@ -27,7 +27,9 @@ class MimallocResource final : public std::pmr::memory_resource {
 
   auto do_deallocate(void* address, std::size_t, std::size_t) -> void override { mi_free(address); }
 
-  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override { return this == &other; }
+  KZ_NODISCARD auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override {
+    return this == &other;
+  }
 };
 
 } // namespace

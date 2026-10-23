@@ -21,10 +21,10 @@ namespace {
 
 template <typename Tag>
 struct Service {
-  Service() { constructions.fetch_add(1); }
+  Service() { constructions_.fetch_add(1); }
 
-  static inline std::atomic<int> constructions{0};
-  int value{42};
+  static inline std::atomic<int> constructions_{0};
+  int value_{42};
 };
 
 struct LazyTag {};
@@ -41,7 +41,7 @@ using EagerService = Service<EagerTag>;
 using StartupService = Service<StartupTag>;
 
 // This call may precede the eager initializer and must see a complete object.
-const int kStartupValue = kitzoo::core::EagerSingleton<StartupService>::instance().value;
+const int kStartupValue = kitzoo::core::EagerSingleton<StartupService>::instance().value_;
 
 class DerivedService : public kitzoo::core::Singleton<DerivedService> {
   friend class kitzoo::core::Singleton<DerivedService>;
@@ -69,12 +69,12 @@ class RetryService : public kitzoo::core::Singleton<RetryService> {
   friend class kitzoo::core::Singleton<RetryService>;
 
 public:
-  static inline std::atomic<int> attempts{0};
-  int value{42};
+  static inline std::atomic<int> attempts_{0};
+  int value_{42};
 
 private:
   RetryService() {
-    if (attempts.fetch_add(1) == 0)
+    if (attempts_.fetch_add(1) == 0)
       throw std::runtime_error{"first initialization fails"};
   }
 };
@@ -95,9 +95,9 @@ auto verify_concurrent_access() -> void {
   ASSERT_NE(instances.front(), nullptr);
   for (auto* instance : instances) {
     EXPECT_EQ(instance, instances.front());
-    EXPECT_EQ(instance->value, 42);
+    EXPECT_EQ(instance->value_, 42);
   }
-  EXPECT_EQ(Value::constructions.load(), 1);
+  EXPECT_EQ(Value::constructions_.load(), 1);
 }
 
 } // namespace
@@ -111,22 +111,22 @@ TEST(SingletonTest, ConcurrentLazyAccessConstructsOnce) {
 }
 
 TEST(SingletonTest, ConstructsOnlyOnFirstAccess) {
-  EXPECT_EQ(LazyService::constructions.load(), 0);
+  EXPECT_EQ(LazyService::constructions_.load(), 0);
   auto& instance = kitzoo::core::Singleton<LazyService>::instance();
-  EXPECT_EQ(instance.value, 42);
-  EXPECT_EQ(LazyService::constructions.load(), 1);
+  EXPECT_EQ(instance.value_, 42);
+  EXPECT_EQ(LazyService::constructions_.load(), 1);
   EXPECT_EQ(&instance, &kitzoo::core::Singleton<LazyService>::instance());
-  EXPECT_EQ(LazyService::constructions.load(), 1);
+  EXPECT_EQ(LazyService::constructions_.load(), 1);
 }
 
 TEST(SingletonTest, RetriesAfterConstructorThrows) {
   EXPECT_THROW((void)RetryService::instance(), std::runtime_error);
-  EXPECT_EQ(RetryService::attempts.load(), 1);
+  EXPECT_EQ(RetryService::attempts_.load(), 1);
   auto& instance = RetryService::instance();
-  EXPECT_EQ(instance.value, 42);
-  EXPECT_EQ(RetryService::attempts.load(), 2);
+  EXPECT_EQ(instance.value_, 42);
+  EXPECT_EQ(RetryService::attempts_.load(), 2);
   EXPECT_EQ(&instance, &RetryService::instance());
-  EXPECT_EQ(RetryService::attempts.load(), 2);
+  EXPECT_EQ(RetryService::attempts_.load(), 2);
 }
 
 TEST(SingletonTest, EagerDerivedClassUsesInheritedInstance) {

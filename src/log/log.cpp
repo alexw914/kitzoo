@@ -173,7 +173,7 @@ public:
     dest.append(name.data(), name.data() + name.size());
   }
 
-  auto clone() const -> std::unique_ptr<spdlog::custom_flag_formatter> override {
+  KZ_NODISCARD auto clone() const -> std::unique_ptr<spdlog::custom_flag_formatter> override {
     return std::make_unique<FunctionNameFlag>();
   }
 };
@@ -200,7 +200,7 @@ Logger::Logger(std::string name, const Level level)
       pattern_{kDefaultPattern} {
   native_->set_level(to_spdlog(level));
   native_->set_formatter(make_formatter(pattern_));
-  native_->set_error_handler([this](const std::string& message) { report_error(message); });
+  native_->set_error_handler([this](const std::string& message) -> void { report_error(message); });
 }
 
 Logger::Logger(std::string name, const LoggerOptions& options) : Logger(std::move(name), options.level) {
@@ -288,7 +288,7 @@ auto Logger::flush() -> void {
 }
 
 auto default_logger() -> Logger& {
-  static Logger instance{"default", [] {
+  static Logger instance{"default", []() -> LoggerOptions {
                            LoggerOptions options;
                            options.sinks.push_back(memory::make_shared<ConsoleSink>());
                            return options;
@@ -318,7 +318,7 @@ AsyncLogger::AsyncLogger(std::shared_ptr<Logger> logger, AsyncLoggerOptions opti
     throw std::invalid_argument("AsyncLogger requires a logger");
   if (!options_.capacity)
     throw std::invalid_argument("queue capacity must be positive");
-  worker_ = std::jthread([this] { worker_loop(); });
+  worker_ = std::jthread([this]() -> void { worker_loop(); });
 }
 
 AsyncLogger::~AsyncLogger() {
@@ -349,7 +349,7 @@ auto AsyncLogger::log_owned(Level level, memory::String message, const std::sour
       ++dropped_;
       return;
     }
-    space_.wait(lock, [this] { return closed_ || queue_.size() < options_.capacity; });
+    space_.wait(lock, [this]() -> bool { return closed_ || queue_.size() < options_.capacity; });
     if (closed_) {
       ++rejected_;
       return;
@@ -366,7 +366,7 @@ auto AsyncLogger::flush() -> void {
   auto barrier = memory::make_shared<std::promise<void>>();
   auto complete = barrier->get_future();
   std::unique_lock lock(mutex_);
-  space_.wait(lock, [this] { return closed_ || queue_.size() < options_.capacity; });
+  space_.wait(lock, [this]() -> bool { return closed_ || queue_.size() < options_.capacity; });
   if (closed_) {
     lock.unlock();
     close();
@@ -383,7 +383,7 @@ auto AsyncLogger::worker_loop() -> void {
   for (;;) {
     {
       std::unique_lock lock(mutex_);
-      available_.wait(lock, [this] { return closed_ || !queue_.empty(); });
+      available_.wait(lock, [this]() -> bool { return closed_ || !queue_.empty(); });
       if (queue_.empty())
         break;
       queue_.swap(batch_);

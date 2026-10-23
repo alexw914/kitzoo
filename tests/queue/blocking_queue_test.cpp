@@ -42,7 +42,7 @@ TEST(BlockingQueueTest, WaitAndPopBlocks) {
   BlockingQueue<int> q;
   std::atomic<bool> pushed{false};
 
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     std::this_thread::sleep_for(std::chrono::milliseconds{10});
     pushed.store(true);
     q.push(7);
@@ -100,13 +100,13 @@ TEST(BlockingQueueTest, ConcurrentPushPop) {
   BlockingQueue<int> q;
   std::atomic<int> sum{0};
 
-  std::jthread consumer{[&] {
+  std::jthread consumer{[&]() -> void {
     for (int i = 0; i < kItems; ++i) {
       sum.fetch_add(q.wait_and_pop().value());
     }
   }};
 
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     for (int i = 0; i < kItems; ++i)
       q.push(1);
   }};
@@ -122,7 +122,7 @@ TEST(BlockingQueueTest, CloseWakesConsumers) {
   BlockingQueue<int> q;
   std::atomic<bool> consumer_returned{false};
 
-  std::jthread consumer{[&] {
+  std::jthread consumer{[&]() -> void {
     auto v = q.wait_and_pop(); // blocks
     EXPECT_EQ(v, std::nullopt);
     consumer_returned.store(true);
@@ -157,7 +157,7 @@ TEST(BlockingQueueTest, MultipleConsumersOnClose) {
   BlockingQueue<int> q;
   std::atomic<int> wakeups{0};
 
-  auto consumer_fn = [&] {
+  auto consumer_fn = [&]() -> void {
     while (q.wait_and_pop().has_value()) {
     }
     wakeups.fetch_add(1);
@@ -177,7 +177,7 @@ TEST(BlockingQueueTest, BoundedPushBlocksUntilSpace) {
   EXPECT_EQ(q.capacity(), 1u);
   ASSERT_TRUE(q.push(1));
   std::atomic<bool> pushed{false};
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     EXPECT_TRUE(q.push(2));
     pushed = true;
   }};
@@ -192,7 +192,7 @@ TEST(BlockingQueueTest, BoundedPushBlocksUntilSpace) {
 TEST(BlockingQueueTest, CloseWakesBlockedProducer) {
   BlockingQueue<int> q{1};
   ASSERT_TRUE(q.push(1));
-  std::jthread producer{[&] { EXPECT_FALSE(q.push(2)); }};
+  std::jthread producer{[&]() -> void { EXPECT_FALSE(q.push(2)); }};
   std::this_thread::sleep_for(std::chrono::milliseconds{20});
   q.close();
   producer.join();
@@ -215,7 +215,7 @@ TEST(BlockingQueueTest, PopForTimesOutAndReturnsItems) {
   const auto start = std::chrono::steady_clock::now();
   EXPECT_EQ(q.pop_for(std::chrono::milliseconds{30}), std::nullopt);
   EXPECT_GE(std::chrono::steady_clock::now() - start, std::chrono::milliseconds{30});
-  std::jthread producer{[&] {
+  std::jthread producer{[&]() -> void {
     std::this_thread::sleep_for(std::chrono::milliseconds{10});
     q.push(7);
   }};
@@ -260,7 +260,7 @@ TEST(BlockingQueueTest, PushEvictAfterCloseReturnsValue) {
 
 TEST(BlockingQueueTest, PushEvictWakesWaitingConsumer) {
   BlockingQueue<int> q{1};
-  std::jthread consumer([&q] { EXPECT_EQ(q.wait_and_pop(), 9); });
+  std::jthread consumer([&q]() -> void { EXPECT_EQ(q.wait_and_pop(), 9); });
   std::this_thread::sleep_for(std::chrono::milliseconds{20});
   EXPECT_EQ(q.push_evict(9), std::nullopt);
 }

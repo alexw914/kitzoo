@@ -7,7 +7,6 @@
 #include <kitzoo/queue/mpmc_queue.hpp>
 #include <kitzoo/queue/spsc_queue.hpp>
 
-#include <atomic>
 #include <benchmark/benchmark.h>
 #include <cstdint>
 #include <thread>
@@ -49,7 +48,7 @@ constexpr std::int64_t kThroughputItems = 1 << 20;
 static void BM_SpscThroughput(benchmark::State& state) {
   for (auto _ : state) {
     SPSCQueue<std::int64_t, 4096> q;
-    std::jthread producer{[&] {
+    std::jthread producer{[&]() -> void {
       for (std::int64_t i = 0; i < kThroughputItems;)
         if (q.push(i))
           ++i;
@@ -73,7 +72,7 @@ BENCHMARK(BM_SpscThroughput)->UseRealTime();
 static void BM_BlockingQueueThroughput(benchmark::State& state) {
   for (auto _ : state) {
     BlockingQueue<std::int64_t> q{4096};
-    std::jthread producer{[&] {
+    std::jthread producer{[&]() -> void {
       for (std::int64_t i = 0; i < kThroughputItems; ++i)
         q.push(i);
     }};
@@ -96,11 +95,11 @@ static void run_mpmc(benchmark::State& state, Push push, Pop pop) {
   for (auto _ : state) {
     std::vector<std::jthread> threads;
     for (int p = 0; p < pairs; ++p) {
-      threads.emplace_back([&] {
+      threads.emplace_back([&]() -> void {
         for (std::int64_t i = 0; i < per_producer; ++i)
           push(i);
       });
-      threads.emplace_back([&] {
+      threads.emplace_back([&]() -> void {
         std::int64_t sum = 0;
         for (std::int64_t i = 0; i < per_producer; ++i)
           sum += pop();
@@ -115,7 +114,7 @@ static void BM_MpmcQueueThroughput(benchmark::State& state) {
   MPMCQueue<std::int64_t> q{4096};
   run_mpmc(
       state,
-      [&](std::int64_t v) {
+      [&](std::int64_t v) -> void {
         while (!q.push(v)) {
         }
       },
@@ -130,7 +129,7 @@ BENCHMARK(BM_MpmcQueueThroughput)->Arg(1)->Arg(2)->Arg(4)->UseRealTime();
 
 static void BM_BlockingQueueMpmcThroughput(benchmark::State& state) {
   BlockingQueue<std::int64_t> q{4096};
-  run_mpmc(state, [&](std::int64_t v) { q.push(v); }, [&]() -> std::int64_t { return *q.wait_and_pop(); });
+  run_mpmc(state, [&](std::int64_t v) -> void { q.push(v); }, [&]() -> std::int64_t { return *q.wait_and_pop(); });
 }
 
 BENCHMARK(BM_BlockingQueueMpmcThroughput)->Arg(1)->Arg(2)->Arg(4)->UseRealTime();
@@ -138,7 +137,7 @@ BENCHMARK(BM_BlockingQueueMpmcThroughput)->Arg(1)->Arg(2)->Arg(4)->UseRealTime()
 static void BM_ConcurrentQueueMpmcThroughput(benchmark::State& state) {
   ConcurrentQueue<std::int64_t> q{4096};
   run_mpmc(
-      state, [&](std::int64_t v) { q.enqueue(v); },
+      state, [&](std::int64_t v) -> void { q.enqueue(v); },
       [&]() -> std::int64_t {
         std::int64_t v = 0;
         while (!q.try_dequeue(v)) {

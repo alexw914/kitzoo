@@ -27,7 +27,7 @@ TEST(SynchronizedTest, ConcurrentIncrements) {
   kitzoo::thread::Synchronized<int> counter{0};
   std::vector<std::jthread> threads;
   for (int i = 0; i < 8; ++i) {
-    threads.emplace_back([&counter] {
+    threads.emplace_back([&counter]() -> void {
       for (int j = 0; j < 1000; ++j)
         counter.with_lock([](int& value) -> void { ++value; });
     });
@@ -45,7 +45,7 @@ TEST(SynchronizedTest, SpinLockGuardsConcurrentIncrements) {
   kitzoo::thread::Synchronized<int, kitzoo::thread::SpinLock> counter{0};
   std::vector<std::jthread> threads;
   for (int i = 0; i < 8; ++i) {
-    threads.emplace_back([&counter] {
+    threads.emplace_back([&counter]() -> void {
       for (int j = 0; j < 1000; ++j)
         counter.with_lock([](int& value) -> void { ++value; });
     });
@@ -62,22 +62,22 @@ TEST(SynchronizedTest, RWSpinLockSupportsSharedReadAndExclusiveWrite) {
 }
 
 TEST(SynchronizedTest, ReadIsOnlyAvailableForSharedLockableMutexes) {
-  constexpr auto can_read = []<typename Mutex>() -> bool {
+  constexpr auto kCanRead = []<typename Mutex>() -> bool {
     return requires(const kitzoo::thread::Synchronized<int, Mutex>& value) {
       value.read([](const int& number) -> int { return number; });
     };
   };
-  EXPECT_TRUE(can_read.template operator()<std::shared_mutex>());
-  EXPECT_TRUE(can_read.template operator()<kitzoo::thread::RWSpinLock>());
-  EXPECT_FALSE(can_read.template operator()<std::mutex>());
-  EXPECT_FALSE(can_read.template operator()<kitzoo::thread::SpinLock>());
+  EXPECT_TRUE(kCanRead.template operator()<std::shared_mutex>());
+  EXPECT_TRUE(kCanRead.template operator()<kitzoo::thread::RWSpinLock>());
+  EXPECT_FALSE(kCanRead.template operator()<std::mutex>());
+  EXPECT_FALSE(kCanRead.template operator()<kitzoo::thread::SpinLock>());
 }
 
 // copy() must not wait for a reader that is still holding its shared lock.
 TEST(SynchronizedTest, CopyRunsAlongsideSharedReaders) {
   kitzoo::thread::Synchronized<int, std::shared_mutex> value{7};
   const bool copied = value.read([&value](const int&) -> bool {
-    auto copy = std::async(std::launch::async, [&value] { return value.copy(); });
+    auto copy = std::async(std::launch::async, [&value]() -> int { return value.copy(); });
     return copy.wait_for(std::chrono::seconds{5}) == std::future_status::ready && copy.get() == 7;
   });
   EXPECT_TRUE(copied);

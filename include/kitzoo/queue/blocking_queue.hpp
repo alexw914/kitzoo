@@ -38,7 +38,7 @@ public:
   auto push(T value) -> bool {
     {
       std::unique_lock lock{mutex_};
-      not_full_.wait(lock, [this] { return closed_ || !full(); });
+      not_full_.wait(lock, [this]() -> bool { return closed_ || !full(); });
       if (closed_)
         return false;
       deque_.push_back(std::move(value));
@@ -80,25 +80,6 @@ public:
     return evicted;
   }
 
-  KZ_NODISCARD auto wait_and_pop() -> std::optional<T> {
-    std::unique_lock lock{mutex_};
-    not_empty_.wait(lock, [this] { return !deque_.empty() || closed_; });
-    return take(lock);
-  }
-
-  // Returns nullopt on timeout or when the queue is closed and drained.
-  template <typename Rep, typename Period>
-  KZ_NODISCARD auto pop_for(std::chrono::duration<Rep, Period> timeout) -> std::optional<T> {
-    std::unique_lock lock{mutex_};
-    not_empty_.wait_for(lock, timeout, [this] { return !deque_.empty() || closed_; });
-    return take(lock);
-  }
-
-  KZ_NODISCARD auto try_pop() -> std::optional<T> {
-    std::unique_lock lock{mutex_};
-    return take(lock);
-  }
-
   auto close() -> void {
     {
       std::lock_guard lock{mutex_};
@@ -106,6 +87,25 @@ public:
     }
     not_empty_.notify_all();
     not_full_.notify_all();
+  }
+
+  // Returns nullopt on timeout or when the queue is closed and drained.
+  template <typename Rep, typename Period>
+  KZ_NODISCARD auto pop_for(std::chrono::duration<Rep, Period> timeout) -> std::optional<T> {
+    std::unique_lock lock{mutex_};
+    not_empty_.wait_for(lock, timeout, [this]() -> bool { return !deque_.empty() || closed_; });
+    return take(lock);
+  }
+
+  KZ_NODISCARD auto wait_and_pop() -> std::optional<T> {
+    std::unique_lock lock{mutex_};
+    not_empty_.wait(lock, [this]() -> bool { return !deque_.empty() || closed_; });
+    return take(lock);
+  }
+
+  KZ_NODISCARD auto try_pop() -> std::optional<T> {
+    std::unique_lock lock{mutex_};
+    return take(lock);
   }
 
   KZ_NODISCARD auto is_closed() const -> bool {

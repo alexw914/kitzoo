@@ -79,13 +79,13 @@ TEST(MPMCQueueTest, ConcurrentProducersAndConsumersDeliverEveryValueInProducerOr
   {
     std::vector<std::jthread> threads;
     for (int p = 0; p < kProducers; ++p)
-      threads.emplace_back([&, p] {
+      threads.emplace_back([&, p]() -> void {
         for (std::int64_t i = 0; i < kPerProducer; ++i)
           while (!q.push(p * kPerProducer + i)) {
           }
       });
     for (int c = 0; c < kConsumers; ++c)
-      threads.emplace_back([&] {
+      threads.emplace_back([&]() -> void {
         std::vector<std::int64_t> last(kProducers, -1);
         while (consumed.load(std::memory_order_relaxed) < kProducers * kPerProducer) {
           auto value = q.pop();

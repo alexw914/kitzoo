@@ -34,33 +34,33 @@ auto valid_alignment(std::size_t alignment) -> bool {
 }
 
 struct SharedPool {
-  void* storage = nullptr;
-  std::size_t bytes = 0;
+  void* storage_ = nullptr;
+  std::size_t bytes_ = 0;
   // Address-ordered, coalesced free extents: first block -> block count.
-  Map<std::size_t, std::size_t> free_extents;
+  Map<std::size_t, std::size_t> free_extents_;
   // Allocation start block -> requested byte size.
-  Map<std::size_t, std::size_t> allocations;
+  Map<std::size_t, std::size_t> allocations_;
 
-  explicit SharedPool(std::size_t size) : bytes(size) {
+  static auto block_count(std::size_t size) -> std::size_t { return size / kBlockSize + (size % kBlockSize != 0); }
+
+  explicit SharedPool(std::size_t size) : bytes_(size) {
     if (size / kBlockSize != 0)
-      free_extents.emplace(0, size / kBlockSize);
+      free_extents_.emplace(0, size / kBlockSize);
   }
 
   auto contains(const void* address) const -> bool {
     const auto value = reinterpret_cast<std::uintptr_t>(address);
-    const auto base = reinterpret_cast<std::uintptr_t>(storage);
-    return storage != nullptr && value >= base && value - base < bytes;
+    const auto base = reinterpret_cast<std::uintptr_t>(storage_);
+    return storage_ != nullptr && value >= base && value - base < bytes_;
   }
-
-  static auto block_count(std::size_t size) -> std::size_t { return size / kBlockSize + (size % kBlockSize != 0); }
 
   // First fit over free extents; mappings are page-aligned, so block starts are 16-byte aligned.
   auto allocate(std::size_t size, std::size_t alignment) -> void* {
-    if (size == 0 || size > bytes || !valid_alignment(alignment))
+    if (size == 0 || size > bytes_ || !valid_alignment(alignment))
       return nullptr;
     const auto count = block_count(size);
-    const auto base = reinterpret_cast<std::uintptr_t>(storage);
-    for (auto it = free_extents.begin(); it != free_extents.end(); ++it) {
+    const auto base = reinterpret_cast<std::uintptr_t>(storage_);
+    for (auto it = free_extents_.begin(); it != free_extents_.end(); ++it) {
       const auto [start, length] = *it;
       const auto address = base + start * kBlockSize;
       const auto aligned = (address + alignment - 1) / alignment * alignment;
@@ -69,42 +69,42 @@ struct SharedPool {
       const auto index = (aligned - base) / kBlockSize;
       if (index + count > start + length)
         continue;
-      free_extents.erase(it);
+      free_extents_.erase(it);
       if (index > start)
-        free_extents.emplace(start, index - start);
+        free_extents_.emplace(start, index - start);
       if (index + count < start + length)
-        free_extents.emplace(index + count, start + length - index - count);
-      allocations.emplace(index, size);
-      return static_cast<unsigned char*>(storage) + index * kBlockSize;
+        free_extents_.emplace(index + count, start + length - index - count);
+      allocations_.emplace(index, size);
+      return static_cast<unsigned char*>(storage_) + index * kBlockSize;
     }
     return nullptr;
   }
 
   auto deallocate(void* address, std::size_t size) -> void {
-    const auto offset = reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(storage);
+    const auto offset = reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(storage_);
     if (offset % kBlockSize != 0)
       return;
-    const auto found = allocations.find(offset / kBlockSize);
-    if (found == allocations.end() || found->second != size)
+    const auto found = allocations_.find(offset / kBlockSize);
+    if (found == allocations_.end() || found->second != size)
       return;
     auto start = found->first;
     auto length = block_count(size);
-    allocations.erase(found);
-    const auto next = free_extents.lower_bound(start);
-    if (next != free_extents.end() && start + length == next->first) {
+    allocations_.erase(found);
+    const auto next = free_extents_.lower_bound(start);
+    if (next != free_extents_.end() && start + length == next->first) {
       length += next->second;
-      free_extents.erase(next);
+      free_extents_.erase(next);
     }
-    const auto after = free_extents.lower_bound(start);
-    if (after != free_extents.begin()) {
+    const auto after = free_extents_.lower_bound(start);
+    if (after != free_extents_.begin()) {
       const auto previous = std::prev(after);
       if (previous->first + previous->second == start) {
         start = previous->first;
         length += previous->second;
-        free_extents.erase(previous);
+        free_extents_.erase(previous);
       }
     }
-    free_extents.emplace(start, length);
+    free_extents_.emplace(start, length);
   }
 };
 
@@ -130,7 +130,9 @@ private:
     owner_.deallocate(address, bytes == 0 ? 1 : bytes);
   }
 
-  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override { return this == &other; }
+  KZ_NODISCARD auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override {
+    return this == &other;
+  }
 
   BasicMemory& owner_;
   bool shared_;
@@ -155,10 +157,10 @@ struct BasicMemory::Impl {
   ~Impl() {
     if (shared_pool) {
 #if defined(_WIN32)
-      UnmapViewOfFile(shared_pool->storage);
+      UnmapViewOfFile(shared_pool->storage_);
       CloseHandle(mapping);
 #else
-      munmap(shared_pool->storage, shared_pool->bytes);
+      munmap(shared_pool->storage_, shared_pool->bytes_);
       shm_unlink(shared_name.c_str());
 #endif
     }
@@ -205,8 +207,8 @@ auto BasicMemory::init_shared(const SharedBasicMemoryConfig& config) -> bool {
   core::ScopeGuard close_mapping{[&]() noexcept { CloseHandle(mapping); }};
   if (existed)
     return false;
-  pool->storage = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, config.memory_size_bytes);
-  if (!pool->storage)
+  pool->storage_ = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, config.memory_size_bytes);
+  if (!pool->storage_)
     return false;
   close_mapping.dismiss();
   impl_->mapping = mapping;
@@ -221,14 +223,14 @@ auto BasicMemory::init_shared(const SharedBasicMemoryConfig& config) -> bool {
   KZ_SCOPE_EXIT {
     close(fd);
   };
-  core::ScopeGuard unlink{[&]() noexcept { shm_unlink(name.c_str()); }};
+  core::ScopeGuard unlink{[&]() noexcept -> void { shm_unlink(name.c_str()); }};
   if (ftruncate(fd, static_cast<off_t>(config.memory_size_bytes)) != 0)
     return false;
   auto* storage = mmap(nullptr, config.memory_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (storage == MAP_FAILED)
     return false;
   unlink.dismiss();
-  pool->storage = storage;
+  pool->storage_ = storage;
 #endif
   impl_->shared_name = std::move(owned_name);
   impl_->shared_pool = std::move(pool);
@@ -294,12 +296,12 @@ auto BasicMemory::shared_memory_name() const -> std::string {
 
 auto BasicMemory::shared_memory_size_bytes() const -> std::size_t {
   std::lock_guard lock(impl_->mutex);
-  return impl_->shared_pool ? impl_->shared_pool->bytes : 0;
+  return impl_->shared_pool ? impl_->shared_pool->bytes_ : 0;
 }
 
 auto BasicMemory::shared_memory_address() const -> void* {
   std::lock_guard lock(impl_->mutex);
-  return impl_->shared_pool ? impl_->shared_pool->storage : nullptr;
+  return impl_->shared_pool ? impl_->shared_pool->storage_ : nullptr;
 }
 
 } // namespace kitzoo::memory

@@ -34,18 +34,18 @@ public:
   explicit ScopeGuard(F callback, ScopeRun when = ScopeRun::Always) noexcept
       : callback_(std::move(callback)), when_(when) {}
 
-  ScopeGuard(const ScopeGuard&) = delete;
-  auto operator=(const ScopeGuard&) -> ScopeGuard& = delete;
-
   ~ScopeGuard() {
     if (!dismissed_ && should_run())
       callback_();
   }
 
+  ScopeGuard(const ScopeGuard&) = delete;
+  auto operator=(const ScopeGuard&) -> ScopeGuard& = delete;
+
   auto dismiss() noexcept -> void { dismissed_ = true; }
 
 private:
-  auto should_run() const noexcept -> bool {
+  KZ_NODISCARD auto should_run() const noexcept -> bool {
     const bool unwinding = std::uncaught_exceptions() > exceptions_;
     switch (when_) {
     case ScopeRun::Always:
@@ -92,13 +92,16 @@ auto operator+(ScopeSuccessTag, F callback) -> ScopeGuard<F> {
 
 } // namespace kitzoo::core
 
-#define KZ_SCOPE_GUARD_CONCAT_(a, b) a##b
-#define KZ_SCOPE_GUARD_CONCAT(a, b) KZ_SCOPE_GUARD_CONCAT_(a, b)
+#define KZ_SCOPE_GUARD_CONCAT_IMPL(a, b) a##b
+#define KZ_SCOPE_GUARD_CONCAT(a, b) KZ_SCOPE_GUARD_CONCAT_IMPL(a, b)
 #define KZ_SCOPE_GUARD_VARIABLE KZ_SCOPE_GUARD_CONCAT(kz_scope_guard_, __COUNTER__)
 
 // Usage: KZ_SCOPE_FAIL { rollback(); }; The block captures by reference.
-#define KZ_SCOPE_EXIT const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeExitTag{} + [&]() noexcept
-#define KZ_SCOPE_FAIL const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeFailTag{} + [&]() noexcept
-#define KZ_SCOPE_SUCCESS const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeSuccessTag{} + [&]() noexcept
+#define KZ_SCOPE_EXIT                                                                                                  \
+  const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeExitTag{} + [&]() noexcept -> void
+#define KZ_SCOPE_FAIL                                                                                                  \
+  const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeFailTag{} + [&]() noexcept -> void
+#define KZ_SCOPE_SUCCESS                                                                                               \
+  const auto KZ_SCOPE_GUARD_VARIABLE = ::kitzoo::core::detail::ScopeSuccessTag{} + [&]() noexcept -> void
 
 #endif // KITZOO_CORE_SCOPEGUARD_HPP

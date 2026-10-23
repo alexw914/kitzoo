@@ -39,7 +39,7 @@ TEST(TimeWatcherTest, ScopeCachesResultBeforeReentrantCallback) {
   int calls = 0;
   TimeDuration result{};
   {
-    auto scope = watcher.scope("frame", [&](std::string_view name, TimeDuration elapsed) {
+    auto scope = watcher.scope("frame", [&](std::string_view name, TimeDuration elapsed) -> void {
       ++calls;
       result = elapsed;
       EXPECT_EQ(name, "frame");
@@ -58,7 +58,7 @@ TEST(TimeWatcherTest, ExplicitFinishAndMoveCompleteOnlyOnce) {
   TimeWatcher watcher;
   int calls = 0;
   {
-    auto original = watcher.scope("frame", [&](std::string_view, TimeDuration) { ++calls; });
+    auto original = watcher.scope("frame", [&](std::string_view, TimeDuration) -> void { ++calls; });
     auto moved = std::move(original);
     const auto elapsed = moved.finish();
     EXPECT_EQ(moved.finish(), elapsed);
@@ -73,8 +73,8 @@ TEST(TimeWatcherTest, MoveAssignmentFinishesDestinationBeforeTakingSource) {
   int first_calls = 0;
   int second_calls = 0;
   {
-    auto first = watcher.scope("first", [&](std::string_view, TimeDuration) { ++first_calls; });
-    auto second = watcher.scope("second", [&](std::string_view, TimeDuration) { ++second_calls; });
+    auto first = watcher.scope("first", [&](std::string_view, TimeDuration) -> void { ++first_calls; });
+    auto second = watcher.scope("second", [&](std::string_view, TimeDuration) -> void { ++second_calls; });
     first = std::move(second);
     EXPECT_EQ(first_calls, 1);
     EXPECT_EQ(second_calls, 0);
@@ -89,7 +89,7 @@ TEST(TimeWatcherTest, MoveAssignmentFinishesDestinationBeforeTakingSource) {
 TEST(TimeWatcherTest, ExplicitCallbackExceptionRetainsResultAndIsNotRepeated) {
   TimeWatcher watcher;
   int calls = 0;
-  auto scope = watcher.scope("failure", [&](std::string_view, TimeDuration) {
+  auto scope = watcher.scope("failure", [&](std::string_view, TimeDuration) -> void {
     ++calls;
     throw std::runtime_error("callback failed");
   });
@@ -104,7 +104,7 @@ TEST(TimeWatcherTest, DestructorCompletesDuringUnwind) {
   TimeWatcher watcher;
   int calls = 0;
   try {
-    auto scope = watcher.scope("unwind", [&](std::string_view, TimeDuration) { ++calls; });
+    auto scope = watcher.scope("unwind", [&](std::string_view, TimeDuration) -> void { ++calls; });
     throw std::logic_error("work failed");
   } catch (const std::logic_error& error) {
     EXPECT_STREQ(error.what(), "work failed");
@@ -117,8 +117,8 @@ TEST(TimeWatcherTest, ThrowingCallbackInDestructorTerminates) {
   EXPECT_DEATH(
       {
         TimeWatcher watcher;
-        auto scope =
-            watcher.scope("fatal", [](std::string_view, TimeDuration) { throw std::runtime_error("callback failed"); });
+        auto scope = watcher.scope(
+            "fatal", [](std::string_view, TimeDuration) -> void { throw std::runtime_error("callback failed"); });
       },
       "");
 }
@@ -128,7 +128,7 @@ TEST(TimeWatcherTest, ScopeCanOutliveWatcher) {
   int calls = 0;
   {
     TimeWatcher watcher;
-    scope.emplace(watcher.scope("late", [&](std::string_view, TimeDuration elapsed) {
+    scope.emplace(watcher.scope("late", [&](std::string_view, TimeDuration elapsed) -> void {
       ++calls;
       EXPECT_GE(elapsed, 0ns);
     }));
@@ -142,12 +142,12 @@ TEST(TimeWatcherTest, ConcurrentIndependentNamesCompleteEveryScope) {
   std::atomic<int> completed{0};
   std::vector<std::jthread> workers;
   for (int worker = 0; worker < 4; ++worker)
-    workers.emplace_back([&, worker] {
+    workers.emplace_back([&, worker]() -> void {
       const auto name = "worker_" + std::to_string(worker);
       for (int i = 0; i < 50; ++i) {
         watcher.begin(name);
         (void)watcher.end(name);
-        auto scope = watcher.scope(name, [&](std::string_view, TimeDuration) { ++completed; });
+        auto scope = watcher.scope(name, [&](std::string_view, TimeDuration) -> void { ++completed; });
       }
     });
   workers.clear();

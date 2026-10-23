@@ -63,7 +63,6 @@ KZ_NODISCARD auto process_cpu_time() -> std::chrono::nanoseconds;
 
 auto set_thread_name(std::thread& thread, std::string_view thread_name,
                      std::string_view name_prefix = kThreadNamePrefix) -> bool;
-
 // Native handles must refer to live threads, not Linux kernel TIDs.
 // macOS can set only the current thread's name; other threads return false.
 auto set_thread_name(std::thread::native_handle_type thread_id, std::string_view thread_name,
@@ -72,12 +71,10 @@ auto set_thread_name(std::thread::native_handle_type thread_id, std::string_view
 auto set_current_thread_name(std::string_view thread_name, std::string_view name_prefix = kThreadNamePrefix) -> bool;
 
 KZ_NODISCARD auto get_thread_name(std::thread& thread) -> std::string;
-
 KZ_NODISCARD auto get_thread_name(std::thread::native_handle_type thread_id) -> std::string;
 
 auto set_thread_priority(std::thread& thread, std::int32_t thread_priority,
                          SchedPolicy sched_policy = SchedPolicy::Other) -> bool;
-
 auto set_thread_priority(std::thread::native_handle_type thread_id, std::int32_t thread_priority,
                          SchedPolicy sched_policy = SchedPolicy::Other) -> bool;
 
@@ -91,7 +88,6 @@ auto set_current_thread_nice(std::int32_t nice) -> bool;
 // Windows indices are relative to the thread's processor group.
 // macOS does not support CPU index binding; returns false.
 auto bind_cpus(std::thread& thread, const std::vector<std::uint32_t>& cpu_cores) -> bool;
-
 auto bind_cpus(std::thread::native_handle_type thread_id, const std::vector<std::uint32_t>& cpu_cores) -> bool;
 
 auto bind_current_cpus(const std::vector<std::uint32_t>& cpu_cores) -> bool;

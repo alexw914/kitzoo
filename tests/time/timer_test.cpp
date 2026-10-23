@@ -28,7 +28,7 @@ TEST(TimerTest, CallbackFiresAndStopIsIdempotent) {
   std::promise<void> fired;
   auto ready = fired.get_future();
   std::atomic<int> calls{0};
-  timer.start([&] {
+  timer.start([&]() -> void {
     if (calls.fetch_add(1) == 0)
       fired.set_value();
   });
@@ -46,7 +46,7 @@ TEST(TimerTest, CallbackFiresAndStopIsIdempotent) {
 TEST(TimerTest, StopInterruptsLongIntervalWithoutCallingCallback) {
   Timer timer(1h);
   std::atomic<int> calls{0};
-  timer.start([&] { ++calls; });
+  timer.start([&]() -> void { ++calls; });
   const auto begin = std::chrono::steady_clock::now();
   timer.stop();
   EXPECT_LT(std::chrono::steady_clock::now() - begin, 5s);
@@ -60,11 +60,11 @@ TEST(TimerTest, StartWhileRunningDoesNotReplaceCallback) {
   auto ready = fired.get_future();
   std::atomic<int> first_calls{0};
   std::atomic<int> second_calls{0};
-  timer.start([&] {
+  timer.start([&]() -> void {
     if (first_calls.fetch_add(1) == 0)
       fired.set_value();
   });
-  timer.start([&] { ++second_calls; });
+  timer.start([&]() -> void { ++second_calls; });
   const auto status = ready.wait_for(5s);
   timer.stop();
   EXPECT_EQ(status, std::future_status::ready);
@@ -78,7 +78,7 @@ TEST(TimerTest, CanRestartWithNewCallbackAfterStop) {
     std::promise<void> fired;
     auto ready = fired.get_future();
     std::atomic<int> calls{0};
-    timer.start([&] {
+    timer.start([&]() -> void {
       if (calls.fetch_add(1) == 0)
         fired.set_value();
     });
@@ -93,7 +93,7 @@ TEST(TimerTest, CallbackExceptionTerminates) {
   EXPECT_DEATH(
       {
         Timer timer(1ms);
-        timer.start([] { throw std::runtime_error("tick failed"); });
+        timer.start([]() -> void { throw std::runtime_error("tick failed"); });
         std::this_thread::sleep_for(1s);
       },
       "");
@@ -104,7 +104,7 @@ TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {
   std::promise<void> stopped;
   auto ready = stopped.get_future();
   std::atomic<int> calls{0};
-  timer.start([&] {
+  timer.start([&]() -> void {
     if (calls.fetch_add(1) == 0) {
       timer.stop();
       stopped.set_value();
@@ -118,7 +118,7 @@ TEST(TimerTest, CallbackCanStopTimerAndOwnerCanRestart) {
   std::promise<void> restarted;
   auto again = restarted.get_future();
   std::atomic<bool> fired{false};
-  timer.start([&] {
+  timer.start([&]() -> void {
     if (!fired.exchange(true))
       restarted.set_value();
   });
@@ -150,7 +150,7 @@ TEST(TimerTest, AcceptsMoveOnlyCallbackAndDestructorStopsWorker) {
   auto ready = value.get_future();
   {
     Timer timer(1ms);
-    timer.start([owned = std::make_unique<int>(42), &value]() mutable {
+    timer.start([owned = std::make_unique<int>(42), &value]() mutable -> void {
       if (owned) {
         value.set_value(*owned);
         owned.reset();

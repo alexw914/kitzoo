@@ -70,7 +70,7 @@ int pipe_fds[2]{-1, -1};
 
 // Returns the errno of a failed pipe creation, or zero.
 auto open_wake_pipe() noexcept -> int {
-  static const int error = [] {
+  static const int kError = []() -> int {
     if (::pipe(pipe_fds) != 0)
       return errno;
     for (const int fd : pipe_fds) {
@@ -79,7 +79,7 @@ auto open_wake_pipe() noexcept -> int {
     }
     return 0;
   }();
-  return error;
+  return kError;
 }
 
 auto require_wake_pipe() -> void {
@@ -109,7 +109,7 @@ extern "C" auto on_signal(int signal) -> void {
 
 auto install_shutdown_handler() -> void {
   static std::once_flag once;
-  std::call_once(once, [] {
+  std::call_once(once, []() -> void {
 #if defined(_WIN32)
     if (!::SetConsoleCtrlHandler(on_console_event, TRUE))
       throw std::system_error{static_cast<int>(::GetLastError()), std::system_category(), "SetConsoleCtrlHandler"};

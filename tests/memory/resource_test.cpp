@@ -18,7 +18,9 @@ class FailingResource final : public std::pmr::memory_resource {
 
   auto do_deallocate(void*, std::size_t, std::size_t) -> void override {}
 
-  auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override { return this == &other; }
+  KZ_NODISCARD auto do_is_equal(const std::pmr::memory_resource& other) const noexcept -> bool override {
+    return this == &other;
+  }
 };
 
 struct alignas(256) AlignedValue {

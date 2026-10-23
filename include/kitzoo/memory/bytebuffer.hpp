@@ -36,18 +36,6 @@ public:
   auto view() noexcept -> std::span<std::byte>;
   KZ_NODISCARD auto view() const noexcept -> std::span<const std::byte>;
 
-  KZ_NODISCARD auto size() const noexcept -> std::size_t;
-
-  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
-
-  KZ_NODISCARD auto alignment() const noexcept -> std::size_t;
-
-  KZ_NODISCARD auto empty() const noexcept -> bool;
-
-  static constexpr auto max_size() noexcept -> std::size_t {
-    return static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
-  }
-
   // reserve() leaves size unchanged. resize() grows capacity geometrically.
   auto reserve(std::size_t capacity) -> void;
 
@@ -56,17 +44,28 @@ public:
   // Self/subrange append is supported. Internal sources must lie within size().
   // Empty input is a no-op; nonempty input must point to readable bytes.
   auto append(std::span<const std::byte> bytes) -> void;
-
   auto append(const void* data, std::size_t size) -> void;
 
   // Retains capacity for reuse. reset() releases storage instead.
   auto clear() noexcept -> void;
+
+  static constexpr auto max_size() noexcept -> std::size_t {
+    return static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+  }
 
   auto reset() noexcept -> void;
 
   auto shrink_to_fit() -> void;
 
   auto swap(ByteBuffer& other) noexcept -> void;
+
+  KZ_NODISCARD auto size() const noexcept -> std::size_t;
+
+  KZ_NODISCARD auto capacity() const noexcept -> std::size_t;
+
+  KZ_NODISCARD auto alignment() const noexcept -> std::size_t;
+
+  KZ_NODISCARD auto empty() const noexcept -> bool;
 
 private:
   auto reallocate(std::size_t capacity) -> void;

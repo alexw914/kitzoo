@@ -41,11 +41,11 @@ public:
   auto cleanup_error() -> std::string;
 
 private:
+  auto open_file() -> void;
+
   auto sink_it_(const spdlog::details::log_msg& message) -> void override;
 
   auto flush_() -> void override;
-
-  auto open_file() -> void;
 
   struct Impl;
   memory::UniquePtr<Impl> impl_;

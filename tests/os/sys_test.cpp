@@ -44,7 +44,7 @@ TEST(SysPortableTest, WorkerThreadOperations) {
   namespace os = kitzoo::os;
   std::promise<void> release;
   auto wait = release.get_future();
-  std::thread worker([&wait] { wait.wait(); });
+  std::thread worker([&wait]() -> void { wait.wait(); });
 #if defined(__APPLE__)
   EXPECT_FALSE(os::set_thread_name(worker, "worker"));
   EXPECT_FALSE(os::bind_cpus(worker, {0}));
@@ -236,7 +236,7 @@ TEST(SysQueryTest, HomeDir) {
 
 TEST(SysQueryTest, LongThreadNamesUsePlatformLimit) {
   const std::string name(kitzoo::os::kMaxThreadNameLength + 20, 'w');
-  std::jthread worker{[&] {
+  std::jthread worker{[&]() -> void {
     ASSERT_TRUE(kitzoo::os::set_current_thread_name(name));
 #if defined(_WIN32)
     const auto actual = kitzoo::os::get_thread_name(GetCurrentThread());

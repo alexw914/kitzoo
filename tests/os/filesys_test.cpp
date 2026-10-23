@@ -22,7 +22,7 @@ protected:
     kitzoo::os::remove_path(root_, ec, true);
   }
 
-  auto path(std::string_view name) const -> std::filesystem::path { return root_ / name; }
+  KZ_NODISCARD auto path(std::string_view name) const -> std::filesystem::path { return root_ / name; }
 
   std::filesystem::path root_;
 };
