@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <sstream> // IWYU pragma: keep (Windows stacktrace)
 
 #if defined(_WIN32)
 #ifndef NOMINMAX

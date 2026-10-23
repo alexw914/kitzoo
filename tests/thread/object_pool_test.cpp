@@ -7,6 +7,7 @@
 #include <kitzoo/thread/object_pool.hpp>
 
 #include <atomic>
+#include <chrono> // IWYU pragma: keep (std::chrono_literals)
 #include <cstdint>
 #include <future>
 #include <gtest/gtest.h>

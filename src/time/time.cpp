@@ -4,6 +4,7 @@
 // Description: Implements basic clocks, calendar conversion and steady timing utilities.
 // -----------------------------------------------------------------------------
 
+#include <kitzoo/memory/memory.hpp> // IWYU pragma: keep (Linux ptp_timestamp)
 #include <kitzoo/time/time.hpp>
 
 #include <cstdint>
