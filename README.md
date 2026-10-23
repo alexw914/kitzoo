@@ -60,7 +60,7 @@ Pin a release tag or commit:
 include(FetchContent)
 FetchContent_Declare(kitzoo
     GIT_REPOSITORY https://github.com/alexw914/kitzoo.git
-    GIT_TAG v0.5.1)
+    GIT_TAG v0.5.2)
 FetchContent_MakeAvailable(kitzoo)
 
 target_link_libraries(app PRIVATE kitzoo::core kitzoo::utilities)
